@@ -29,6 +29,8 @@
   },
   "exclude": [
     "node_modules",
+    "dist",
+    "build",
     "src/temp/monitoring*.ts",
     "src/temp/system*.ts",
     "src/temp/workspaceData.ts"
