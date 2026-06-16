@@ -1,0 +1,203 @@
+/**
+ * Temporary prototype data.
+ * Replace with API data when backend integration begins.
+ */
+import { ToolCallStat } from "../types/monitoring";
+
+export const monitoringToolCalls: ToolCallStat[] = [
+  {
+    id: "tool-01",
+    name: "query_kb_articles",
+    mcpServer: "Enterprise Data Searcher",
+    readonly: true,
+    todayCalls: 2150,
+    successRate: 99.9,
+    avgLatency: 280,
+    p95Latency: 590,
+    timeoutCount: 0,
+    errorCount: 2,
+    lastCallTime: "2026-06-15T20:42:58Z"
+  },
+  {
+    id: "tool-02",
+    name: "semantic_document_chunk_retrieve",
+    mcpServer: "Enterprise Data Searcher",
+    readonly: true,
+    todayCalls: 1800,
+    successRate: 99.8,
+    avgLatency: 410,
+    p95Latency: 920,
+    timeoutCount: 1,
+    errorCount: 3,
+    lastCallTime: "2026-06-15T20:42:50Z"
+  },
+  {
+    id: "tool-03",
+    name: "patch_crm_lead",
+    mcpServer: "Salesforce CRM Connector",
+    readonly: false,
+    todayCalls: 850,
+    successRate: 97.4,
+    avgLatency: 950,
+    p95Latency: 2800,
+    timeoutCount: 8,
+    errorCount: 14,
+    lastCallTime: "2026-06-15T20:41:02Z"
+  },
+  {
+    id: "tool-04",
+    name: "create_financial_invoice",
+    mcpServer: "Financial ERP Billing API",
+    readonly: false,
+    todayCalls: 430,
+    successRate: 84.6,
+    avgLatency: 2400,
+    p95Latency: 6800,
+    timeoutCount: 24,
+    errorCount: 42,
+    lastCallTime: "2026-06-15T20:38:40Z"
+  },
+  {
+    id: "tool-05",
+    name: "jira_get_assigned_issues",
+    mcpServer: "Jira Task Automation",
+    readonly: true,
+    todayCalls: 310,
+    successRate: 100.0,
+    avgLatency: 390,
+    p95Latency: 780,
+    timeoutCount: 0,
+    errorCount: 0,
+    lastCallTime: "2026-06-15T18:25:30Z"
+  },
+  {
+    id: "tool-06",
+    name: "google_calendar_insert_event",
+    mcpServer: "Google Calendar Workspace",
+    readonly: false,
+    todayCalls: 1200,
+    successRate: 99.6,
+    avgLatency: 350,
+    p95Latency: 720,
+    timeoutCount: 1,
+    errorCount: 4,
+    lastCallTime: "2026-06-15T20:42:30Z"
+  },
+  {
+    id: "tool-07",
+    name: "staff_get_profile_by_id",
+    mcpServer: "Staff Profile Database",
+    readonly: true,
+    todayCalls: 0,
+    successRate: 0.0,
+    avgLatency: 0,
+    p95Latency: 0,
+    timeoutCount: 0,
+    errorCount: 0,
+    lastCallTime: "2026-06-14T09:18:20Z"
+  },
+  {
+    id: "tool-08",
+    name: "send_corporate_email",
+    mcpServer: "Email Delivery Agent",
+    readonly: false,
+    todayCalls: 120,
+    successRate: 98.3,
+    avgLatency: 310,
+    p95Latency: 750,
+    timeoutCount: 0,
+    errorCount: 2,
+    lastCallTime: "2026-06-15T20:42:01Z"
+  },
+  {
+    id: "tool-09",
+    name: "search_confluence_spaces",
+    mcpServer: "Confluence Knowledge Retriever",
+    readonly: true,
+    todayCalls: 780,
+    successRate: 99.4,
+    avgLatency: 420,
+    p95Latency: 850,
+    timeoutCount: 0,
+    errorCount: 5,
+    lastCallTime: "2026-06-15T20:41:20Z"
+  },
+  {
+    id: "tool-10",
+    name: "jira_update_ticket_status",
+    mcpServer: "Jira Task Automation",
+    readonly: false,
+    todayCalls: 230,
+    successRate: 100.0,
+    avgLatency: 520,
+    p95Latency: 1100,
+    timeoutCount: 0,
+    errorCount: 0,
+    lastCallTime: "2026-06-15T18:24:12Z"
+  },
+  {
+    id: "tool-11",
+    name: "google_calendar_list_events",
+    mcpServer: "Google Calendar Workspace",
+    readonly: true,
+    todayCalls: 650,
+    successRate: 99.3,
+    avgLatency: 210,
+    p95Latency: 450,
+    timeoutCount: 0,
+    errorCount: 4,
+    lastCallTime: "2026-06-15T20:41:44Z"
+  },
+  {
+    id: "tool-12",
+    name: "crm_list_accounts",
+    mcpServer: "Salesforce CRM Connector",
+    readonly: true,
+    todayCalls: 1100,
+    successRate: 98.2,
+    avgLatency: 820,
+    p95Latency: 1800,
+    timeoutCount: 2,
+    errorCount: 18,
+    lastCallTime: "2026-06-15T20:40:11Z"
+  },
+  {
+    id: "tool-13",
+    name: "query_fiscal_ledger",
+    mcpServer: "Financial ERP Billing API",
+    readonly: true,
+    todayCalls: 610,
+    successRate: 85.6,
+    avgLatency: 1800,
+    p95Latency: 5400,
+    timeoutCount: 15,
+    errorCount: 73,
+    lastCallTime: "2026-06-15T20:37:15Z"
+  },
+  {
+    id: "tool-14",
+    name: "confluence_read_page_content",
+    mcpServer: "Confluence Knowledge Retriever",
+    readonly: true,
+    todayCalls: 300,
+    successRate: 98.6,
+    avgLatency: 480,
+    p95Latency: 910,
+    timeoutCount: 0,
+    errorCount: 4,
+    lastCallTime: "2026-06-15T20:38:52Z"
+  },
+  {
+    id: "tool-15",
+    name: "staff_get_department_members",
+    mcpServer: "Staff Profile Database",
+    readonly: true,
+    todayCalls: 0,
+    successRate: 0.0,
+    avgLatency: 0,
+    p95Latency: 0,
+    timeoutCount: 0,
+    errorCount: 0,
+    lastCallTime: "2026-06-14T09:15:10Z"
+  }
+];

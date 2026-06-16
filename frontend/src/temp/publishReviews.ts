@@ -1,0 +1,73 @@
+import { AuditRequest } from "../types/audit-center";
+
+export const MOCK_PUBLISH_REVIEWS: AuditRequest[] = [
+  {
+    id: "REV-2026-0001",
+    title: "智能海外回复助手 Skill 发布申请",
+    type: "capability_publish",
+    capabilityName: "智能海外回复助手",
+    capabilityType: "Skill",
+    version: "v1.0.0",
+    applicant: "李娜 (Lina)",
+    applicantEmail: "lina.li@haze-tech.com",
+    department: "客户服务部",
+    submitTime: "2026-06-15 09:30",
+    urgency: "normal",
+    status: "pending",
+    timeLeft: "剩余 24小时",
+    description: "发布面向海外消费者的智能语义回复与情感分析客服助理 Skill，旨在提升工单初次回复效率和满意度。",
+    hasBlocker: false
+  },
+  {
+    id: "REV-2026-0002",
+    title: "企业数据库安全连接服务 MCP Server 发布申请",
+    type: "capability_publish",
+    capabilityName: "企业数据中心 MCP",
+    capabilityType: "MCP Server",
+    version: "v2.1.2",
+    applicant: "王磊 (Leo)",
+    applicantEmail: "leo.wang@haze-tech.com",
+    department: "企业架构部",
+    submitTime: "2026-06-15 11:20",
+    urgency: "urgent",
+    status: "processing",
+    timeLeft: "剩余 12小时",
+    description: "提供企业内部受控安全 SQL 运行、高频数据实体视图导出、模式元数据检索的 SSE/HTTP 模型上下文协议集成服务。",
+    hasBlocker: false
+  },
+  {
+    id: "REV-2026-0003",
+    title: "每日行业快讯自动成稿 Skill 发布申请",
+    type: "capability_publish",
+    capabilityName: "每日行业快讯自动成稿及社媒排版",
+    capabilityType: "Skill",
+    version: "v1.1.0",
+    applicant: "陈静 (Jane)",
+    applicantEmail: "jane.chen@haze-tech.com",
+    department: "市场活动部",
+    submitTime: "2026-06-14 15:43",
+    urgency: "normal",
+    status: "approved",
+    timeLeft: "--",
+    description: "搜集全网当日 AI、科技领域重点动态，结合设定的组织人设与微信、小红书排版风格生成推文。",
+    hasBlocker: false
+  },
+  {
+    id: "REV-2026-0004",
+    title: "竞争对手价格监控 Skill 拒绝案例",
+    type: "capability_publish",
+    capabilityName: "竞争对手价格实时监控与调价建议",
+    capabilityType: "Skill",
+    version: "v1.0.2",
+    applicant: "杨波 (Bob)",
+    applicantEmail: "bob.yang@haze-tech.com",
+    department: "运营中台",
+    submitTime: "2026-06-13 10:12",
+    urgency: "normal",
+    status: "rejected",
+    timeLeft: "--",
+    description: "每日定时拉取国内外主要竞品电商定价，结合库存状况和历史销售系数计算推荐价格。",
+    hasBlocker: true,
+    blockReason: "爬取接口触发了对端强力防护滑块验证，经研判测试容易中断，不予发布入库"
+  }
+];
