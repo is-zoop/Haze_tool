@@ -6,7 +6,6 @@ import {
   ShieldCheck, 
   Settings,
   Bell,
-  Search,
   PanelLeft,
   Menu,
   MoreHorizontal,
@@ -25,7 +24,6 @@ import { Guide } from "./pages/Guide";
 
 // Import real shadcn/ui components
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Sheet,
@@ -220,7 +218,7 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
   const [currentRole, setCurrentRole] = useState<"Admin" | "Member">("Admin");
   
   // Global Search Term
-  const [searchQuery, setSearchQuery] = useState("");
+  const searchQuery = "";
   
   // Custom states initialized from migrated mock data
   const [notifications, setNotifications] = useState(MOCK_DASHBOARD_NOTIFICATIONS);
@@ -281,17 +279,17 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
       { key: "workbench" as const, label: t.workbench, icon: LayoutDashboard },
       { key: "market" as const, label: t.market, icon: ShoppingBag },
       { key: "developer" as const, label: t.developer, icon: Code },
-      { key: "guide" as const, label: "开发者指南", icon: BookOpen }
+      { key: "guide" as const, label: langCode === "ZH" ? "开发者指南" : langCode === "JA" ? "開発者ガイド" : langCode === "ES" ? "Guía de Desarrolladores" : "Developer Guide", icon: BookOpen }
     ];
-  }, [t]);
+  }, [t, langCode]);
 
   const menuItemsGroup2 = useMemo(() => {
     if (currentRole !== "Admin") return [];
     return [
-      { key: "audit" as const, label: "发布审核", icon: ShieldCheck },
-      { key: "settings" as const, label: "成员管理", icon: Settings }
+      { key: "audit" as const, label: langCode === "ZH" ? "发布审核" : langCode === "JA" ? "リリース審査" : langCode === "ES" ? "Control de Auditoría" : "Audit Center", icon: ShieldCheck },
+      { key: "settings" as const, label: langCode === "ZH" ? "成员管理" : langCode === "JA" ? "メンバー管理" : langCode === "ES" ? "Gestión de Miembros" : "Member Management", icon: Settings }
     ];
-  }, [currentRole]);
+  }, [currentRole, langCode]);
 
   const menuItems = useMemo(() => {
     return [...menuItemsGroup1, ...menuItemsGroup2];
@@ -384,7 +382,7 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                     <div className="border-t border-black/[0.04] mx-1 my-2" />
                     {!isSidebarCollapsed && (
                       <div className="px-3 py-1 text-[10px] font-bold text-muted-foreground/50 tracking-wider uppercase text-left">
-                        安全与管理
+                        {langCode === "ZH" ? "安全与管理" : langCode === "JA" ? "セキュリティ・管理" : langCode === "ES" ? "Seguridad y Gestión" : "Security & Admin"}
                       </div>
                     )}
                     <div className="space-y-1">
@@ -527,7 +525,7 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                           <div className="space-y-1.5 pt-1">
                             <div className="border-t border-black/[0.04] mx-1 my-2" />
                             <div className="px-2.5 py-1 text-[10px] font-bold text-muted-foreground/50 tracking-wider uppercase text-left">
-                              安全与管理
+                              {langCode === "ZH" ? "安全与管理" : langCode === "JA" ? "セキュリティ・管理" : langCode === "ES" ? "Seguridad y Gestión" : "Security & Admin"}
                             </div>
                             <div className="space-y-1">
                               {menuItemsGroup2.map((item) => {
@@ -587,29 +585,6 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
 
             {/* Search Box & Floating Tools Area */}
             <div className="flex items-center gap-2 md:gap-3">
-              {/* Search Input Box */}
-              <div className="relative w-40 sm:w-60 md:w-[320px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-                <Input
-                  id="haze-header-search"
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t.searchPlaceholder}
-                  className="pl-9 pr-8 bg-neutral-50/80 border-border text-sm h-9 rounded-xl shadow-none focus-visible:ring-1 focus-visible:ring-ring"
-                />
-                {searchQuery && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    {t.searchClear}
-                  </Button>
-                )}
-              </div>
-
               {/* Notification Button backed by DropdownMenu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -652,7 +627,9 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
 
               {/* Role Switcher Toolbar Button for V1 Demonstration */}
               <div className="flex items-center gap-1.5 p-1 bg-neutral-100/70 border border-black/[0.04] rounded-lg">
-                <span className="text-[10px] font-bold text-neutral-450 px-1 uppercase tracking-tight hidden md:inline">测试体验角色:</span>
+                <span className="text-[10px] font-bold text-neutral-450 px-1 uppercase tracking-tight hidden md:inline">
+                  {langCode === "ZH" ? "测试体验角色:" : langCode === "JA" ? "体験ロール:" : langCode === "ES" ? "Rol de prueba:" : "Demo Role:"}
+                </span>
                 <Button 
                   size="sm"
                   onClick={() => {
@@ -689,13 +666,14 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                   setShowDocDrawer={setShowDocDrawer}
                   setActiveMenu={setActiveMenu}
                   searchQuery={searchQuery}
+                  langCode={langCode}
                 />
               )}
-              {activeMenu === "market" && <Market onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} setActiveMenu={setActiveMenu} />}
+              {activeMenu === "market" && <Market onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} setActiveMenu={(menu) => setActiveMenu(menu as MenuKey)} />}
               {activeMenu === "developer" && <DeveloperCenter onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} currentRole={currentRole} />}
               {activeMenu === "audit" && currentRole === "Admin" && <AuditCenter onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
               {activeMenu === "settings" && currentRole === "Admin" && <SettingsPage onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
-              {activeMenu === "guide" && <Guide onBackToHome={() => setActiveMenu("workbench")} />}
+              {activeMenu === "guide" && <Guide onBackToHome={() => setActiveMenu("workbench")} setActiveMenu={(menu) => setActiveMenu(menu as MenuKey)} />}
             </div>
           </main>
 

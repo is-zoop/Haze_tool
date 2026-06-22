@@ -15,8 +15,9 @@ export const MOCK_PUBLISH_REVIEWS: AuditRequest[] = [
     urgency: "normal",
     status: "pending",
     timeLeft: "剩余 24小时",
-    description: "发布面向海外消费者的智能语义回复与情感分析客服助理 Skill，旨在提升工单初次回复效率和满意度。",
-    hasBlocker: false
+    description: "发布面向海外消费者的智能语义回复与情感分析客服助理 Skill，旨在提升工单初次回复效率 and 满意度。",
+    hasBlocker: false,
+    submittedAt: "2026-06-15T09:30:00"
   },
   {
     id: "REV-2026-0002",
@@ -33,7 +34,8 @@ export const MOCK_PUBLISH_REVIEWS: AuditRequest[] = [
     status: "processing",
     timeLeft: "剩余 12小时",
     description: "提供企业内部受控安全 SQL 运行、高频数据实体视图导出、模式元数据检索的 SSE/HTTP 模型上下文协议集成服务。",
-    hasBlocker: false
+    hasBlocker: false,
+    submittedAt: "2026-06-15T11:20:00"
   },
   {
     id: "REV-2026-0003",
@@ -50,7 +52,9 @@ export const MOCK_PUBLISH_REVIEWS: AuditRequest[] = [
     status: "approved",
     timeLeft: "--",
     description: "搜集全网当日 AI、科技领域重点动态，结合设定的组织人设与微信、小红书排版风格生成推文。",
-    hasBlocker: false
+    hasBlocker: false,
+    submittedAt: "2026-06-14T15:43:00",
+    reviewedAt: "2026-06-15T14:30:00"
   },
   {
     id: "REV-2026-0004",
@@ -68,6 +72,8 @@ export const MOCK_PUBLISH_REVIEWS: AuditRequest[] = [
     timeLeft: "--",
     description: "每日定时拉取国内外主要竞品电商定价，结合库存状况和历史销售系数计算推荐价格。",
     hasBlocker: true,
-    blockReason: "爬取接口触发了对端强力防护滑块验证，经研判测试容易中断，不予发布入库"
+    blockReason: "爬取接口触发了对端强力防护滑块验证，经研判测试容易中断，不予发布入库",
+    submittedAt: "2026-06-13T10:12:00",
+    reviewedAt: "2026-06-15T11:12:00"
   }
 ];

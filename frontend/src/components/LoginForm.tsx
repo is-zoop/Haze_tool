@@ -119,7 +119,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
     },
   };
 
-  const letterVariants = {
+  const letterVariants: any = {
     hidden: { 
       opacity: 0, 
       y: 20 

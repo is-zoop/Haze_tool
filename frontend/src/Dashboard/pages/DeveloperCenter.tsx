@@ -1,54 +1,29 @@
 import React, { useMemo, useState } from "react";
 import {
-  ArrowUpCircle,
-  Check,
-  CheckCircle,
-  ChevronLeft,
-  ChevronRight,
-  Copy,
-  Cpu,
-  Edit,
-  History,
-  MinusCircle,
-  MoreHorizontal,
-  Play,
   Plus,
   RotateCcw,
   Search,
-  Send,
-  Sparkles,
-  Terminal,
-  Trash2,
-  X,
+  Check,
+  Code,
+  Cpu,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Combobox,
+  ComboboxContent,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
+import { UnifiedTabs, TabItem } from "@/components/UnifiedTabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,9 +34,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
 import { MOCK_DEVELOPER_SKILLS } from "../../temp/developerSkills";
 import { MOCK_DEVELOPER_MCP_SERVERS } from "../../temp/developerMcpServers";
-import { AssetStatus, DeveloperAsset, TestStatus } from "../../types/developer-center";
+import { AssetStatus, DeveloperAsset } from "../../types/developer-center";
+import { PageHeader } from "../../components/common/PageHeader";
+import { DataTableFooter } from "../../components/common/DataTableFooter";
+
+// Modular Developer Center Subcomponents
+import { DeveloperAssetTable } from "../../components/developer-center/DeveloperAssetTable";
+import { DeveloperAssetFormDialog } from "../../components/developer-center/DeveloperAssetFormDialog";
+import { NewVersionDialog } from "../../components/developer-center/NewVersionDialog";
+import { McpConnectionTestDialog } from "../../components/developer-center/McpConnectionTestDialog";
+
+// Shared options & Temporary data imports
+import {
+  DEFAULT_ASSET,
+  SIMULATION_LOGS,
+  SIMULATION_FINISH_DELAY,
+} from "../../temp/developerCenterTestData";
 
 interface PageProps {
   onBackToHome: () => void;
@@ -70,89 +61,6 @@ interface PageProps {
 }
 
 type AssetTypeFilter = "all" | "Skill" | "MCP Server";
-
-const defaultAsset: Partial<DeveloperAsset> = {
-  name: "",
-  code: "",
-  type: "Skill",
-  description: "",
-  version: "v1.0.0",
-  project: "企业智能应用架构",
-  owner: "李娜 (Lina)",
-  status: "draft",
-  tags: [],
-  skillMd: "",
-  transport: "HTTP",
-  serverUrl: "",
-  startCommand: "",
-  startArgs: "",
-  tools: [],
-  resources: [],
-  prompts: [],
-  testCases: [],
-};
-
-const statusBadgeConfig: Record<AssetStatus, { label: string; className: string }> = {
-  published: {
-    label: "已发布",
-    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  },
-  draft: {
-    label: "草稿",
-    className: "border-amber-200 bg-amber-50 text-amber-700",
-  },
-  reviewing: {
-    label: "审核中",
-    className: "border-blue-200 bg-blue-50 text-blue-700",
-  },
-  rejected: {
-    label: "已拒绝",
-    className: "border-red-200 bg-red-50 text-red-700",
-  },
-  offline: {
-    label: "已下线",
-    className: "border-border bg-muted text-muted-foreground",
-  },
-};
-
-const testBadgeConfig: Record<TestStatus, { label: string; className: string }> = {
-  pass: {
-    label: "测试通过",
-    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  },
-  fail: {
-    label: "测试失败",
-    className: "border-red-200 bg-red-50 text-red-700",
-  },
-  testing: {
-    label: "测试中",
-    className: "border-blue-200 bg-blue-50 text-blue-700",
-  },
-  none: {
-    label: "未测试",
-    className: "border-border bg-muted text-muted-foreground",
-  },
-};
-
-function renderStatusBadge(status: AssetStatus) {
-  const config = statusBadgeConfig[status];
-  return (
-    <Badge variant="outline" className={`gap-1 rounded-md px-2 py-1 text-xs font-semibold ${config.className}`}>
-      <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {config.label}
-    </Badge>
-  );
-}
-
-function renderTestStatusBadge(status: TestStatus) {
-  const config = testBadgeConfig[status];
-  return (
-    <Badge variant="outline" className={`gap-1 rounded-md px-2 py-1 text-xs font-semibold ${config.className}`}>
-      {status === "pass" ? <CheckCircle size={12} /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
-      {config.label}
-    </Badge>
-  );
-}
 
 export function DeveloperCenter({
   onBackToHome: _onBackToHome,
@@ -172,15 +80,26 @@ export function DeveloperCenter({
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentAsset, setCurrentAsset] = useState<Partial<DeveloperAsset>>(defaultAsset);
+  const [currentAsset, setCurrentAsset] = useState<Partial<DeveloperAsset>>(DEFAULT_ASSET);
+  const [tagsInputText, setTagsInputText] = useState("");
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const [showNewVersionModal, setShowNewVersionModal] = useState(false);
+  const [newVersionAsset, setNewVersionAsset] = useState<DeveloperAsset | null>(null);
+  const [newVersionNum, setNewVersionNum] = useState("");
+  const [newVersionDesc, setNewVersionDesc] = useState("");
+  const [newVersionZipName, setNewVersionZipName] = useState("");
+  const [newVersionZipSize, setNewVersionZipSize] = useState("");
+  const [newVersionZipFiles, setNewVersionZipFiles] = useState<{ name: string; size: string }[]>([]);
+  const [newVersionErrors, setNewVersionErrors] = useState<Record<string, string>>({});
 
   const [showDebugModal, setShowDebugModal] = useState(false);
   const [debugAsset, setDebugAsset] = useState<DeveloperAsset | null>(null);
-  const [activeTestCaseIndex, setActiveTestCaseIndex] = useState(0);
-  const [newTestCaseName, setNewTestCaseName] = useState("");
-  const [newTestCaseInput, setNewTestCaseInput] = useState("");
-  const [debugLogOutput, setDebugLogOutput] = useState("");
   const [debugStatus, setDebugStatus] = useState<"idle" | "testing" | "pass" | "fail">("idle");
+  const [currentStepIndex, setCurrentStepIndex] = useState<number>(-1);
+  const [terminalLogs, setTerminalLogs] = useState<Array<{ time: string; type: string; text: string }>>([]);
+  const [testStarted, setTestStarted] = useState(false);
+  const timeoutsRef = React.useRef<any[]>([]);
 
   const [deleteTarget, setDeleteTarget] = useState<DeveloperAsset | null>(null);
   const [flashMessage, setFlashMessage] = useState<string | null>(null);
@@ -224,11 +143,17 @@ export function DeveloperCenter({
     setCurrentPage(1);
   };
 
-  const handleOpenAddAsset = () => {
+  const handleOpenAddAsset = (type: "Skill" | "MCP Server" = "Skill") => {
     setIsEditing(false);
+    setFormErrors({});
+    setTagsInputText("");
     setCurrentAsset({
-      ...defaultAsset,
-      skillMd: "# 新能力说明\n\n描述该能力的运行机制、适用范围和 prompt 配置。",
+      ...DEFAULT_ASSET,
+      type,
+      project: "企业办公",
+      version: "v1.2.0",
+      description: "",
+      skillMd: "# 新能力说明\n\n描述该能力的运行机制、适用范围 and prompt 配置。",
       tools: ["query_schema_list", "retrieve_active_logs"],
       resources: ["db://default_schemas"],
       testCases: [
@@ -245,13 +170,97 @@ export function DeveloperCenter({
 
   const handleOpenEditAsset = (asset: DeveloperAsset) => {
     setIsEditing(true);
-    setCurrentAsset({ ...asset });
+    setFormErrors({});
+    setTagsInputText((asset.tags || []).join("，"));
+    const updated = { ...asset };
+    if (updated.type === "Skill") {
+      if (!updated.zipName) {
+        updated.zipName = `${updated.code || "skill"}_${updated.version || "v1.2.0"}.zip`;
+      }
+      if (!updated.zipSize) {
+        updated.zipSize = "32.1 KB";
+      }
+      if (!updated.zipFiles) {
+        updated.zipFiles = [
+          { name: "business_analysis_README.md", size: "18.2 KB" },
+          { name: "TASK_TEMPLATE.md", size: "14.0 KB" }
+        ];
+      }
+    }
+    setCurrentAsset(updated);
     setShowEditModal(true);
+  };
+
+  const handleZipFileUploaded = (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      setFormErrors(prev => ({ ...prev, zipName: "zip 大小不能超过 10MB" }));
+      return;
+    }
+    const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || "skill";
+    setCurrentAsset(prev => ({
+      ...prev,
+      zipName: file.name,
+      zipSize: `${(file.size / 1024).toFixed(1)} KB`,
+      zipFiles: [
+        { name: `${baseName}_README.md`, size: `${Math.max(1, Math.round(file.size * 0.45 / 1024))} KB` },
+        { name: "index.ts", size: `${Math.max(1, Math.round(file.size * 0.4 / 1024))} KB` },
+        { name: "package.json", size: "380 B" }
+      ]
+    }));
+    setFormErrors(prev => ({ ...prev, zipName: "" }));
   };
 
   const handleSaveAssetForm = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!currentAsset.name || !currentAsset.code) return;
+
+    const errors: Record<string, string> = {};
+    if (currentAsset.type === "Skill") {
+      if (!currentAsset.name || !currentAsset.name.trim()) {
+        errors.name = "Skill 名称不能为空";
+      } else if (currentAsset.name.length > 100) {
+        errors.name = "Skill 名称不能超过 100 个字符";
+      }
+
+      if (!currentAsset.code || !currentAsset.code.trim()) {
+        errors.code = "Slug 不能为空";
+      } else if (!/^[a-z0-9_-]{3,50}$/.test(currentAsset.code)) {
+        errors.code = "Slug 只允许小写字母、数字、下划线和中划线，3-50 个字符";
+      }
+
+      if (!currentAsset.project || !currentAsset.project.trim()) {
+        errors.project = "请选择业务分类";
+      }
+
+      const versionStr = currentAsset.version || "";
+      if (!versionStr.trim()) {
+        errors.version = "版本必填";
+      } else if (!/^v\d+\.\d+\.\d+$/.test(versionStr)) {
+        errors.version = "版本建议格式为 v1.2.0";
+      }
+
+      if (!currentAsset.zipName) {
+        errors.zipName = "Skill 文件必填";
+      }
+
+      const descStr = currentAsset.description || "";
+      if (!descStr.trim()) {
+        errors.description = "Skill 描述不能为空";
+      } else if (descStr.length > 300) {
+        errors.description = "Skill 描述不能超过 300 个字符";
+      }
+    } else {
+      if (!currentAsset.name || !currentAsset.name.trim()) {
+        errors.name = "能力资产名称不能为空";
+      }
+      if (!currentAsset.code || !currentAsset.code.trim()) {
+        errors.code = "系统唯一 Code 不能为空";
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
 
     if (isEditing) {
       setAssets((prev) =>
@@ -259,10 +268,15 @@ export function DeveloperCenter({
           item.id === currentAsset.id ? ({ ...item, ...currentAsset } as DeveloperAsset) : item,
         ),
       );
-      triggerFlashAlert(`能力 [${currentAsset.name}] 更新成功`);
+      triggerFlashAlert(
+        _langCode === "ZH" ? `能力 [${currentAsset.name}] 更新成功`
+        : _langCode === "JA" ? `機能 [${currentAsset.name}] を更新しました`
+        : _langCode === "ES" ? `Capacidad [${currentAsset.name}] actualizada con éxito`
+        : `Capability [${currentAsset.name}] updated successfully`
+      );
     } else {
       const newlyCreated: DeveloperAsset = {
-        ...defaultAsset,
+        ...DEFAULT_ASSET,
         ...currentAsset,
         id: `asset-${assets.length + 1}`,
         calls: 0,
@@ -271,14 +285,20 @@ export function DeveloperCenter({
         updatedAt: new Date().toISOString().replace("T", " ").substring(0, 19),
       } as DeveloperAsset;
       setAssets((prev) => [newlyCreated, ...prev]);
-      triggerFlashAlert(`新建能力 [${currentAsset.name}] 成功并保存为草稿`);
+      triggerFlashAlert(
+        _langCode === "ZH" ? `新建能力 [${currentAsset.name}] 成功并保存为草稿`
+        : _langCode === "JA" ? `新規機能 [${currentAsset.name}] を作成し、下書きとして保存しました`
+        : _langCode === "ES" ? `Nueva capacidad [${currentAsset.name}] creada y guardada como borrador`
+        : `New capability [${currentAsset.name}] created and saved as draft`
+      );
     }
 
     setShowEditModal(false);
   };
 
   const handlePublishAsset = (asset: DeveloperAsset) => {
-    const targetStatus: AssetStatus = currentRole === "Member" ? "published" : "published";
+    // Requirement 9: Resolve invalid currentRole check inside handlePublishAsset
+    const targetStatus: AssetStatus = currentRole === "Member" ? "reviewing" : "published";
     setAssets((prev) =>
       prev.map((item) =>
         item.id === asset.id
@@ -286,577 +306,469 @@ export function DeveloperCenter({
           : item,
       ),
     );
-    triggerFlashAlert(`能力 [${asset.name}] 已发布到能力市场`);
+
+    const isSubmitted = currentRole === "Member";
+    const msg = isSubmitted
+      ? (_langCode === "ZH" ? `已成功提交能力 [${asset.name}] 的发布申请至审核中心`
+         : _langCode === "JA" ? `機能 [${asset.name}] の公開申請を送信しました`
+         : _langCode === "ES" ? `La solicitud de publicación para [${asset.name}] ha sido enviada`
+         : `Capability [${asset.name}] has been submitted for review`)
+      : (_langCode === "ZH" ? `能力 [${asset.name}] 已发布到能力市场`
+         : _langCode === "JA" ? `機能 [${asset.name}] をマーケットに公開しました`
+         : _langCode === "ES" ? `La capacidad [${asset.name}] ha sido publicada en el mercado`
+         : `Capability [${asset.name}] has been published to market`);
+
+    triggerFlashAlert(msg);
   };
 
   const handleOfflineAsset = (asset: DeveloperAsset) => {
     setAssets((prev) => prev.map((item) => (item.id === asset.id ? { ...item, status: "offline" } : item)));
-    triggerFlashAlert(`能力 [${asset.name}] 已下线`);
+    triggerFlashAlert(
+      _langCode === "ZH" ? `能力 [${asset.name}] 已下线`
+      : _langCode === "JA" ? `機能 [${asset.name}] はオフラインになりました`
+      : _langCode === "ES" ? `La capacidad [${asset.name}] ahora está fuera de línea`
+      : `Capability [${asset.name}] is now offline`
+    );
   };
 
   const handleIncrementVersion = (asset: DeveloperAsset) => {
     const parts = asset.version.replace("v", "").split(".");
-    if (parts.length !== 3) return;
-    parts[1] = String(Number(parts[1]) + 1);
-    const version = `v${parts.join(".")}`;
+    let nextVersion = "1.3.0";
+    if (parts.length === 3) {
+      parts[1] = String(Number(parts[1]) + 1);
+      nextVersion = parts.join(".");
+    }
+    setNewVersionAsset(asset);
+    setNewVersionNum(nextVersion);
+    setNewVersionDesc("");
+    setNewVersionZipName("");
+    setNewVersionZipSize("");
+    setNewVersionZipFiles([]);
+    setNewVersionErrors({});
+    setShowNewVersionModal(true);
+  };
+
+  const handleNewVersionZipUploaded = (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      setNewVersionErrors(prev => ({ ...prev, zipName: "zip 大小不能超过 10MB" }));
+      return;
+    }
+    const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || "skill";
+    setNewVersionZipName(file.name);
+    setNewVersionZipSize(`${(file.size / 1024).toFixed(1)} KB`);
+    setNewVersionZipFiles([
+      { name: `${baseName}_README.md`, size: `${Math.max(1, Math.round(file.size * 0.45 / 1024))} KB` },
+      { name: "index.ts", size: `${Math.max(1, Math.round(file.size * 0.4 / 1024))} KB` },
+      { name: "package.json", size: "380 B" }
+    ]);
+    setNewVersionErrors(prev => ({ ...prev, zipName: "" }));
+  };
+
+  const handleSaveNewVersion = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!newVersionAsset) return;
+
+    const errors: Record<string, string> = {};
+    if (!newVersionNum.trim()) {
+      errors.version = "版本号不能为空";
+    } else if (!/^\d+\.\d+\.\d+$/.test(newVersionNum.trim())) {
+      errors.version = "格式不正确，应为 x.y.z";
+    }
+
+    if (!newVersionDesc.trim()) {
+      errors.description = "版本说明不能为空";
+    }
+
+    if (newVersionAsset.type === "Skill" && !newVersionZipName) {
+      errors.zipName = "请上传 Skill 压缩包文件";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setNewVersionErrors(errors);
+      return;
+    }
+
+    const versionStr = `v${newVersionNum.trim()}`;
     setAssets((prev) =>
       prev.map((item) =>
-        item.id === asset.id
-          ? { ...item, version, updatedAt: new Date().toISOString().replace("T", " ").substring(0, 19) }
-          : item,
-      ),
+        item.id === newVersionAsset.id
+          ? {
+              ...item,
+              version: versionStr,
+              zipName: newVersionAsset.type === "Skill" ? newVersionZipName : item.zipName,
+              zipSize: newVersionAsset.type === "Skill" ? newVersionZipSize : item.zipSize,
+              zipFiles: newVersionAsset.type === "Skill" ? newVersionZipFiles : item.zipFiles,
+              updatedAt: new Date().toISOString().replace("T", " ").substring(0, 19),
+            }
+          : item
+      )
     );
-    triggerFlashAlert(`已为 [${asset.name}] 创建新版本 ${version}`);
+
+    triggerFlashAlert(
+      _langCode === "ZH" ? `已成功创建新版本 [${newVersionAsset.name}] ${versionStr}`
+      : `Successfully created new version ${versionStr} for [${newVersionAsset.name}]`
+    );
+    setShowNewVersionModal(false);
   };
 
   const handleDeleteAsset = (asset: DeveloperAsset) => {
     setAssets((prev) => prev.filter((item) => item.id !== asset.id));
     setDeleteTarget(null);
-    triggerFlashAlert(`资产能力 [${asset.name}] 已从工作区移除`);
+    triggerFlashAlert(
+      _langCode === "ZH" ? `资产能力 [${asset.name}] 已从工作区移除`
+      : _langCode === "JA" ? `機能 [${asset.name}] をワークスペースから削除しました`
+      : _langCode === "ES" ? `La capacidad [${asset.name}] ha sido de-registrada`
+      : `Capability [${asset.name}] was removed from active workspace`
+    );
   };
 
   const handleCopyAssetCode = (asset: DeveloperAsset) => {
-    navigator.clipboard.writeText(asset.code);
-    triggerFlashAlert(`已复制标识：${asset.code}`);
-  };
-
-  const handleViewCallHistory = (asset: DeveloperAsset) => {
-    triggerFlashAlert(`调用记录入口：${asset.name}`);
+    const textToCopy = asset.type === "Skill" ? `${asset.name} (Slug: ${asset.code}):\n${asset.description || ""}` : asset.code;
+    navigator.clipboard.writeText(textToCopy);
+    triggerFlashAlert(
+      _langCode === "ZH" ? `已复制 Prompt 到剪贴板`
+      : _langCode === "JA" ? `Prompt をクリップボードにコピーしました`
+      : _langCode === "ES" ? `Prompt copiado al portapapeles`
+      : `Prompt copied to clipboard`
+    );
   };
 
   const handleOpenDebug = (asset: DeveloperAsset) => {
     setDebugAsset({ ...asset });
-    setActiveTestCaseIndex(0);
     setDebugStatus("idle");
-    setDebugLogOutput("");
+    setCurrentStepIndex(-1);
+    setTerminalLogs([]);
+    setTestStarted(false);
     setShowDebugModal(true);
   };
 
-  const handleAddTestCase = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!newTestCaseName.trim() || !newTestCaseInput.trim() || !debugAsset) return;
-
-    const newCase = {
-      id: `tc-new-${Date.now()}`,
-      name: newTestCaseName.trim(),
-      input: newTestCaseInput.trim(),
-      expected: "预期的标准化结果",
-    };
-
-    const updatedAsset = {
-      ...debugAsset,
-      testCases: [...(debugAsset.testCases || []), newCase],
-    };
-
-    setDebugAsset(updatedAsset);
-    setAssets((prev) => prev.map((item) => (item.id === debugAsset.id ? updatedAsset : item)));
-    setNewTestCaseName("");
-    setNewTestCaseInput("");
-    triggerFlashAlert("新增测试用例成功");
+  const formatTerminalTime = () => {
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    const mmm = String(d.getMilliseconds()).padStart(3, '0');
+    return `${hh}:${mm}:${ss}.${mmm}`;
   };
 
-  const handleTriggerTestRun = () => {
-    if (!debugAsset) return;
+  const runSimulation = (assetArg?: DeveloperAsset) => {
+    const targetAsset = assetArg || debugAsset;
+    if (!targetAsset) return;
+
+    // Clear prior timeouts
+    timeoutsRef.current.forEach((t) => clearTimeout(t));
+    timeoutsRef.current = [];
+
+    setTerminalLogs([]);
+    setCurrentStepIndex(0);
     setDebugStatus("testing");
-    setDebugLogOutput(">>> [SANDBOX] initializing model runtime sandbox channel...\n");
 
-    setTimeout(() => {
-      setDebugLogOutput((prev) =>
-        prev + `>>> [CONFIG] Loading transport config: ${debugAsset.type === "Skill" ? "Prompt instructions and meta definition" : `${debugAsset.transport} protocol integration`}\n`,
-      );
-    }, 400);
+    const pushLog = (type: string, text: string) => {
+      setTerminalLogs((prev) => [
+        ...prev,
+        {
+          time: formatTerminalTime(),
+          type,
+          text,
+        },
+      ]);
+    };
 
-    setTimeout(() => {
-      const activeCase = debugAsset.testCases?.[activeTestCaseIndex] || {
-        input: "无指定输入",
-        expected: "无预期",
-      };
-      setDebugLogOutput((prev) =>
-        prev + `>>> [INPUT_FED] fed input question: "${activeCase.input}"\n>>> Running system rules lookup and schema alignment...\n`,
-      );
-    }, 1000);
+    const serverUrl = targetAsset.serverUrl || `http://127.0.0.1:3000/api/mcp/${targetAsset.code}`;
 
-    setTimeout(() => {
-      setDebugLogOutput((prev) =>
-        prev + ">>> [CONNECTED] Received response successfully on 125ms.\n>>> [COMPARE] validating response output against test criteria: SUCCESS\n",
-      );
+    pushLog("START", `开始测试 MCP 服务: ${serverUrl}`);
+
+    // Offload simulation logs & steps to separate config
+    SIMULATION_LOGS.forEach((log) => {
+      const t = setTimeout(() => {
+        if (log.type === "SYSTEM_STEP") {
+          setCurrentStepIndex(log.nextStepIdx);
+        } else {
+          pushLog(log.type, log.text);
+        }
+      }, log.delay);
+      timeoutsRef.current.push(t);
+    });
+
+    const tFinish = setTimeout(() => {
       setDebugStatus("pass");
       setAssets((prev) =>
-        prev.map((item) => (item.id === debugAsset.id ? { ...item, recentTestStatus: "pass" } : item)),
+        prev.map((item) =>
+          item.id === targetAsset.id ? { ...item, recentTestStatus: "pass" } : item
+        )
       );
-    }, 2205);
+    }, SIMULATION_FINISH_DELAY);
+    timeoutsRef.current.push(tFinish);
   };
 
-  return (
-    <div className="dashboard-page-stack h-full overflow-hidden text-left" id="haze-developer-center-container">
-      {flashMessage && (
-        <div className="mx-4 mt-3 flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card p-2 text-xs font-semibold text-foreground shadow-sm">
-          <Check size={14} />
-          <span>{flashMessage}</span>
-        </div>
-      )}
+  // Dynamic Type Tab Counts
+  const allCount = assets.length;
+  const skillCount = assets.filter((item) => item.type === "Skill").length;
+  const mcpCount = assets.filter((item) => item.type === "MCP Server").length;
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 rounded-xl border border-border bg-background p-4">
-        <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">开发者中心</h1>
-            <p className="mt-1 text-sm text-muted-foreground">管理和发布企业内部的 Skill 与 MCP 能力</p>
+  const developerCenterTabs: TabItem[] = [
+    {
+      value: "all",
+      label: (
+        <span className="flex items-center gap-1">
+          {_langCode === "ZH" ? "全部" : _langCode === "JA" ? "全て" : _langCode === "ES" ? "Todo" : "All"} <span className="font-normal opacity-80">{allCount}</span>
+        </span>
+      ),
+    },
+    {
+      value: "Skill",
+      label: (
+        <span className="flex items-center gap-1">
+          Skill <span className="font-normal opacity-80">{skillCount}</span>
+        </span>
+      ),
+    },
+    {
+      value: "MCP Server",
+      label: (
+        <span className="flex items-center gap-1">
+          MCP <span className="font-normal opacity-80">{mcpCount}</span>
+        </span>
+      ),
+    },
+  ];
+
+  return (
+    <div className="dashboard-page-stack h-full overflow-hidden text-left font-sans flex flex-col gap-3 animate-in fade-in duration-300" id="haze-developer-center-container">
+      {/* Dynamic Animated Toast */}
+      <AnimatePresence>
+        {flashMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 35, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-900 px-4 py-3 text-xs font-bold text-white shadow-xl/90"
+          >
+            <Check size={14} className="text-emerald-400 shrink-0" />
+            <span>{flashMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <PageHeader
+        title={_langCode === "ZH" ? "开发者中心" : _langCode === "JA" ? "開発者センター" : _langCode === "ES" ? "Centro de Desarrolladores" : "Developer Center"}
+        description={_langCode === "ZH" ? "在此登记或上传托管的 Skill 及受控 MCP 节点服务并执行全沙箱运行调试" : _langCode === "JA" ? "ホスト型 Skill および制御された MCP ノードの登録・公開とデバッグを実行" : _langCode === "ES" ? "Registre y cargue servicios de Skill y MCP para pruebas de depuración" : "Configure and spin up hosted Skill engines or custom controlled MCP server nodes"}
+        breadcrumbs={[_langCode === "ZH" ? "首页" : _langCode === "JA" ? "ホーム" : _langCode === "ES" ? "Inicio" : "Home", _langCode === "ZH" ? "开发者中心" : _langCode === "JA" ? "開発者センター" : _langCode === "ES" ? "Centro de Desarrolladores" : "Developer Center"]}
+        actions={(
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="w-full sm:w-auto font-bold bg-slate-900 hover:bg-slate-800 text-white h-10 px-4 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors">
+                <Plus size={16} />
+                <span>{_langCode === "ZH" ? "注册能力" : _langCode === "JA" ? "新規追加" : _langCode === "ES" ? "Registrar" : "Add Capability"}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="text-xs bg-white text-slate-700 border border-slate-100 shadow-md rounded-xl p-1 w-[140px] z-50 animate-none">
+              <DropdownMenuItem
+                onClick={() => handleOpenAddAsset("Skill")}
+                className="cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center gap-1.5 animate-none"
+              >
+                <Code size={12} className="text-slate-400 animate-none" />
+                <span>{_langCode === "ZH" ? "上传 Skill" : "Upload Skill"}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleOpenAddAsset("MCP Server")}
+                className="cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center gap-1.5 animate-none"
+              >
+                <Cpu size={12} className="text-slate-400 animate-none" />
+                <span>{_langCode === "ZH" ? "注册 MCP" : "Register MCP"}</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      />
+
+      <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-border/75 bg-white shadow-sm p-4 pt-2.5 pb-2.5 gap-3 overflow-hidden" id="haze-developer-page-overhaul">
+
+        {/* Dynamic Type Filter Tabs */}
+        <div id="haze-developer-tabs-container" className="shrink-0">
+          <UnifiedTabs
+            value={activeTypeTab}
+            onValueChange={(value) => {
+              setActiveTypeTab(value as AssetTypeFilter);
+              resetToFirstPage();
+            }}
+            className="shrink-0 animate-fade-in"
+            listClassName="h-9 rounded-lg bg-slate-100/80 p-1 border-none"
+            triggerClassName="h-7 text-xs px-4 font-bold"
+            tabs={developerCenterTabs}
+          />
+        </div>
+
+        {/* Left Aligned Filters Toolbar - Heights of 40px */}
+        <div className="flex flex-wrap items-center gap-3 shrink-0" id="haze-developer-filter-toolbar">
+          <div className="relative w-full sm:w-[340px]">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 w-4 h-4" />
+            <Input
+              type="text"
+              placeholder={
+                _langCode === "ZH" ? "搜索资产名称、标识或工程..." 
+                : _langCode === "JA" ? "名前、ID、またはプロジェクトで検索..." 
+                : _langCode === "ES" ? "Buscar por nombre, ID o proyecto..." 
+                : "Search asset name, code or project..."
+              }
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full h-10 pl-10 pr-4 text-xs bg-background border border-border/70 rounded-lg focus-visible:ring-blue-500 text-foreground placeholder:text-muted-foreground font-semibold text-left"
+            />
           </div>
-          <Button onClick={handleOpenAddAsset} className="h-9 w-full shrink-0 px-4 sm:w-auto">
-            <Plus size={15} />
-            <span>注册能力</span>
+
+          <Combobox
+            value={statusFilter}
+            onValueChange={(val) => {
+              setStatusFilter(val as any);
+              setCurrentPage(1);
+            }}
+            items={[
+              { value: "all", label: _langCode === "ZH" ? "全部状态" : _langCode === "JA" ? "全ステータス" : _langCode === "ES" ? "Todos estados" : "All Status" },
+              { value: "published", label: _langCode === "ZH" ? "已发布" : _langCode === "JA" ? "公開済み" : _langCode === "ES" ? "Publicado" : "Published" },
+              { value: "draft", label: _langCode === "ZH" ? "草稿" : _langCode === "JA" ? "下書き" : _langCode === "ES" ? "Borrador" : "Draft" },
+              { value: "offline", label: _langCode === "ZH" ? "已下线" : _langCode === "JA" ? "オフライン" : _langCode === "ES" ? "Fuera de línea" : "Offline" },
+              { value: "reviewing", label: _langCode === "ZH" ? "审核中" : _langCode === "JA" ? "審査中" : _langCode === "ES" ? "En revisión" : "Reviewing" }
+            ]}
+            className="w-[180px]"
+          >
+            <ComboboxInput className="h-10 w-[180px] bg-background border border-border/70 font-semibold text-xs rounded-lg text-foreground focus:outline-hidden" placeholder={_langCode === "ZH" ? "全部状态" : _langCode === "JA" ? "全ステータス" : _langCode === "ES" ? "Todos estados" : "All Status"} />
+            <ComboboxContent className="w-[180px] bg-white">
+              <ComboboxList>
+                <ComboboxItem value="all">{_langCode === "ZH" ? "全部状态" : _langCode === "JA" ? "全ステータス" : _langCode === "ES" ? "Todos estados" : "All Status"}</ComboboxItem>
+                <ComboboxItem value="published">{_langCode === "ZH" ? "已发布" : _langCode === "JA" ? "公开済み" : _langCode === "ES" ? "Publicado" : "Published"}</ComboboxItem>
+                <ComboboxItem value="draft">{_langCode === "ZH" ? "草稿" : _langCode === "JA" ? "下書き" : _langCode === "ES" ? "Borrador" : "Draft"}</ComboboxItem>
+                <ComboboxItem value="offline">{_langCode === "ZH" ? "已下线" : _langCode === "JA" ? "オフライン" : _langCode === "ES" ? "Fuera de línea" : "Offline"}</ComboboxItem>
+                <ComboboxItem value="reviewing">{_langCode === "ZH" ? "审核中" : _langCode === "JA" ? "審査中" : _langCode === "ES" ? "En revisión" : "Reviewing"}</ComboboxItem>
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+
+          <Button
+            variant="ghost"
+            disabled={searchQuery === "" && statusFilter === "all" && activeTypeTab === "all"}
+            onClick={handleResetFilters}
+            className="h-10 px-4 text-xs font-semibold flex items-center justify-center gap-1 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-lg cursor-pointer transition-colors disabled:opacity-40 disabled:pointer-events-none"
+          >
+            <RotateCcw size={13} />
+            <span>{_langCode === "ZH" ? "重置" : _langCode === "JA" ? "リセット" : _langCode === "ES" ? "Reiniciar" : "Reset"}</span>
           </Button>
         </div>
 
-        <Card className="shrink-0 rounded-lg border-border bg-card shadow-sm">
-          <CardContent className="flex flex-col gap-3 p-4 xl:flex-row xl:items-center">
-            <Tabs
-              value={activeTypeTab}
-              onValueChange={(value) => {
-                setActiveTypeTab(value as AssetTypeFilter);
-                resetToFirstPage();
-              }}
-              className="w-full xl:w-[360px]"
-            >
-              <TabsList className="h-9 rounded-lg bg-muted/40">
-                <TabsTrigger value="all">全部</TabsTrigger>
-                <TabsTrigger value="Skill" className="gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  Skill
-                </TabsTrigger>
-                <TabsTrigger value="MCP Server" className="gap-1">
-                  <Cpu className="h-3 w-3" />
-                  MCP
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+        {/* Assets Main Table Content and Pagination Wrapper */}
+        <div className="flex-grow flex-1 min-h-0 flex flex-col gap-2" id="haze-developer-table-wrapper">
+          <DeveloperAssetTable
+            paginatedAssets={paginatedAssets}
+            langCode={_langCode}
+            onOpenDebug={handleOpenDebug}
+            onOpenEditAsset={handleOpenEditAsset}
+            onIncrementVersion={handleIncrementVersion}
+            onCopyAssetCode={handleCopyAssetCode}
+            onPublishAsset={handlePublishAsset}
+            onOfflineAsset={handleOfflineAsset}
+            onSetDeleteTarget={setDeleteTarget}
+          />
 
-            <div className="relative w-full xl:max-w-[360px]">
-              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="搜索资产名称、标识或工程"
-                value={searchQuery}
-                onChange={(event) => {
-                  setSearchQuery(event.target.value);
-                  resetToFirstPage();
-                }}
-                className="h-9 bg-background pl-9"
-              />
-            </div>
-
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => {
-                setStatusFilter(value as "all" | AssetStatus);
-                resetToFirstPage();
-              }}
-            >
-              <SelectTrigger className="h-9 w-full bg-background text-xs xl:w-[170px]">
-                <SelectValue placeholder="全部状态" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部状态</SelectItem>
-                <SelectItem value="draft">草稿</SelectItem>
-                <SelectItem value="reviewing">审核中</SelectItem>
-                <SelectItem value="published">已发布</SelectItem>
-                <SelectItem value="offline">已下线</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button variant="outline" className="h-9 w-full xl:ml-auto xl:w-auto" onClick={handleResetFilters}>
-              <RotateCcw size={14} />
-              重置
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="min-h-0 flex-1 overflow-hidden rounded-lg border-border bg-card shadow-sm">
-          <ScrollArea className="h-full w-full">
-            <div className="min-w-[980px]">
-              <Table>
-                <TableHeader className="border-b border-border bg-muted/30">
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="px-4 py-3 text-xs font-semibold text-muted-foreground">资产</TableHead>
-                    <TableHead className="w-[130px] px-4 py-3 text-xs font-semibold text-muted-foreground">类型</TableHead>
-                    <TableHead className="w-[90px] px-4 py-3 text-xs font-semibold text-muted-foreground">版本</TableHead>
-                    <TableHead className="w-[105px] px-4 py-3 text-xs font-semibold text-muted-foreground">状态</TableHead>
-                    <TableHead className="w-[130px] px-4 py-3 text-xs font-semibold text-muted-foreground">测试</TableHead>
-                    <TableHead className="w-[100px] px-4 py-3 text-xs font-semibold text-muted-foreground">调用</TableHead>
-                    <TableHead className="w-[230px] px-4 py-3 pr-6 text-right text-xs font-semibold text-muted-foreground">操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="divide-y divide-border text-xs">
-                  {paginatedAssets.map((asset) => (
-                    <TableRow key={asset.id} className="text-foreground transition-colors hover:bg-muted/30">
-                      <TableCell className="px-4 py-4">
-                        <div className="space-y-0.5">
-                          <p className="font-semibold text-foreground">{asset.name}</p>
-                          <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-                            <span className="font-mono">#{asset.code}</span>
-                            <span>/</span>
-                            <span className="truncate">{asset.project}</span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <Badge variant="secondary" className="gap-1 rounded-md px-2 py-1 text-xs font-semibold">
-                          {asset.type === "Skill" ? <Sparkles size={12} /> : <Cpu size={12} />}
-                          {asset.type === "Skill" ? "Skill 技能" : "MCP"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 font-mono font-semibold text-muted-foreground">{asset.version}</TableCell>
-                      <TableCell className="px-4 py-3">{renderStatusBadge(asset.status)}</TableCell>
-                      <TableCell className="px-4 py-3">{renderTestStatusBadge(asset.recentTestStatus)}</TableCell>
-                      <TableCell className="px-4 py-3 font-mono font-semibold text-foreground">{asset.calls} 次</TableCell>
-                      <TableCell className="px-4 py-3 text-right pr-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleOpenDebug(asset)} className="h-8 px-2.5">
-                            <Play size={13} />
-                            <span>调试</span>
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleOpenEditAsset(asset)} className="h-8 px-2.5">
-                            <Edit size={13} />
-                            <span>编辑</span>
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="icon" className="h-8 w-8">
-                                <MoreHorizontal size={14} />
-                                <span className="sr-only">更多操作</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {asset.status === "published" && (
-                                <DropdownMenuItem onClick={() => handleIncrementVersion(asset)}>
-                                  <ArrowUpCircle size={13} className="mr-2" />
-                                  新建版本
-                                </DropdownMenuItem>
-                              )}
-                              {(asset.status === "draft" || asset.status === "offline" || asset.status === "rejected") && (
-                                <DropdownMenuItem onClick={() => handlePublishAsset(asset)}>
-                                  <Send size={13} className="mr-2" />
-                                  发布
-                                </DropdownMenuItem>
-                              )}
-                              {asset.status === "published" && (
-                                <DropdownMenuItem onClick={() => handleOfflineAsset(asset)}>
-                                  <MinusCircle size={13} className="mr-2" />
-                                  下线
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem onClick={() => handleCopyAssetCode(asset)}>
-                                <Copy size={13} className="mr-2" />
-                                复制标识
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleViewCallHistory(asset)}>
-                                <History size={13} className="mr-2" />
-                                查看调用记录
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onSelect={(event) => { event.preventDefault(); setDeleteTarget(asset); }}>
-                                <Trash2 size={13} className="mr-2" />
-                                删除
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {paginatedAssets.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-40 text-center font-normal text-muted-foreground">
-                        暂无匹配的能力注册项
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </ScrollArea>
-
-          <div className="flex shrink-0 flex-col gap-3 border-t border-border px-4 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-            <span>共 {filteredAssets.length} 条</span>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={String(pageSize)}
-                onValueChange={(value) => {
-                  setPageSize(Number(value));
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="h-8 w-[110px] bg-background text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10 条/页</SelectItem>
-                  <SelectItem value="20">20 条/页</SelectItem>
-                  <SelectItem value="50">50 条/页</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={safeCurrentPage <= 1}
-                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-              >
-                <ChevronLeft size={14} />
-              </Button>
-              <span className="flex h-8 min-w-8 items-center justify-center rounded-md border border-border bg-primary px-2 font-semibold text-primary-foreground">
-                {safeCurrentPage}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={safeCurrentPage >= totalPages}
-                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-              >
-                <ChevronRight size={14} />
-              </Button>
-            </div>
-          </div>
-        </Card>
+          <DataTableFooter
+            totalItems={filteredAssets.length}
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+            langCode={_langCode}
+          />
+        </div>
       </div>
 
       <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent size="sm">
+        <AlertDialogContent size="sm" className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-base">删除能力</AlertDialogTitle>
-            <AlertDialogDescription className="text-xs">
-              确认删除 {deleteTarget?.name}？该操作会从当前工作区移除此能力。
+            <AlertDialogTitle className="text-base text-left">
+              {_langCode === "ZH" ? "删除能力" : _langCode === "JA" ? "機能の削除" : _langCode === "ES" ? "Eliminar capacidad" : "Delete Capability"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-left">
+              {_langCode === "ZH" ? `确认删除 ${deleteTarget?.name}？该操作会从当前工作区移除此能力。` 
+               : _langCode === "JA" ? `本当に ${deleteTarget?.name} を削除しますか？この操作によりワークスペースからアセットがクリーアされます。` 
+               : _langCode === "ES" ? `¿Está seguro de que desea eliminar ${deleteTarget?.name}? Esta acción eliminará esta capacidad de su espacio de trabajo.` 
+               : `Are you sure you want to delete ${deleteTarget?.name}? This action will remove this capability from the active workspace.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel size="sm">取消</AlertDialogCancel>
-            <AlertDialogAction size="sm" variant="destructive" onClick={() => deleteTarget && handleDeleteAsset(deleteTarget)}>
-              删除
+            <AlertDialogCancel size="sm" className="cursor-pointer">
+              {_langCode === "ZH" ? "取消" : _langCode === "JA" ? "キャンセル" : _langCode === "ES" ? "Cancelar" : "Cancel"}
+            </AlertDialogCancel>
+            <AlertDialogAction size="sm" variant="destructive" className="bg-rose-600 hover:bg-rose-700 text-white cursor-pointer border-none" onClick={() => deleteTarget && handleDeleteAsset(deleteTarget)}>
+              {_langCode === "ZH" ? "删除" : _langCode === "JA" ? "削除" : _langCode === "ES" ? "Eliminar" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs select-none">
-          <div className="absolute inset-0" onClick={() => setShowEditModal(false)} />
-          <div className="relative flex h-[560px] w-full max-w-2xl flex-col rounded-lg border border-border bg-card p-5 shadow-lg">
-            <div className="flex shrink-0 items-center justify-between border-b border-border pb-3">
-              <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
-                {currentAsset.type === "Skill" ? <Sparkles size={14} /> : <Cpu size={14} />}
-                <span>{isEditing ? `编辑资产配置 - ${currentAsset.name}` : "注册新企业 AI 能力"}</span>
-              </h3>
-              <button onClick={() => setShowEditModal(false)} className="text-muted-foreground hover:text-foreground">
-                <X size={16} />
-              </button>
-            </div>
+      {/* Modularized Configuration Modal for Adding/Editing */}
+      <DeveloperAssetFormDialog
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        currentAsset={currentAsset}
+        setCurrentAsset={setCurrentAsset}
+        tagsInputText={tagsInputText}
+        setTagsInputText={setTagsInputText}
+        formErrors={formErrors}
+        setFormErrors={setFormErrors}
+        onSave={handleSaveAssetForm}
+        onZipUploaded={handleZipFileUploaded}
+        onClearZip={() => {
+          setCurrentAsset(prev => ({ ...prev, zipName: undefined, zipSize: undefined, zipFiles: undefined }));
+        }}
+      />
 
-            <ScrollArea className="min-h-0 flex-1 py-4 pr-1">
-              <form onSubmit={handleSaveAssetForm} className="space-y-4">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <FormField label="能力资产名称">
-                    <Input
-                      required
-                      value={currentAsset.name || ""}
-                      onChange={(event) => setCurrentAsset((prev) => ({ ...prev, name: event.target.value }))}
-                      placeholder="财务报表摘要智能生成器"
-                    />
-                  </FormField>
-                  <FormField label="系统唯一 Code">
-                    <Input
-                      required
-                      value={currentAsset.code || ""}
-                      onChange={(event) => setCurrentAsset((prev) => ({ ...prev, code: event.target.value }))}
-                      placeholder="fin_summary_v1"
-                      className="font-mono"
-                    />
-                  </FormField>
-                </div>
+      {/* Modularized Versioning Dialogue */}
+      <NewVersionDialog
+        open={showNewVersionModal}
+        onClose={() => setShowNewVersionModal(false)}
+        newVersionAsset={newVersionAsset}
+        newVersionNum={newVersionNum}
+        setNewVersionNum={setNewVersionNum}
+        newVersionDesc={newVersionDesc}
+        setNewVersionDesc={setNewVersionDesc}
+        newVersionZipName={newVersionZipName}
+        newVersionZipSize={newVersionZipSize}
+        newVersionZipFiles={newVersionZipFiles}
+        onZipUploaded={handleNewVersionZipUploaded}
+        onClearZip={() => {
+          setNewVersionZipName("");
+          setNewVersionZipSize("");
+          setNewVersionZipFiles([]);
+        }}
+        newVersionErrors={newVersionErrors}
+        onSave={handleSaveNewVersion}
+      />
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <FormField label="类型">
-                    <Select
-                      value={currentAsset.type || "Skill"}
-                      disabled={isEditing}
-                      onValueChange={(value) => setCurrentAsset((prev) => ({ ...prev, type: value as DeveloperAsset["type"] }))}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Skill">Skill</SelectItem>
-                        <SelectItem value="MCP Server">MCP Server</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormField>
-                  <FormField label="所属工程">
-                    <Input
-                      value={currentAsset.project || ""}
-                      onChange={(event) => setCurrentAsset((prev) => ({ ...prev, project: event.target.value }))}
-                    />
-                  </FormField>
-                  <FormField label="版本">
-                    <Input
-                      value={currentAsset.version || ""}
-                      onChange={(event) => setCurrentAsset((prev) => ({ ...prev, version: event.target.value }))}
-                      className="font-mono"
-                    />
-                  </FormField>
-                </div>
-
-                <FormField label="能力描述">
-                  <textarea
-                    rows={3}
-                    value={currentAsset.description || ""}
-                    onChange={(event) => setCurrentAsset((prev) => ({ ...prev, description: event.target.value }))}
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-xs text-foreground shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-                  />
-                </FormField>
-
-                {currentAsset.type === "Skill" ? (
-                  <FormField label="SKILL.md">
-                    <textarea
-                      rows={8}
-                      value={currentAsset.skillMd || ""}
-                      onChange={(event) => setCurrentAsset((prev) => ({ ...prev, skillMd: event.target.value }))}
-                      className="w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-xs text-foreground shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-                    />
-                  </FormField>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <FormField label="Transport">
-                      <Select
-                        value={currentAsset.transport || "HTTP"}
-                        onValueChange={(value) => setCurrentAsset((prev) => ({ ...prev, transport: value as DeveloperAsset["transport"] }))}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="HTTP">HTTP</SelectItem>
-                          <SelectItem value="STDIO">STDIO</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormField>
-                    <FormField label="Server URL / Start Command">
-                      <Input
-                        value={currentAsset.serverUrl || currentAsset.startCommand || ""}
-                        onChange={(event) =>
-                          setCurrentAsset((prev) => ({
-                            ...prev,
-                            serverUrl: prev.transport === "HTTP" ? event.target.value : prev.serverUrl,
-                            startCommand: prev.transport === "STDIO" ? event.target.value : prev.startCommand,
-                          }))
-                        }
-                      />
-                    </FormField>
-                  </div>
-                )}
-              </form>
-            </ScrollArea>
-
-            <div className="flex shrink-0 justify-end gap-2 border-t border-border pt-4">
-              <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
-                取消
-              </Button>
-              <Button type="button" onClick={(event) => handleSaveAssetForm(event as unknown as React.FormEvent)}>
-                保存草稿
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showDebugModal && debugAsset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-xs select-none">
-          <div className="absolute inset-0" onClick={() => setShowDebugModal(false)} />
-          <div className="relative flex h-[620px] w-full max-w-4xl flex-col rounded-lg border border-border bg-card p-5 shadow-lg">
-            <div className="flex shrink-0 items-center justify-between border-b border-border pb-3">
-              <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
-                <Terminal size={14} />
-                <span>在线沙箱调试 - {debugAsset.name}</span>
-              </h3>
-              <button onClick={() => setShowDebugModal(false)} className="text-muted-foreground hover:text-foreground">
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 py-4 lg:grid-cols-[260px_1fr]">
-              <div className="min-h-0 rounded-lg border border-border bg-background p-3">
-                <p className="mb-2 text-xs font-bold text-foreground">测试用例</p>
-                <div className="space-y-2">
-                  {(debugAsset.testCases || []).map((testCase, index) => (
-                    <button
-                      key={testCase.id}
-                      type="button"
-                      onClick={() => setActiveTestCaseIndex(index)}
-                      className={`w-full rounded-lg border px-3 py-2 text-left text-xs ${
-                        activeTestCaseIndex === index ? "border-border bg-muted text-foreground" : "border-border bg-card text-muted-foreground"
-                      }`}
-                    >
-                      <span className="block font-semibold">{testCase.name}</span>
-                      <span className="mt-1 block truncate">{testCase.input}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <form onSubmit={handleAddTestCase} className="mt-4 space-y-2">
-                  <Input
-                    value={newTestCaseName}
-                    onChange={(event) => setNewTestCaseName(event.target.value)}
-                    placeholder="用例名称"
-                  />
-                  <textarea
-                    rows={3}
-                    value={newTestCaseInput}
-                    onChange={(event) => setNewTestCaseInput(event.target.value)}
-                    placeholder="输入内容"
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-xs text-foreground shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
-                  />
-                  <Button type="submit" variant="outline" className="w-full">
-                    新增用例
-                  </Button>
-                </form>
-              </div>
-
-              <div className="flex min-h-0 flex-col rounded-lg border border-border bg-background p-3">
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="text-xs font-bold text-foreground">运行日志</p>
-                  <Button onClick={handleTriggerTestRun} disabled={debugStatus === "testing"}>
-                    <Play size={13} />
-                    运行测试
-                  </Button>
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto rounded-lg bg-foreground p-3 font-mono text-[11px] leading-relaxed text-background">
-                  {debugLogOutput ? <pre className="whitespace-pre-wrap">{debugLogOutput}</pre> : "等待运行..."}
-                </div>
-                {debugStatus === "pass" && (
-                  <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-xs font-semibold text-emerald-700">
-                    <CheckCircle size={13} />
-                    测试对比通过
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex shrink-0 justify-end border-t border-border pt-4">
-              <Button variant="outline" onClick={() => setShowDebugModal(false)}>
-                关闭调试
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modularized Sandboxed MCP debugging terminal simulator */}
+      <McpConnectionTestDialog
+        open={showDebugModal}
+        onClose={() => setShowDebugModal(false)}
+        debugAsset={debugAsset}
+        langCode={_langCode}
+        debugStatus={debugStatus}
+        currentStepIndex={currentStepIndex}
+        terminalLogs={terminalLogs}
+        testStarted={testStarted}
+        onStartTest={() => {
+          if (!testStarted) {
+            setTestStarted(true);
+          }
+          runSimulation(debugAsset || undefined);
+        }}
+        onClearLogs={() => setTerminalLogs([])}
+        onTriggerAlert={triggerFlashAlert}
+      />
     </div>
-  );
-}
-
-function FormField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block space-y-1.5">
-      <span className="text-xs font-semibold text-foreground">{label}</span>
-      {children}
-    </label>
   );
 }

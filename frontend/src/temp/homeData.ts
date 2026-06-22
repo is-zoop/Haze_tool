@@ -287,3 +287,82 @@ export const MOCK_DASHBOARD_TODOS: DashboardTodo[] = [
   { id: "t3", title: "异常服务人工确认", subtitle: "[API Gateway Node 04] 断线中", count: 2, level: "danger" },
   { id: "t4", title: "即将过期 API 授权", subtitle: "外部厂商大模型调用 Token 续约", count: 4, level: "info" }
 ];
+
+export const MOCK_HOME_RECOMMEND = [
+  {
+    id: "sk_1",
+    name: "销售日报自动分析",
+    type: "Skill",
+    description: "汇聚并自动分析前一日全渠道销售数据，自动产出包含异动归因、趋势预测、高潜货品及爆款建议的结构化日报。",
+    author: "数据科学部",
+    time: "3小时前",
+    calls: "1.2k",
+    status: "published",
+    iconColor: "bg-blue-50 text-blue-600 border-blue-100",
+    iconName: "Sparkles"
+  },
+  {
+    id: "pub-3",
+    name: "合同法律条款风险审核",
+    type: "Skill",
+    description: "快速审查电子合同文本中的排他性、赔偿限额以及争议管辖权等条款风险并提示提示。",
+    author: "陈晓磊",
+    time: "1天前",
+    calls: "862",
+    status: "reviewing",
+    iconColor: "bg-purple-50 text-purple-600 border-purple-100",
+    iconName: "Sparkles"
+  },
+  {
+    id: "pub-2",
+    name: "企业内部数据库安全连接服务",
+    type: "MCP Server",
+    description: "提供安全只读 SQL 执行、高频数据实体视图导出、模式元数据检索的 MCP 服务。",
+    author: "王磊 (Leo)",
+    time: "2天前",
+    calls: "2.1k",
+    status: "published",
+    iconColor: "bg-indigo-50 text-indigo-600 border-indigo-100",
+    iconName: "Cpu"
+  }
+];
+
+export const MOCK_HOME_POPULAR = [
+  {
+    id: "sk_2",
+    name: "企业知识检索助手",
+    type: "Skill",
+    description: "一站式极速检索、提炼企业所有历史规章制度、福利标准、技术红皮书，安全防泄露，带有溯源引用。",
+    author: "信息安全部",
+    time: "2026-06-14",
+    calls: "5.4k",
+    status: "published",
+    iconColor: "bg-blue-50 text-blue-600 border-blue-100",
+    iconName: "Sparkles"
+  },
+  {
+    id: "sk_5",
+    name: "Excel 数据智能化加工",
+    type: "Skill",
+    description: "高级复杂多表 VLOOKUP 替换、乱码清理、格式对齐以及透视表自动设计。用自然语言解决千奇百怪的复杂统计整理诉求。",
+    author: "财务共享部",
+    time: "2026-06-13",
+    calls: "1.5k",
+    status: "published",
+    iconColor: "bg-purple-50 text-purple-600 border-purple-100",
+    iconName: "Sparkles"
+  },
+  {
+    id: "sk_1",
+    name: "销售日报自动分析",
+    type: "Skill",
+    description: "汇聚并自动分析前一日全渠道销售数据，自动产出包含异动归因、趋势预测、高潜货品及爆款建议的结构化日报。",
+    author: "数据科学部",
+    time: "2026-06-12",
+    calls: "1.2k",
+    status: "published",
+    iconColor: "bg-indigo-50 text-indigo-600 border-indigo-100",
+    iconName: "Sparkles"
+  }
+];
+

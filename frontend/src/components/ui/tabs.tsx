@@ -12,7 +12,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground w-full border border-border",
+      "inline-flex h-9 items-center justify-center rounded-lg bg-slate-100/80 p-1 text-slate-500",
       className
     )}
     {...props}
@@ -20,16 +20,14 @@ const TabsList = React.forwardRef<
 ))
 TabsList.displayName = TabsPrimitive.List.displayName
 
-const TabsTrigger = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->((({ className, ...props }, ref) => (
+const TabsTrigger = React.forwardRef<any, any>((({ className, ...props }: any, ref) => (
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-xs font-semibold ring-offset-background transition-all focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs flex-1 cursor-pointer",
+      "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-xs font-semibold ring-offset-background transition-all focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-xs cursor-pointer",
       className
     )}
+    value={props.value}
     {...props}
   />
 )) as any) // Add casting to any for safety or let it infer correctly without types mismatch if react types of forwardRef are strict. Let's keep signature identical to original trigger.

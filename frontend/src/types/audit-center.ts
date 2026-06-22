@@ -33,6 +33,8 @@ export interface AuditRequest {
   description: string; // 简短申请说明
   hasBlocker: boolean;
   blockReason?: string;
+  submittedAt?: string;
+  reviewedAt?: string;
 }
 
 export interface AuditHistoryItem {

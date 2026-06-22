@@ -36,6 +36,10 @@ export interface DeveloperAsset {
   skillMd?: string;
   dependentTools?: string[];
   testCases?: TestCase[];
+  icon?: string;
+  zipName?: string;
+  zipSize?: string;
+  zipFiles?: { name: string; size: string }[];
 
   // MCP Server-specific fields
   transport?: "HTTP" | "STDIO";
