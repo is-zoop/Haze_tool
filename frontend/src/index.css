@@ -175,7 +175,7 @@ button,
 input,
 textarea,
 select {
-  font: inherit;
+  font-family: inherit;
 }
 
 input:-webkit-autofill,
