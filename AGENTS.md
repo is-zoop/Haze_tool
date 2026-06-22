@@ -68,3 +68,17 @@ Before completing a task, check:
 6. Is the code simple, readable, and easy to maintain?
 7. Were user-facing strings added to i18n when required?
 8. Did the change avoid unintended UI redesign?
+
+
+## Preview / Browser Policy
+
+1. Do not start browser preview unless the user explicitly asks for it.
+2. Do not automatically run Vite dev server for visual verification.
+3. Do not use browser automation, Playwright, Chrome DevTools, or screenshots unless explicitly requested.
+4. For frontend tasks, prefer static validation:
+   - npm run build
+   - TypeScript check
+   - lint if available
+   - git diff review
+5. If visual verification is needed, stop and ask the user before starting any dev server or browser.
+6. Do not keep background dev server processes running after checks.
