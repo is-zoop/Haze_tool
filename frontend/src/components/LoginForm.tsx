@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Mail, Lock, Eye, EyeOff, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
+import { Mail, User, Lock, Eye, EyeOff, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
 import { GoogleIcon } from "./GoogleIcon";
 import { motion, AnimatePresence } from "motion/react";
 import { Input } from "@/components/ui/input";
@@ -50,16 +50,11 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
     setErrorMsg("");
     setSuccessMsg("");
 
-    if (!email) {
-      setErrorMsg("Please enter your email address.");
-      return;
-    }
-    if (!validateEmail(email)) {
-      setErrorMsg("Please enter a valid email address.");
-      return;
-    }
-
     if (authMode === "signin") {
+      if (!email.trim()) {
+        setErrorMsg("Please enter your username.");
+        return;
+      }
       if (!password) {
         setErrorMsg("Please enter your password.");
         return;
@@ -77,6 +72,14 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
       }, 1500);
 
     } else if (authMode === "signup") {
+      if (!email) {
+        setErrorMsg("Please enter your email address.");
+        return;
+      }
+      if (!validateEmail(email)) {
+        setErrorMsg("Please enter a valid email address.");
+        return;
+      }
       if (!fullName) {
         setErrorMsg("Please enter your full name.");
         return;
@@ -99,6 +102,14 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
       }, 1500);
 
     } else if (authMode === "forgot") {
+      if (!email) {
+        setErrorMsg("Please enter your email address.");
+        return;
+      }
+      if (!validateEmail(email)) {
+        setErrorMsg("Please enter a valid email address.");
+        return;
+      }
       setIsLoading(true);
       setTimeout(() => {
         setIsLoading(false);
@@ -208,13 +219,13 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
                 <div className="flex-1 h-px bg-border"></div>
               </div>
 
-              {/* Email field */}
+              {/* Username field */}
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5 rounded-xl border border-input focus-within:border-ring bg-card px-3.5 py-3 shadow-2xs focus-within:ring-1 focus-within:ring-ring transition-all">
-                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <User className="h-4 w-4 text-muted-foreground shrink-0" />
                   <Input
-                    type="email"
-                    placeholder="Your email"
+                    type="text"
+                    placeholder="Username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}

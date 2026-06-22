@@ -2,7 +2,6 @@ import { Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -10,13 +9,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Combobox,
   ComboboxContent,
@@ -78,11 +70,6 @@ export function DeveloperAssetFormDialog({
               <DialogTitle className="text-base font-bold text-slate-800 flex items-center leading-tight">
                 {currentAsset.type === "MCP Server" ? "编辑 MCP 配置" : "编辑 Skill 配置"}
               </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mt-1">
-                {currentAsset.type === "MCP Server" 
-                  ? "修改 MCP 基础信息、业务分类、连接方式和上传文件。"
-                  : "修改 Skill 基础信息、业务分类、版本和上传文件。"}
-              </DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -200,28 +187,36 @@ export function DeveloperAssetFormDialog({
               required
               error={formErrors.project}
             >
-              <Select
+              <Combobox
                 value={currentAsset.project || "企业办公"}
-                onValueChange={(val) => {
-                  setCurrentAsset((prev) => ({ ...prev, project: val }));
+                onValueChange={(value) => {
+                  setCurrentAsset((prev) => ({ ...prev, project: String(value) }));
                   if (formErrors.project) {
-                    setFormErrors(prev => ({ ...prev, project: "" }));
+                    setFormErrors((prev) => ({ ...prev, project: "" }));
                   }
                 }}
+                items={CUSTOM_CATEGORIES.filter((category) => category.id !== "all").map((category) => ({
+                  value: category.zh,
+                  label: category.zh,
+                }))}
+                className="w-full"
               >
-                <SelectTrigger className={`w-full h-9 text-xs bg-white text-slate-800 rounded-lg border-slate-200 ${
-                  formErrors.project ? "border-destructive focus-visible:ring-destructive" : ""
-                }`}>
-                  <SelectValue placeholder="选择业务分类" />
-                </SelectTrigger>
-                <SelectContent position="popper" align="start" className="w-[var(--radix-select-trigger-width)] bg-popover">
-                  {CUSTOM_CATEGORIES.filter((c) => c.id !== "all").map((c) => (
-                    <SelectItem key={c.id} value={c.zh} className="text-xs">
-                      {c.zh}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <ComboboxInput
+                  className={`h-9 w-full bg-white text-xs font-normal text-slate-800 ${
+                    formErrors.project ? "border-destructive focus:border-destructive focus:ring-destructive/20" : "border-slate-200"
+                  }`}
+                  placeholder="选择业务分类"
+                />
+                <ComboboxContent className="w-full bg-white">
+                  <ComboboxList>
+                    {CUSTOM_CATEGORIES.filter((category) => category.id !== "all").map((category) => (
+                      <ComboboxItem key={category.id} value={category.zh} className="font-normal">
+                        {category.zh}
+                      </ComboboxItem>
+                    ))}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
             </FormField>
 
             {/* 能力标签 (Requirement 3) */}

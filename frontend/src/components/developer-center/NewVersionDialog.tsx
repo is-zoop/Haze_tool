@@ -1,8 +1,7 @@
 import React from "react";
 import { Sparkles } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DeveloperAsset } from "../../types/developer-center";
 import { FormField } from "./FormField";
@@ -53,9 +52,6 @@ export function NewVersionDialog({
               <DialogTitle className="text-base font-bold text-slate-800 flex items-center leading-tight">
                 新建{newVersionAsset?.name}版本
               </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mt-1">
-                创建此能力的下一个子版本，可自定义版本号、添加版本改动说明，并上传相关的部署文件。
-              </DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -64,10 +60,10 @@ export function NewVersionDialog({
           {/* 1. Skill名称和版本号 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             <FormField label="Skill 名称">
-              <Input
+              <input
                 disabled
                 value={newVersionAsset?.name || ""}
-                className="h-9 text-xs bg-slate-50 text-slate-505 rounded-lg border-slate-205 cursor-not-allowed select-none font-medium text-left"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-left text-xs font-medium text-slate-500 shadow-xs cursor-not-allowed select-none outline-none"
               />
             </FormField>
 
@@ -82,7 +78,7 @@ export function NewVersionDialog({
                 <span className="flex items-center justify-center bg-slate-50 text-slate-500 font-bold px-3 py-1.5 border-r border-input h-full text-xs select-none">
                   v
                 </span>
-                <Input
+                <input
                   required
                   type="text"
                   value={newVersionNum}
@@ -91,7 +87,7 @@ export function NewVersionDialog({
                     setNewVersionNum(val);
                   }}
                   placeholder="建议遵循语义化版本，输入其数字部分：如 1.3.0"
-                  className="flex-1 bg-white px-3 text-xs focus:outline-hidden text-foreground h-full font-mono font-medium"
+                  className="h-full min-w-0 flex-1 border-0 bg-white px-3 text-xs font-medium text-foreground outline-none font-mono"
                 />
               </div>
             </FormField>

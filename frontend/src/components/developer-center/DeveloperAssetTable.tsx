@@ -263,48 +263,50 @@ export function DeveloperAssetTable({
                               <MoreHorizontal size={14} />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="text-xs bg-white text-slate-700 border border-slate-100 shadow-md rounded-xl p-1 w-[140px] z-50">
-                            {asset.status === "published" && (
-                              <DropdownMenuItem
-                                onClick={() => onIncrementVersion(asset)}
-                                className="cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center gap-1.5"
-                              >
-                                <ArrowUpCircle size={12} className="text-slate-400" />
-                                <span>{langCode === "ZH" ? "新建版本" : langCode === "JA" ? "新バージョン" : langCode === "ES" ? "Nueva versión" : "New Version"}</span>
-                              </DropdownMenuItem>
-                            )}
+                          <DropdownMenuContent
+                            align="end"
+                            collisionPadding={12}
+                            className="z-50 w-auto min-w-40 rounded-xl border border-slate-100 bg-white p-1 text-xs text-slate-700 shadow-md"
+                          >
+                            <DropdownMenuItem
+                              disabled={asset.status !== "published"}
+                              onClick={() => onIncrementVersion(asset)}
+                              className="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg p-2 font-bold hover:bg-slate-50 focus:bg-slate-50"
+                            >
+                              <ArrowUpCircle size={12} className="text-slate-400" />
+                              <span>{langCode === "ZH" ? "新建版本" : langCode === "JA" ? "新バージョン" : langCode === "ES" ? "Nueva versión" : "New Version"}</span>
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => onCopyAssetCode(asset)}
-                              className="cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center gap-1.5"
+                              className="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg p-2 font-bold hover:bg-slate-50 focus:bg-slate-50"
                             >
                               <Copy size={12} className="text-slate-400" />
-                              <span>{langCode === "ZH" ? "复制Prompt" : langCode === "JA" ? "Promptをコピー" : langCode === "ES" ? "Copiar Prompt" : "Copy Prompt"}</span>
+                              <span>{langCode === "ZH" ? "复制 Prompt" : langCode === "JA" ? "Promptをコピー" : langCode === "ES" ? "Copiar Prompt" : "Copy Prompt"}</span>
                             </DropdownMenuItem>
-
-                            {/* Requirement 9: Hiding/Disabling un-implemented call history entry to avoid raw toast popping only */}
-                            {/* We can omit/hide it for clean UI */}
 
                             <DropdownMenuSeparator />
 
-                            <DropdownMenuItem
-                              onClick={() => onPublishAsset(asset)}
-                              className="cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center gap-1.5"
-                            >
-                              <Send size={12} className="text-slate-400" />
-                              <span>{langCode === "ZH" ? "发布" : langCode === "JA" ? "公開する" : langCode === "ES" ? "Publicar" : "Publish"}</span>
-                            </DropdownMenuItem>
-                            {asset.status === "published" && (
+                            {asset.status === "published" ? (
                               <DropdownMenuItem
                                 onClick={() => onOfflineAsset(asset)}
-                                className="cursor-pointer font-bold p-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700 focus:bg-rose-50 rounded-lg flex items-center gap-1.5"
+                                className="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg p-2 font-bold text-rose-600 hover:bg-rose-50 hover:text-rose-700 focus:bg-rose-50"
                               >
                                 <MinusCircle size={12} className="text-rose-500" />
                                 <span>{langCode === "ZH" ? "下线" : langCode === "JA" ? "非公開" : langCode === "ES" ? "Fuera de línea" : "Offline"}</span>
                               </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                disabled={asset.status === "reviewing"}
+                                onClick={() => onPublishAsset(asset)}
+                                className="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg p-2 font-bold hover:bg-slate-50 focus:bg-slate-50"
+                              >
+                                <Send size={12} className="text-slate-400" />
+                                <span>{langCode === "ZH" ? "发布" : langCode === "JA" ? "公開する" : langCode === "ES" ? "Publicar" : "Publish"}</span>
+                              </DropdownMenuItem>
                             )}
                             <DropdownMenuItem
                               onSelect={(event) => { event.preventDefault(); onSetDeleteTarget(asset); }}
-                              className="cursor-pointer font-bold p-2 text-destructive hover:bg-destructive/10 focus:bg-destructive/10 rounded-lg flex items-center gap-1.5"
+                              className="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg p-2 font-bold text-destructive hover:bg-destructive/10 focus:bg-destructive/10"
                             >
                               <Trash2 size={12} />
                               <span>{langCode === "ZH" ? "删除" : langCode === "JA" ? "削除" : langCode === "ES" ? "Eliminar" : "Delete"}</span>
