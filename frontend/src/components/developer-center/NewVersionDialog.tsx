@@ -3,6 +3,7 @@ import { Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { DeveloperAsset } from "../../types/developer-center";
 import { FormField } from "./FormField";
 import { ZipUploadField } from "./ZipUploadField";
@@ -81,7 +82,7 @@ export function NewVersionDialog({
                 <span className="flex items-center justify-center bg-slate-50 text-slate-500 font-bold px-3 py-1.5 border-r border-input h-full text-xs select-none">
                   v
                 </span>
-                <input
+                <Input
                   required
                   type="text"
                   value={newVersionNum}
@@ -101,7 +102,7 @@ export function NewVersionDialog({
             required
             error={newVersionErrors.description}
           >
-            <textarea
+            <Textarea
               required
               rows={3}
               value={newVersionDesc}

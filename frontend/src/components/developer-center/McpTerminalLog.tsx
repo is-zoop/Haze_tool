@@ -43,7 +43,7 @@ export function McpTerminalLog({
           variant="outline"
           size="sm"
           onClick={onClearLogs}
-          className="h-7 px-2.5 text-[10px] bg-white border-slate-200 text-slate-500 hover:text-slate-800 rounded-md transition-colors cursor-pointer select-none"
+          className="h-7 px-2.5 text-xs bg-white border-slate-200 text-slate-500 hover:text-slate-800 rounded-md transition-colors cursor-pointer select-none"
         >
           <Trash2 className="h-3.5 w-3.5 mr-1 text-slate-400 inline" />
           {langCode === "ZH" ? "清空日志" : "Clear Logs"}
@@ -51,7 +51,7 @@ export function McpTerminalLog({
       </div>
 
       {/* Dark Monospace Terminal Logs Frame */}
-      <div className="relative min-h-0 flex-1 overflow-y-auto rounded-b-xl bg-slate-950 p-4 font-mono select-text">
+      <div className="relative min-h-0 flex-1 overflow-y-auto rounded-b-xl bg-slate-950 p-4 text-code select-text">
         {/* Floating Action: Copy Log content */}
         {terminalLogs.length > 0 && (
           <button
@@ -69,16 +69,16 @@ export function McpTerminalLog({
             terminalLogs.map((log, index) => (
               <div
                 key={index}
-                className="flex items-start gap-2.5 text-[11px] leading-relaxed"
+                className="flex items-start gap-2.5 leading-5"
               >
                 {/* Log hours stamp */}
-                <span className="text-slate-500 shrink-0 font-medium select-none">
+                <span className="text-slate-500 shrink-0 font-normal tabular-nums select-none">
                   [{log.time}]
                 </span>
 
                 {/* Log custom typed badges */}
                 <span
-                  className={`shrink-0 font-bold select-none ${
+                  className={`shrink-0 font-semibold select-none ${
                     log.type === "START"
                       ? "text-sky-400"
                       : log.type === "HTTP"
@@ -101,9 +101,9 @@ export function McpTerminalLog({
 
                 {/* Line statement */}
                 <span
-                  className={`flex-grow break-all font-medium ${
+                  className={`flex-grow break-all font-normal ${
                     log.type === "SUCCESS"
-                      ? "text-emerald-400 font-extrabold shadow-emerald-500/10"
+                      ? "text-emerald-400 font-semibold shadow-emerald-500/10"
                       : "text-slate-100"
                   }`}
                 >
@@ -112,7 +112,7 @@ export function McpTerminalLog({
               </div>
             ))
           ) : (
-            <div className="flex h-full min-h-[300px] items-center justify-center text-slate-500 text-[11px] select-none text-center">
+            <div className="flex h-full min-h-[300px] items-center justify-center text-slate-500 text-xs select-none text-center">
               <div>
                 <Terminal className="h-6 w-6 mx-auto mb-2 opacity-35" />
                 <span>

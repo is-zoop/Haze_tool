@@ -400,8 +400,8 @@ function CodeBlock({ children, className, langCode = "ZH" }: { children: any; cl
   };
 
   return (
-    <div className="relative my-5 overflow-hidden rounded-lg border border-slate-200 bg-slate-950 shadow-sm text-slate-100 font-mono text-[11px]">
-      <div className="flex items-center justify-between bg-slate-900 px-3.5 py-2 text-[10px] text-slate-400 border-b border-slate-800 border-solid">
+    <div className="relative my-5 overflow-hidden rounded-lg border border-slate-200 bg-slate-950 shadow-sm text-slate-100 font-mono text-xs">
+      <div className="flex items-center justify-between bg-slate-900 px-3.5 py-2 text-xs text-slate-400 border-b border-slate-800 border-solid">
         <div className="flex items-center gap-1.5 font-bold tracking-tight">
           <span className="flex h-2 w-2 rounded-full bg-slate-700" />
           <span className="font-mono uppercase">{lang}</span>
@@ -445,7 +445,7 @@ function FaqSection({ faqs, langCode = "ZH" }: { faqs?: Array<{ q: string; a: st
 
   return (
     <div className="mt-12 border-t border-slate-100 pt-8" id="faq-section">
-      <h2 className="text-sm font-black text-slate-900 mb-4 flex items-center gap-2" style={{ fontWeight: "900" }}>
+      <h2 className="text-sm font-black text-slate-900 mb-4 flex items-center gap-2">
         <HelpCircle className="h-4.5 w-4.5 text-blue-500" />
         {langCode === "ZH" ? "常见问题 FAQs" : langCode === "JA" ? "よくある質問 FAQs" : langCode === "ES" ? "Preguntas frecuentes FAQs" : "Frequently Asked Questions FAQs"}
       </h2>
@@ -633,7 +633,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
         const title = getTextFromChildren(children);
         const id = title.replace(/[^\w\u4e00-\u9fa5a-zA-Z0-9-]/g, "-").toLowerCase();
         return (
-          <h2 id={id} className="scroll-m-20 text-md font-black text-slate-950 mt-10 mb-4 border-b border-slate-100 pb-2.5 flex items-center gap-2 group" style={{ fontWeight: "900" }}>
+          <h2 id={id} className="scroll-m-20 text-md font-black text-slate-950 mt-10 mb-4 border-b border-slate-100 pb-2.5 flex items-center gap-2 group">
             <span className="text-blue-500 font-black">#</span>
             {children}
           </h2>
@@ -643,7 +643,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
         const title = getTextFromChildren(children);
         const id = title.replace(/[^\w\u4e00-\u9fa5a-zA-Z0-9-]/g, "-").toLowerCase();
         return (
-          <h3 id={id} className="scroll-m-20 text-[13px] font-black text-slate-800 mt-7 mb-3 flex items-center gap-1.5" style={{ fontWeight: "900" }}>
+          <h3 id={id} className="scroll-m-20 text-sm font-black text-slate-800 mt-7 mb-3 flex items-center gap-1.5">
             <span className="text-blue-600 font-extrabold">•</span>
             {children}
           </h3>
@@ -703,7 +703,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
         return <tr className="hover:bg-slate-50/40 transition-colors">{children}</tr>;
       },
       th: ({ children }: any) => {
-        return <th className="p-3.5 font-bold text-slate-800 text-[11px] uppercase tracking-wide">{children}</th>;
+        return <th className="p-3.5 font-bold text-slate-800 text-xs uppercase tracking-wide">{children}</th>;
       },
       td: ({ children }: any) => {
         return <td className="p-3.5 align-middle text-slate-600 text-xs leading-relaxed font-medium">{children}</td>;
@@ -714,7 +714,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
           return <CodeBlock className={className}>{children}</CodeBlock>;
         }
         return (
-          <code className="mx-1 px-1.5 py-0.5 rounded bg-slate-50 text-[11px] font-mono text-slate-800 border border-slate-200">
+          <code className="mx-1 px-1.5 py-0.5 rounded bg-slate-50 text-xs font-mono text-slate-800 border border-slate-200">
             {children}
           </code>
         );
@@ -790,7 +790,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   <activeMeta.icon className="h-4.5 w-4.5 text-blue-600" />
-                  <h1 className="text-sm font-black text-slate-950" style={{ fontWeight: "900" }}>{getSectionTitle(activeMeta.id, _langCode)}</h1>
+                  <h1 className="text-sm font-black text-slate-950">{getSectionTitle(activeMeta.id, _langCode)}</h1>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {GUIDE_SECTIONS.map((section) => (
@@ -798,7 +798,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
                       key={section.id}
                       variant={activeSection === section.id ? "default" : "outline"}
                       size="sm"
-                      className="h-8 px-2.5 text-[10.5px] font-bold"
+                      className="h-8 px-2.5 text-xs font-bold"
                       onClick={() => handleSectionChange(section.id)}
                     >
                       {getSectionTitle(section.id, _langCode)}
@@ -816,14 +816,14 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
                 <div className="mb-8 border-b border-slate-100 pb-8">
                   <div className="flex flex-col gap-4.5 md:flex-row md:items-start md:justify-between">
                     <div className="space-y-3.5 max-w-[580px]">
-                      <h1 className="text-lg font-black text-slate-950 font-sans tracking-tight" style={{ fontWeight: "900" }}>
+                      <h1 className="text-lg font-black text-slate-950 font-sans tracking-tight">
                         {getSectionTitle(activeSection, _langCode)}
                       </h1>
                       <p className="text-xs leading-5.5 text-slate-500 font-medium">
                         {meta.description}
                       </p>
                       
-                      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-1.5 text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-1.5 text-xs text-slate-400 font-semibold uppercase tracking-wider">
                         <span className="flex items-center gap-1.5">
                           <Clock3 className="h-3.5 w-3.5 text-slate-400" />
                           {_langCode === "ZH" ? "最后更新" : _langCode === "JA" ? "最終更新" : _langCode === "ES" ? "Última actualización" : "Last updated"}: {meta.updatedAt || "2026-06-16"}
@@ -845,7 +845,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
                       {meta.downloadLabel && (
                         <Button
                           variant="outline"
-                          className="h-9 px-3.5 rounded-lg bg-white hover:bg-slate-50 text-[11px] border border-slate-200 text-slate-700 font-bold flex items-center justify-center gap-1.5 shadow-sm shrink-0 cursor-pointer w-full md:w-auto"
+                          className="h-9 px-3.5 rounded-lg bg-white hover:bg-slate-50 text-xs border border-slate-200 text-slate-700 font-bold flex items-center justify-center gap-1.5 shadow-sm shrink-0 cursor-pointer w-full md:w-auto"
                           onClick={() => {
                             alert(`正在开始下载示例包 "${meta.downloadLabel}" 到本地目录...\n源地址: ${meta.downloadUrl}`);
                           }}
@@ -857,7 +857,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
                       
                       {meta.actionLabel && (
                         <Button
-                          className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 shadow-sm transition-all shrink-0 cursor-pointer w-full md:w-auto"
+                          className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all shrink-0 cursor-pointer w-full md:w-auto"
                           onClick={() => handleActionClick(meta.actionMenu)}
                         >
                           <ArrowUpRight className="h-4 w-4" />
@@ -889,15 +889,15 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
                         return (
                           <Card key={item.id} className="rounded-lg border-2 border-slate-100/50 hover:border-slate-200/80 bg-white relative p-4 shadow-none overflow-hidden hover:shadow-none transition-all duration-200">
                             <div className="flex items-center justify-between mb-3.5">
-                              <span className={cn("flex h-6 w-6 items-center justify-center rounded-full text-xs font-black", colors.numBg)} style={{ fontWeight: "900" }}>
+                              <span className={cn("flex h-6 w-6 items-center justify-center rounded-full text-xs font-black", colors.numBg)}>
                                 {item.id}
                               </span>
                               <div className={cn("p-1.5 rounded-md", colors.iconBg)}>
                                 <Icon className="h-3.5 w-3.5" />
                               </div>
                             </div>
-                            <p className="text-[11px] font-black text-slate-900 mb-1 leading-tight" style={{ fontWeight: "900" }}>{localItem.title}</p>
-                            <p className="text-[10px] leading-relaxed text-slate-500 font-medium">{localItem.desc}</p>
+                            <p className="text-xs font-black text-slate-900 mb-1 leading-tight">{localItem.title}</p>
+                            <p className="text-xs leading-relaxed text-slate-500 font-medium">{localItem.desc}</p>
                           </Card>
                         );
                       })}
@@ -925,7 +925,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
                       onClick={() => handleSectionChange(GUIDE_SECTIONS[currentIndex - 1].id)}
                       className="flex flex-col items-start gap-1 p-2 rounded-lg hover:bg-slate-50 transition-colors text-left group cursor-pointer"
                     >
-                      <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest pl-1.5">
+                      <span className="text-xs text-slate-400 font-extrabold uppercase tracking-widest pl-1.5">
                         {_langCode === "ZH" ? "上一篇" : _langCode === "JA" ? "前へ" : _langCode === "ES" ? "Anterior" : "Previous"}
                       </span>
                       <span className="text-xs font-bold text-slate-700 group-hover:text-blue-600 flex items-center gap-0.5">
@@ -943,7 +943,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
                       onClick={() => handleSectionChange(GUIDE_SECTIONS[currentIndex + 1].id)}
                       className="flex flex-col items-end gap-1 p-2 rounded-lg hover:bg-slate-50 transition-colors text-right group cursor-pointer"
                     >
-                      <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest pr-1.5">
+                      <span className="text-xs text-slate-400 font-extrabold uppercase tracking-widest pr-1.5">
                         {_langCode === "ZH" ? "下一篇" : _langCode === "JA" ? "次へ" : _langCode === "ES" ? "Siguiente" : "Next"}
                       </span>
                       <span className="text-xs font-bold text-slate-700 group-hover:text-blue-600 flex items-center gap-0.5">
@@ -962,7 +962,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
 
           {/* Right Column: Floating dynamic Table of Contents (TOC) & FAQ links */}
           <aside className="hidden border-l border-border/70 bg-white p-4.5 lg:flex lg:flex-col min-h-0 select-none">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3.5">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3.5">
               {_langCode === "ZH" ? "本页目录" : _langCode === "JA" ? "コンテンツ" : _langCode === "ES" ? "Tabla de contenidos" : "TOC"}
             </h3>
 
@@ -977,7 +977,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
                         type="button"
                         onClick={() => handleHeadingClick(hdr.id)}
                         className={cn(
-                          "block w-full text-left font-sans text-[11px] py-1 transition-all relative cursor-pointer leading-5.5",
+                          "block w-full text-left font-sans text-xs py-1 transition-all relative cursor-pointer leading-5.5",
                           hdr.level === 3 ? "pl-5 text-slate-400" : "pl-3 font-semibold text-slate-500",
                           isActive
                             ? "text-blue-600 font-black scale-102"
@@ -993,7 +993,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
                   })}
                 </div>
               ) : (
-                <p className="text-[10px] text-slate-400 font-medium">
+                <p className="text-xs text-slate-400 font-medium">
                   {_langCode === "ZH" ? "无章节目录" : _langCode === "JA" ? "セクションなし" : _langCode === "ES" ? "Sin secciones" : "No sections"}
                 </p>
               )}
@@ -1001,7 +1001,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
               {/* Static Quick FAQ items link in right rail list */}
               {meta.faqs && meta.faqs.length > 0 && (
                 <div className="mt-8 pt-6 border-t border-slate-100">
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3.5">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3.5">
                     {_langCode === "ZH" ? "常见问题" : _langCode === "JA" ? "よくある質問" : _langCode === "ES" ? "Faqs" : "FAQs"}
                   </h3>
                   <div className="space-y-3.5">
@@ -1010,7 +1010,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
                         key={idx}
                         type="button"
                         onClick={() => handleHeadingClick("faq-section")}
-                        className="block w-full text-left text-[10.5px] leading-relaxed text-slate-500 hover:text-blue-600 transition-colors font-medium cursor-pointer"
+                        className="block w-full text-left text-xs leading-relaxed text-slate-500 hover:text-blue-600 transition-colors font-medium cursor-pointer"
                       >
                         {faq.q}
                       </button>

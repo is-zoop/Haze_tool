@@ -145,5 +145,32 @@ export const zhCN = {
   memberMgmt_msgPasswordSuccess: "已发送密码重置验证邮件，请通知其查收。",
   memberMgmt_today: "今天",
   memberMgmt_yesterday: "昨天",
-  memberMgmt_daysAgo: "天前"
+  memberMgmt_daysAgo: "天前",
+  // Shared status labels
+  statusPublished: "已发布",
+  statusDraft: "草稿",
+  statusReviewing: "审核中",
+  statusRejected: "已拒绝",
+  statusOffline: "已下线",
+  statusPending: "待审核",
+  statusApproved: "已通过",
+  statusProcessing: "处理中",
+  statusWithdrawn: "已撤回",
+  statusPass: "测试通过",
+  statusFail: "测试失败",
+  statusTesting: "测试中",
+  statusNoTestRequired: "无需测试",
+  statusNotTested: "未测试",
+
+  // Audit and developer actions
+  auditRefreshSuccess: "数据已成功刷新！最新发布审计序列已同步。",
+  auditViewLogs: "查看流水号 {id} 的流转审计日志...",
+  auditCopiedRequestId: "已复制流水号到剪贴板: {id}",
+  auditExpediteSuccess: "已发送至部门主管加急流程！",
+  developerUploadSkill: "上传 Skill",
+  developerRegisterMcp: "注册 MCP",
+  developerVersionRequired: "版本号不能为空",
+  developerVersionFormat: "格式不正确，应为 x.y.z",
+  developerDescriptionRequired: "版本说明不能为空",
+  developerSkillZipRequired: "请上传 Skill 压缩包文件"
 };

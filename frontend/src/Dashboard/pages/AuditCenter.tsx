@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from "react";
-import { motion } from "motion/react";
 import { 
   Search, 
   Check, 
@@ -26,6 +25,7 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Table, 
   TableHeader, 
@@ -50,11 +50,13 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { UnifiedTabs, TabItem } from "@/components/UnifiedTabs";
 import { MOCK_PUBLISH_REVIEWS } from "../../temp/publishReviews";
 import { AuditRequest } from "../../types/audit-center";
 import { PageHeader } from "../../components/common/PageHeader";
 import { DataTableFooter } from "../../components/common/DataTableFooter";
+import { StatusBadge } from "../../components/common/StatusBadge";
 
 interface PageProps {
   onBackToHome?: () => void;
@@ -90,6 +92,13 @@ const AUDIT_LOCALIZED_DEPARTS: Record<string, Record<string, string>> = {
 
 export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode = "ZH" }: PageProps) {
   const t = getI18n(_langCode);
+  const statusLabels = {
+    pending: t.statusPending,
+    processing: t.statusProcessing,
+    approved: t.statusApproved,
+    rejected: t.statusRejected,
+    withdrawn: t.statusWithdrawn,
+  };
   const [reviews, setReviews] = useState<AuditRequest[]>(MOCK_PUBLISH_REVIEWS);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "Skill" | "MCP Server">("all");
@@ -138,7 +147,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
     setIsRefreshing(true);
     setTimeout(() => {
       setIsRefreshing(false);
-      triggerAlert("数据已成功刷新！最新发布审计序列已同步。");
+      triggerAlert(t.auditRefreshSuccess);
     }, 700);
   };
 
@@ -325,41 +334,6 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
     },
   ];
 
-  const renderStatusBadge = (status: AuditRequest["status"]) => {
-    switch (status) {
-      case "pending":
-      case "processing":
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-50 text-amber-700">
-            {_langCode === "ZH" ? "待审核" : _langCode === "JA" ? "審査待ち" : _langCode === "ES" ? "Pendiente" : "Pending"}
-          </span>
-        );
-      case "approved":
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700">
-            {_langCode === "ZH" ? "已通过" : _langCode === "JA" ? "承認済" : _langCode === "ES" ? "Aprobado" : "Approved"}
-          </span>
-        );
-      case "rejected":
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700">
-            {_langCode === "ZH" ? "已拒绝" : _langCode === "JA" ? "却下済" : _langCode === "ES" ? "Rechazado" : "Rejected"}
-          </span>
-        );
-      case "withdrawn":
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-50 text-slate-500">
-            {_langCode === "ZH" ? "已撤回" : _langCode === "JA" ? "撤回済" : _langCode === "ES" ? "Retirado" : "Withdrawn"}
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-50 text-slate-500">
-            {_langCode === "ZH" ? "已撤回" : _langCode === "JA" ? "撤回済" : _langCode === "ES" ? "Retirado" : "Withdrawn"}
-          </span>
-        );
-    }
-  };
 
   return (
     <div className="dashboard-page-stack h-full overflow-hidden text-left font-sans flex flex-col gap-3 animate-in fade-in duration-300" id="haze-publish-review-container">
@@ -418,7 +392,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
               className="h-9 px-4 text-xs font-semibold border-border/70 bg-white hover:bg-slate-50 flex items-center gap-1.5 shadow-sm text-slate-700 cursor-pointer rounded-lg"
             >
               <RotateCw size={12} className={`text-slate-500 ${isRefreshing ? "animate-spin" : ""}`} />
-              <span>{_langCode === "ZH" ? "刷新" : "Refresh"}</span>
+              <span>{t.refresh}</span>
             </Button>
           </div>
         )}
@@ -442,7 +416,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
                 <span className="text-2xl font-semibold text-slate-900 leading-none font-sans">
                   {countPending}
                 </span>
-                <span className="text-[11px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-sm">
+                <span className="text-xs font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-sm">
                   {_langCode === "ZH" ? "较昨日 +1" : _langCode === "JA" ? "前日比 +1" : _langCode === "ES" ? "+1 vs ayer" : "+1 vs yesterday"}
                 </span>
               </div>
@@ -462,7 +436,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
                 <span className="text-2xl font-semibold text-slate-900 leading-none font-sans">
                   1
                 </span>
-                <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-sm">
+                <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-sm">
                   {_langCode === "ZH" ? "较昨日 +1" : _langCode === "JA" ? "前日比 +1" : _langCode === "ES" ? "+1 vs ayer" : "+1 vs yesterday"}
                 </span>
               </div>
@@ -482,7 +456,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
                 <span className="text-2xl font-semibold text-slate-900 leading-none font-sans">
                   75%
                 </span>
-                <span className="text-[11px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-sm">
+                <span className="text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-sm">
                   {_langCode === "ZH" ? "较上周 +12%" : _langCode === "JA" ? "前週比 +12%" : _langCode === "ES" ? "+12% vs sem. ant." : "+12% vs last week"}
                 </span>
               </div>
@@ -502,7 +476,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
                 <span className="text-2xl font-semibold text-slate-900 leading-none font-sans">
                   3.2h
                 </span>
-                <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-sm">
+                <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-sm">
                   {_langCode === "ZH" ? "较上周 -0.6h" : _langCode === "JA" ? "前週比 -0.6h" : _langCode === "ES" ? "-0.6h vs sem. ant." : "-0.6h vs last week"}
                 </span>
               </div>
@@ -732,7 +706,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
                     
                     {/* Status inline */}
                     <TableCell className="px-4 py-3">
-                      {renderStatusBadge(rev.status)}
+                      <StatusBadge status={rev.status} labels={statusLabels} className="rounded px-2 py-0.5" />
                     </TableCell>
                     
                     {/* Operations right-aligned */}
@@ -772,17 +746,17 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="text-xs">
-                            <DropdownMenuItem onClick={() => triggerAlert(_langCode === "ZH" ? `查看流水号 ${rev.id} 的流转审计日志...` : `Viewing audit logs for request ${rev.id}...`)}>
+                            <DropdownMenuItem onClick={() => triggerAlert(t.auditViewLogs.replace("{id}", rev.id))}>
                               <History className="mr-2 h-3.5 w-3.5 text-slate-400" />
                               <span>{_langCode === "ZH" ? "审计日志" : _langCode === "JA" ? "監査履歴" : _langCode === "ES" ? "Log de auditoría" : "Audit Log"}</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => triggerAlert(_langCode === "ZH" ? `已复制流水号到剪贴板: ${rev.id}` : `Copied request ID to clipboard: ${rev.id}`)}>
+                            <DropdownMenuItem onClick={() => triggerAlert(t.auditCopiedRequestId.replace("{id}", rev.id))}>
                               <FileText className="mr-2 h-3.5 w-3.5 text-slate-400" />
                               <span>{_langCode === "ZH" ? "复制流水号" : _langCode === "JA" ? "申請IDをコピー" : _langCode === "ES" ? "Copiar ID" : "Copy Request ID"}</span>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             {rev.status === "pending" || rev.status === "processing" ? (
-                              <DropdownMenuItem className="text-rose-600 font-medium" onClick={() => triggerAlert(_langCode === "ZH" ? "已发送至部门主管加急流程！" : "Expedited request sent to department supervisor!")}>
+                              <DropdownMenuItem className="text-rose-600 font-medium" onClick={() => triggerAlert(t.auditExpediteSuccess)}>
                                 <Zap className="mr-2 h-3.5 w-3.5" />
                                 <span>{_langCode === "ZH" ? "加急流程" : _langCode === "JA" ? "優先処理" : _langCode === "ES" ? "Acelerar proceso" : "Expedite Flow"}</span>
                               </DropdownMenuItem>
@@ -815,15 +789,12 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
       </div>
 
       {/* 7. Slide Overlay Sheet */}
-      {selectedReview && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs select-none">
-          <div className="absolute inset-0" onClick={() => setSelectedReview(null)} />
-          <motion.div 
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "tween", duration: 0.2 }}
-            className="relative w-full max-w-lg h-full bg-white border-l border-border flex flex-col shadow-2xl text-left"
+      <Sheet open={Boolean(selectedReview)} onOpenChange={(open) => !open && setSelectedReview(null)}>
+        {selectedReview && (
+          <SheetContent
+            side="right"
+            showCloseButton={false}
+            className="w-full max-w-lg h-full bg-white border-l border-border p-0 gap-0 flex flex-col shadow-2xl text-left sm:max-w-lg"
           >
             {/* Header */}
             <div className="sticky top-0 z-10 p-5 border-b border-border/60 bg-white flex items-center justify-between shrink-0">
@@ -850,7 +821,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
               </div>
 
               <div className="flex items-center gap-1.5">
-                {renderStatusBadge(selectedReview.status)}
+                <StatusBadge status={selectedReview.status} labels={statusLabels} className="rounded px-2 py-0.5" />
                 <button 
                   onClick={() => setSelectedReview(null)}
                   className="p-1.5 rounded-lg hover:bg-slate-50 transition-colors text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -967,7 +938,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
                       <label className="block text-xs font-bold text-slate-500">
                         {_langCode === "ZH" ? "请输入拒绝提审的最终原因及调整建议：" : _langCode === "JA" ? "却下する理由と調整案を入力してください：" : _langCode === "ES" ? "Ingrese el motivo y recomendaciones para la propuesta:" : "Please provide feedback or the reason details for the rejection:"}
                       </label>
-                      <textarea
+                      <Textarea
                         required
                         rows={2.5}
                         value={rejectReason}
@@ -1030,9 +1001,9 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
               )}
             </div>
 
-          </motion.div>
-        </div>
-      )}
+          </SheetContent>
+        )}
+      </Sheet>
     </div>
   );
 }

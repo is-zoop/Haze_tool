@@ -16,7 +16,6 @@ import {
   X,
   CheckCircle,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -34,55 +33,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AssetStatus, DeveloperAsset, TestStatus } from "../../types/developer-center";
-
-// Status Badge Config
-const statusBadgeConfig: Record<AssetStatus, { label: string; className: string }> = {
-  published: {
-    label: "已发布",
-    className: "border-none bg-emerald-50 text-emerald-600 hover:bg-emerald-50",
-  },
-  draft: {
-    label: "草稿",
-    className: "border-none bg-amber-50 text-amber-600 hover:bg-amber-50",
-  },
-  reviewing: {
-    label: "审核中",
-    className: "border-none bg-blue-50 text-blue-600 hover:bg-blue-50",
-  },
-  rejected: {
-    label: "已拒绝",
-    className: "border-none bg-red-50 text-red-600 hover:bg-red-50",
-  },
-  offline: {
-    label: "已下线",
-    className: "border-none bg-slate-100 text-slate-500 hover:bg-slate-100",
-  },
-};
-
-function renderStatusBadge(status: AssetStatus, lang: string = "ZH") {
-  const config = statusBadgeConfig[status] || statusBadgeConfig.draft;
-  let label = config.label;
-  if (lang === "JA") {
-    label = status === "published" ? "公開済み" : status === "draft" ? "下書き" : status === "reviewing" ? "審査中" : status === "rejected" ? "却下" : "オフライン";
-  } else if (lang === "ES") {
-    label = status === "published" ? "Publicado" : status === "draft" ? "Borrador" : status === "reviewing" ? "En revisión" : status === "rejected" ? "Rechazado" : "Fuera de línea";
-  } else if (lang === "EN") {
-    label = status === "published" ? "Published" : status === "draft" ? "Draft" : status === "reviewing" ? "Reviewing" : status === "rejected" ? "Rejected" : "Offline";
-  }
-  return (
-    <Badge variant="outline" className={`rounded-md px-2.5 py-0.5 text-xs font-bold ${config.className}`}>
-      {label}
-    </Badge>
-  );
-}
+import { DeveloperAsset, TestStatus } from "../../types/developer-center";
+import { StatusBadge } from "../common/StatusBadge";
+import { getI18n } from "../../i18n";
 
 function renderTestStatusBadge(status: TestStatus, lang: string = "ZH", type?: string) {
+  const t = getI18n(lang);
   if (type === "Skill" && (status === "none" || !status)) {
     return (
       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
         <span className="h-2 w-2 rounded-full bg-slate-200 shrink-0" />
-        <span>{lang === "ZH" ? "无需测试" : lang === "JA" ? "テスト不要" : lang === "ES" ? "No requiere prueba" : "No Test Required"}</span>
+        <span>{t.statusNoTestRequired}</span>
       </div>
     );
   }
@@ -90,28 +51,28 @@ function renderTestStatusBadge(status: TestStatus, lang: string = "ZH", type?: s
     return (
       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
         <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
-        <span>{lang === "ZH" ? "测试通过" : lang === "JA" ? "テスト成功" : lang === "ES" ? "Prueba exitosa" : "Test Pass"}</span>
+        <span>{t.statusPass}</span>
       </div>
     );
   } else if (status === "fail") {
     return (
       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
         <X className="h-4 w-4 bg-rose-500 text-white rounded-full p-0.5 shrink-0" />
-        <span>{lang === "ZH" ? "测试失败" : lang === "JA" ? "テスト失敗" : lang === "ES" ? "Prueba fallida" : "Test Fail"}</span>
+        <span>{t.statusFail}</span>
       </div>
     );
   } else if (status === "testing") {
     return (
       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
         <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
-        <span>{lang === "ZH" ? "测试中" : lang === "JA" ? "テスト中" : lang === "ES" ? "Prueba en curso" : "Testing"}</span>
+        <span>{t.statusTesting}</span>
       </div>
     );
   } else {
     return (
       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
         <span className="h-2 w-2 rounded-full bg-slate-300 shrink-0" />
-        <span>{lang === "ZH" ? "未测试" : lang === "JA" ? "未テスト" : lang === "ES" ? "No probado" : "No Test"}</span>
+        <span>{t.statusNotTested}</span>
       </div>
     );
   }
@@ -140,6 +101,15 @@ export function DeveloperAssetTable({
   onOfflineAsset,
   onSetDeleteTarget,
 }: DeveloperAssetTableProps) {
+  const t = getI18n(langCode);
+  const assetStatusLabels = {
+    published: t.statusPublished,
+    draft: t.statusDraft,
+    reviewing: t.statusReviewing,
+    rejected: t.statusRejected,
+    offline: t.statusOffline,
+  };
+
   // Helper to get styled asset icon
   const getAssetIcon = (code: string, type: "Skill" | "MCP Server" | string, customIcon?: string) => {
     if (customIcon) {
@@ -231,7 +201,7 @@ export function DeveloperAssetTable({
                       <div className="flex items-center gap-3 text-left">
                         {getAssetIcon(asset.code, asset.type, asset.icon)}
                         <div className="space-y-0.5 text-left">
-                          <p className="font-semibold text-[14px] text-foreground text-left">{asset.name}</p>
+                          <p className="font-semibold text-sm text-foreground text-left">{asset.name}</p>
                           <div className="flex items-center gap-1 text-xs text-muted-foreground text-left">
                             <span className="font-mono text-left">{asset.code}</span>
                           </div>
@@ -253,7 +223,7 @@ export function DeveloperAssetTable({
                       )}
                     </TableCell>
                     <TableCell className="px-4 py-3 font-mono text-xs text-muted-foreground text-left">{asset.version || "v1.0.0"}</TableCell>
-                    <TableCell className="px-4 py-3 text-left">{renderStatusBadge(asset.status, langCode)}</TableCell>
+                    <TableCell className="px-4 py-3 text-left"><StatusBadge status={asset.status} labels={assetStatusLabels} /></TableCell>
                     <TableCell className="px-4 py-3 text-left">{renderTestStatusBadge(asset.recentTestStatus, langCode, asset.type)}</TableCell>
                     <TableCell className="px-4 py-3 font-mono font-bold text-right text-foreground tabular-nums pr-6">
                       {formatCalls(asset.calls)}

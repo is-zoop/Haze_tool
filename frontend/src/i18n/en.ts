@@ -145,5 +145,32 @@ export const en = {
   memberMgmt_msgPasswordSuccess: "Password reset verification email sent.",
   memberMgmt_today: "Today",
   memberMgmt_yesterday: "Yesterday",
-  memberMgmt_daysAgo: "days ago"
+  memberMgmt_daysAgo: "days ago",
+  // Shared status labels
+  statusPublished: "Published",
+  statusDraft: "Draft",
+  statusReviewing: "Reviewing",
+  statusRejected: "Rejected",
+  statusOffline: "Offline",
+  statusPending: "Pending",
+  statusApproved: "Approved",
+  statusProcessing: "Processing",
+  statusWithdrawn: "Withdrawn",
+  statusPass: "Test Pass",
+  statusFail: "Test Fail",
+  statusTesting: "Testing",
+  statusNoTestRequired: "No Test Required",
+  statusNotTested: "Not Tested",
+
+  // Audit and developer actions
+  auditRefreshSuccess: "Data refreshed successfully. The latest audit sequence is synchronized.",
+  auditViewLogs: "Viewing audit logs for request {id}...",
+  auditCopiedRequestId: "Copied request ID to clipboard: {id}",
+  auditExpediteSuccess: "Expedited request sent to department supervisor!",
+  developerUploadSkill: "Upload Skill",
+  developerRegisterMcp: "Register MCP",
+  developerVersionRequired: "Version is required",
+  developerVersionFormat: "Invalid format. Use x.y.z",
+  developerDescriptionRequired: "Version description is required",
+  developerSkillZipRequired: "Please upload the Skill ZIP file"
 };

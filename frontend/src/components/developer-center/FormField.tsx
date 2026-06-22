@@ -25,9 +25,9 @@ export function FormField({
       </div>
       {children}
       {error ? (
-        <span className="text-[11px] font-medium text-rose-500">{error}</span>
+        <span className="text-xs font-medium text-rose-500">{error}</span>
       ) : description ? (
-        <span className="text-[10px] text-muted-foreground/85 leading-normal">{description}</span>
+        <span className="text-xs text-muted-foreground/85 leading-normal">{description}</span>
       ) : null}
     </div>
   );

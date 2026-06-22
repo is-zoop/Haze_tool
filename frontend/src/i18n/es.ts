@@ -145,5 +145,32 @@ export const es = {
   memberMgmt_msgPasswordSuccess: "Se ha enviado el correo para restablecer la contraseña.",
   memberMgmt_today: "Hoy",
   memberMgmt_yesterday: "Ayer",
-  memberMgmt_daysAgo: "días atrás"
+  memberMgmt_daysAgo: "días atrás",
+  // Shared status labels
+  statusPublished: "Publicado",
+  statusDraft: "Borrador",
+  statusReviewing: "En revisión",
+  statusRejected: "Rechazado",
+  statusOffline: "Fuera de línea",
+  statusPending: "Pendiente",
+  statusApproved: "Aprobado",
+  statusProcessing: "Procesando",
+  statusWithdrawn: "Retirado",
+  statusPass: "Prueba exitosa",
+  statusFail: "Prueba fallida",
+  statusTesting: "Probando",
+  statusNoTestRequired: "No requiere prueba",
+  statusNotTested: "No probado",
+
+  // Audit and developer actions
+  auditRefreshSuccess: "Datos actualizados y última secuencia de auditoría sincronizada.",
+  auditViewLogs: "Viendo el registro de auditoría de la solicitud {id}...",
+  auditCopiedRequestId: "ID de solicitud copiado: {id}",
+  auditExpediteSuccess: "Solicitud urgente enviada al responsable del departamento.",
+  developerUploadSkill: "Subir Skill",
+  developerRegisterMcp: "Registrar MCP",
+  developerVersionRequired: "La versión es obligatoria",
+  developerVersionFormat: "Formato incorrecto. Use x.y.z",
+  developerDescriptionRequired: "La descripción de la versión es obligatoria",
+  developerSkillZipRequired: "Suba el archivo ZIP de Skill"
 };

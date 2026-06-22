@@ -52,7 +52,7 @@ export function McpTestTimeline({ currentStepIndex, langCode }: McpTestTimelineP
                       <span className="w-1.5 h-1.5 rounded-full bg-white" />
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center w-4.5 h-4.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200 text-[9px] font-mono font-bold select-none">
+                    <div className="flex items-center justify-center w-4.5 h-4.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200 text-xs font-mono font-bold select-none">
                       {idx + 1}
                     </div>
                   )}
@@ -61,18 +61,18 @@ export function McpTestTimeline({ currentStepIndex, langCode }: McpTestTimelineP
                 {/* Step description block */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1.5">
-                    <span className={`text-[11px] font-bold truncate tracking-tight ${
+                    <span className={`text-xs font-bold truncate tracking-tight ${
                       isCompleted ? "text-slate-700" : isActive ? "text-blue-600" : "text-slate-400"
                     }`}>
                       {step.name}
                     </span>
                     {isCompleted && step.duration && (
-                      <span className="text-[9px] font-mono font-medium text-slate-400 shrink-0 select-none">
+                      <span className="text-xs font-mono font-medium text-slate-400 shrink-0 select-none">
                         {step.duration}
                       </span>
                     )}
                   </div>
-                  <p className={`text-[9.5px] leading-normal truncate ${
+                  <p className={`text-xs leading-normal truncate ${
                     isCompleted ? "text-slate-500" : isActive ? "text-blue-500/85" : "text-slate-400/70"
                   }`}>
                     {step.desc}

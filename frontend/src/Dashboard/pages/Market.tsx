@@ -371,9 +371,9 @@ export function Market({
 
   return (
     <div className="dashboard-page-stack h-full overflow-hidden animate-in fade-in duration-300 flex flex-col gap-3" id="haze-market-page-container">
-      <PageHeader 
-        title={t.marketTitle} 
-        description={t.marketDesc} 
+      <PageHeader
+        title={t.marketTitle}
+        description={t.marketDesc}
         breadcrumbs={[_langCode === "ZH" ? "首页" : _langCode === "JA" ? "ホーム" : _langCode === "ES" ? "Inicio" : "Home", t.marketTitle]}
       />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/70 bg-slate-55">
@@ -381,12 +381,12 @@ export function Market({
           <aside className="hidden min-h-0 border-r border-slate-100 bg-white p-4 lg:flex lg:flex-col w-[240px] shrink-0">
             <div className="mb-4 flex items-center justify-between px-1 shrink-0">
               <div>
-                <p className="text-sm font-black text-slate-900" style={{ fontWeight: "900", fontFamily: '"Noto Sans SC", sans-serif' }}>
+                <p className="text-sm font-black text-slate-900">
                   {_langCode === "ZH" ? "快速定位" : _langCode === "JA" ? "クイック移動" : _langCode === "ES" ? "Navegación" : "Quick Navigator"}
                 </p>
               </div>
               {activeFilterCount > 0 && (
-                <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] text-slate-500 font-extrabold hover:text-slate-800 hover:bg-slate-100" style={{ fontWeight: "900" }} onClick={clearFilters}>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-slate-500 font-extrabold hover:text-slate-800 hover:bg-slate-100" onClick={clearFilters}>
                   {t.reset}
                 </Button>
               )}
@@ -412,7 +412,7 @@ export function Market({
                   {_langCode === "ZH" ? "我的收藏" : _langCode === "JA" ? "お気に入り" : _langCode === "ES" ? "Mis favoritos" : "My Favorites"}
                 </span>
                 <span className={cn(
-                  "rounded-full px-1.5 py-0 text-[10px]",
+                  "rounded-full px-1.5 py-0 text-xs",
                   showFavoritesOnly ? "bg-blue-100 text-blue-600 font-black" : "bg-slate-100/60 text-slate-500"
                 )}>
                   {marketStats.favoriteCount}
@@ -438,7 +438,7 @@ export function Market({
                   {_langCode === "ZH" ? "高频使用" : _langCode === "JA" ? "高頻度使用" : _langCode === "ES" ? "Frecuentes" : "Frequently Used"}
                 </span>
                 <span className={cn(
-                  "rounded-full px-1.5 py-0 text-[10px]",
+                  "rounded-full px-1.5 py-0 text-xs",
                   showRecentlyUsedOnly ? "bg-blue-100 text-blue-600 font-black" : "bg-slate-100/60 text-slate-500"
                 )}>
                   {allItems.filter((item) => item.calls >= 1000).length}
@@ -446,7 +446,7 @@ export function Market({
               </button>
             </div>
 
-            <p className="px-2.5 pt-6 pb-2 text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0" style={{ fontWeight: "900" }}>
+            <p className="px-2.5 pt-6 pb-2 text-xs font-black uppercase tracking-wider text-slate-400 shrink-0">
               {_langCode === "ZH" ? "业务分类" : _langCode === "JA" ? "業務カテゴリ" : _langCode === "ES" ? "Categorías" : "Categories"}
             </p>
 
@@ -473,7 +473,7 @@ export function Market({
                     >
                       <span className="truncate">{getCategoryLabel(category.id, _langCode)}</span>
                       <span className={cn(
-                        "ml-2 rounded-full px-1.5 py-0 text-[10px]",
+                        "ml-2 rounded-full px-1.5 py-0 text-xs",
                         isSelected ? "bg-blue-100 text-blue-600 font-black" : "bg-slate-100/60 text-slate-400"
                       )}>
                         {categoryCounts[category.id] ?? 0}
@@ -504,9 +504,9 @@ export function Market({
                       value={searchQuery}
                       onChange={(event) => setSearchQuery(event.target.value)}
                       placeholder={
-                        _langCode === "ZH" ? "搜索能力、标签、作者或部门..." 
-                        : _langCode === "JA" ? "能力、タグ、開発者、部門で検索..." 
-                        : _langCode === "ES" ? "Buscar por capacidad, etiqueta, autor..." 
+                        _langCode === "ZH" ? "搜索能力、标签、作者或部门..."
+                        : _langCode === "JA" ? "能力、タグ、開発者、部門で検索..."
+                        : _langCode === "ES" ? "Buscar por capacidad, etiqueta, autor..."
                         : "Search capabilities, tags, author, department..."
                       }
                       className="h-9 rounded-lg border-slate-200 bg-white pl-9 pr-4 text-xs focus-visible:ring-blue-500 w-full"
@@ -529,8 +529,8 @@ export function Market({
                         ]}
                         className="w-[110px]"
                       >
-                        <ComboboxInput 
-                          className="h-9 w-[110px] text-xs bg-white border-slate-200" 
+                        <ComboboxInput
+                          className="h-9 w-[110px] text-xs bg-white border-slate-200"
                           placeholder={_langCode === "ZH" ? "排序方式" : _langCode === "JA" ? "ソート" : _langCode === "ES" ? "Criterio" : "Sort By"}
                         />
                         <ComboboxContent className="w-[110px]">
@@ -580,41 +580,41 @@ export function Market({
 
               {activeFilterCount > 0 && (
                 <div className="flex flex-wrap items-center gap-2 self-start">
-                  <span className="text-[11px] font-black text-slate-400" style={{ fontWeight: "900" }}>
+                  <span className="text-xs font-black text-slate-400">
                     {_langCode === "ZH" ? "当前条件" : _langCode === "JA" ? "検索条件" : _langCode === "ES" ? "Filtros aplicados" : "Active Filters"}
                   </span>
                   {selectedCategory !== "all" && (
-                    <FilterPill 
+                    <FilterPill
                       label={
-                        _langCode === "ZH" ? `分类: ${getCategoryLabel(selectedCategory, _langCode)}` 
-                        : _langCode === "JA" ? `カテゴリ: ${getCategoryLabel(selectedCategory, _langCode)}` 
-                        : _langCode === "ES" ? `Categoría: ${getCategoryLabel(selectedCategory, _langCode)}` 
+                        _langCode === "ZH" ? `分类: ${getCategoryLabel(selectedCategory, _langCode)}`
+                        : _langCode === "JA" ? `カテゴリ: ${getCategoryLabel(selectedCategory, _langCode)}`
+                        : _langCode === "ES" ? `Categoría: ${getCategoryLabel(selectedCategory, _langCode)}`
                         : `Category: ${getCategoryLabel(selectedCategory, _langCode)}`
-                      } 
-                      onClear={() => setSelectedCategory("all")} 
+                      }
+                      onClear={() => setSelectedCategory("all")}
                     />
                   )}
                   {showFavoritesOnly && (
-                    <FilterPill 
-                      label={_langCode === "ZH" ? "只看收藏" : _langCode === "JA" ? "お気に入りのみ" : _langCode === "ES" ? "Favoritos" : "Favorites Only"} 
-                      onClear={() => setShowFavoritesOnly(false)} 
+                    <FilterPill
+                      label={_langCode === "ZH" ? "只看收藏" : _langCode === "JA" ? "お気に入りのみ" : _langCode === "ES" ? "Favoritos" : "Favorites Only"}
+                      onClear={() => setShowFavoritesOnly(false)}
                     />
                   )}
                   {showRecentlyUsedOnly && (
-                    <FilterPill 
-                      label={_langCode === "ZH" ? "高频使用" : _langCode === "JA" ? "高頻度使用" : _langCode === "ES" ? "Frecuentes" : "Frequently Used"} 
-                      onClear={() => setShowRecentlyUsedOnly(false)} 
+                    <FilterPill
+                      label={_langCode === "ZH" ? "高频使用" : _langCode === "JA" ? "高頻度使用" : _langCode === "ES" ? "Frecuentes" : "Frequently Used"}
+                      onClear={() => setShowRecentlyUsedOnly(false)}
                     />
                   )}
                   {searchQuery && (
-                    <FilterPill 
+                    <FilterPill
                       label={
-                        _langCode === "ZH" ? `搜索: ${searchQuery}` 
-                        : _langCode === "JA" ? `検索: ${searchQuery}` 
-                        : _langCode === "ES" ? `Buscar: ${searchQuery}` 
+                        _langCode === "ZH" ? `搜索: ${searchQuery}`
+                        : _langCode === "JA" ? `検索: ${searchQuery}`
+                        : _langCode === "ES" ? `Buscar: ${searchQuery}`
                         : `Search: ${searchQuery}`
-                      } 
-                      onClear={() => setSearchQuery("")} 
+                      }
+                      onClear={() => setSearchQuery("")}
                     />
                   )}
                 </div>
@@ -649,12 +649,12 @@ export function Market({
                             </span>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <h4 className="font-extrabold text-slate-800 text-sm truncate max-w-[130px]" style={{ fontWeight: "800", fontFamily: '"Noto Sans SC", sans-serif' }}>{display.name}</h4>
+                                <h4 className="font-extrabold text-slate-800 text-sm truncate max-w-[130px]">{display.name}</h4>
                                 <button
                                   className="h-6 w-6 shrink-0 text-slate-400 hover:text-amber-500 transition-colors flex items-center justify-center cursor-pointer"
                                   onClick={() => toggleFavorite(item.id, item.isMcp)}
-                                  aria-label={item.isFavorite 
-                                    ? (_langCode === "ZH" ? "取消收藏" : _langCode === "JA" ? "お気に入り解除" : _langCode === "ES" ? "Quitar de favoritos" : "Remove from Favorites") 
+                                  aria-label={item.isFavorite
+                                    ? (_langCode === "ZH" ? "取消收藏" : _langCode === "JA" ? "お気に入り解除" : _langCode === "ES" ? "Quitar de favoritos" : "Remove from Favorites")
                                     : (_langCode === "ZH" ? "收藏" : _langCode === "JA" ? "お気に入り登録" : _langCode === "ES" ? "Añadir a favoritos" : "Add to Favorites")
                                   }
                                 >
@@ -662,7 +662,7 @@ export function Market({
                                 </button>
                               </div>
                               <div className="mt-1">
-                                <Badge variant="outline" className={cn("inline-flex h-4 items-center rounded-md px-1.5 text-[9px] font-black border-none shrink-0", 
+                                <Badge variant="outline" className={cn("inline-flex h-4 items-center rounded-md px-1.5 text-xs font-black border-none shrink-0",
                                   item.isMcp ? "bg-violet-50 text-violet-600" : "bg-blue-50 text-blue-600"
                                 )}>
                                   {item.isMcp ? "MCP" : "Skill"}
@@ -679,20 +679,20 @@ export function Market({
                         <div className="flex flex-wrap items-center gap-1.5 mb-3">
                           {display.tags.slice(0, 2).map((tag) => (
                             <Fragment key={tag}>
-                              <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-[10px] text-slate-500 bg-slate-50/80 font-bold border-none">
+                              <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-xs text-slate-500 bg-slate-50/80 font-bold border-none">
                                 {tag}
                               </Badge>
                             </Fragment>
                           ))}
                           {display.tags.length > 2 && (
-                            <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-[10px] text-slate-500 bg-slate-50/80 font-bold border-none">
+                            <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-xs text-slate-500 bg-slate-50/80 font-bold border-none">
                               +{display.tags.length - 2}
                             </Badge>
                           )}
                         </div>
 
                         <div className="mt-auto flex shrink-0 flex-col gap-3 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="truncate text-[11px] text-slate-500">
+                          <div className="truncate text-xs text-slate-500">
                             {display.author} · 开发者 · {formatCalls(item.calls)} 次调用
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
@@ -744,15 +744,15 @@ export function Market({
                                   </div>
                                 </TableCell>
                                 <TableCell className="whitespace-nowrap px-4 py-2.5">
-                                  <Badge variant="secondary" className="h-5 rounded-md border-none px-1.5 text-[10px]">{item.isMcp ? "MCP" : "Skill"}</Badge>
+                                  <Badge variant="secondary" className="h-5 rounded-md border-none px-1.5 text-xs">{item.isMcp ? "MCP" : "Skill"}</Badge>
                                 </TableCell>
                                 <TableCell className="min-w-[220px] max-w-[320px] px-4 py-2.5 text-left">
                                   <p className="line-clamp-1 text-xs text-slate-500" title={display.description}>{display.description}</p>
                                 </TableCell>
                                 <TableCell className="whitespace-nowrap px-4 py-2.5">
                                   <div className="flex items-center gap-1">
-                                    {display.tags.slice(0, 2).map((tag) => <Badge key={tag} variant="secondary" className="h-5 rounded-md border-none bg-slate-50 px-1.5 text-[10px] text-slate-500">{tag}</Badge>)}
-                                    {display.tags.length > 2 && <Badge variant="secondary" className="h-5 rounded-md border-none bg-slate-50 px-1.5 text-[10px] text-slate-500">+{display.tags.length - 2}</Badge>}
+                                    {display.tags.slice(0, 2).map((tag) => <Badge key={tag} variant="secondary" className="h-5 rounded-md border-none bg-slate-50 px-1.5 text-xs text-slate-500">{tag}</Badge>)}
+                                    {display.tags.length > 2 && <Badge variant="secondary" className="h-5 rounded-md border-none bg-slate-50 px-1.5 text-xs text-slate-500">+{display.tags.length - 2}</Badge>}
                                   </div>
                                 </TableCell>
                                 <TableCell className="whitespace-nowrap px-4 py-2.5 text-left text-xs text-slate-600">{display.author} · 开发者</TableCell>
@@ -819,7 +819,7 @@ export function Market({
 
 function FilterPill({ label, onClear }: { label: string; onClear: () => void }) {
   return (
-    <Badge variant="outline" className="gap-1 rounded-md bg-white px-2 py-1 text-[11px] font-semibold border-slate-200">
+    <Badge variant="outline" className="gap-1 rounded-md bg-white px-2 py-1 text-xs font-semibold border-slate-200">
       {label}
       <button type="button" onClick={onClear} className="rounded-full text-muted-foreground hover:text-rose-600 cursor-pointer">
         <X className="h-3 w-3" />
@@ -861,7 +861,7 @@ function CapabilitySheet({
               <SheetTitle className="text-sm font-semibold normal-case tracking-tight text-slate-950">
                 {display.name}
               </SheetTitle>
-              <Badge variant="secondary" className="h-5 rounded-md border-none px-1.5 text-[10px]">
+              <Badge variant="secondary" className="h-5 rounded-md border-none px-1.5 text-xs">
                 {item.isMcp ? "MCP" : "Skill"}
               </Badge>
             </div>
@@ -910,7 +910,7 @@ function CapabilitySheet({
                 <CardTitle className="text-xs font-semibold text-slate-800">能力标签</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-1.5 p-4 pt-0">
-                {display.tags.map((tag) => <Badge key={tag} variant="secondary" className="rounded-md border-none text-[10px]">{tag}</Badge>)}
+                {display.tags.map((tag) => <Badge key={tag} variant="secondary" className="rounded-md border-none text-xs">{tag}</Badge>)}
               </CardContent>
             </Card>
 
@@ -957,8 +957,8 @@ function ReadmeDocument({ content }: { content: string }) {
           p: ({ children }) => <p className="mb-3 text-xs leading-6 text-slate-600">{children}</p>,
           ul: ({ children }) => <ul className="mb-4 list-disc space-y-1.5 pl-5 text-xs leading-5 text-slate-600">{children}</ul>,
           ol: ({ children }) => <ol className="mb-4 list-decimal space-y-1.5 pl-5 text-xs leading-5 text-slate-600">{children}</ol>,
-          code: ({ children }) => <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[11px] text-slate-800">{children}</code>,
-          pre: ({ children }) => <pre className="mb-4 overflow-x-auto rounded-lg bg-slate-950 p-3 text-[11px] leading-5 text-slate-100">{children}</pre>,
+          code: ({ children }) => <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs text-slate-800">{children}</code>,
+          pre: ({ children }) => <pre className="mb-4 overflow-x-auto rounded-lg bg-slate-950 p-3 text-xs leading-5 text-slate-100">{children}</pre>,
         }}
       >
         {content}
@@ -978,8 +978,8 @@ function InfoCell({
 }) {
   return (
     <div className="min-w-0 rounded-lg bg-slate-50 p-3 text-left">
-      <p className="text-[10px] font-semibold text-slate-400">{label}</p>
-      <p className={cn("mt-1 truncate font-black text-slate-900 text-xs", valueClassName)} style={{ fontWeight: "900", fontFamily: '"Noto Sans SC", sans-serif' }}>{value}</p>
+      <p className="text-xs font-semibold text-slate-400">{label}</p>
+      <p className={cn("mt-1 truncate font-black text-slate-900 text-xs", valueClassName)}>{value}</p>
     </div>
   );
 }
@@ -989,13 +989,13 @@ function SkillDetails({ item }: { item: MarketItem }) {
     <div className="space-y-3">
       <Card className="rounded-lg bg-white shadow-none border-slate-100">
         <CardHeader className="p-4 pb-2 text-left">
-          <CardTitle className="flex items-center gap-2 text-xs font-black text-slate-800" style={{ fontWeight: "900" }}>
+          <CardTitle className="flex items-center gap-2 text-xs font-black text-slate-800">
             <Terminal className="h-3.5 w-3.5 text-blue-600" />
             输入示例
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0 text-left">
-          <pre className="max-h-32 overflow-auto rounded-lg bg-slate-950 p-3 text-[11px] leading-5 text-slate-100 font-mono">
+          <pre className="max-h-32 overflow-auto rounded-lg bg-slate-950 p-3 text-xs leading-5 text-slate-100 font-mono">
             {item.inputExample || "暂无输入示例"}
           </pre>
         </CardContent>
@@ -1003,7 +1003,7 @@ function SkillDetails({ item }: { item: MarketItem }) {
 
       <Card className="rounded-lg bg-white shadow-none border-slate-100">
         <CardHeader className="p-4 pb-2 text-left">
-          <CardTitle className="flex items-center gap-2 text-xs font-black text-slate-800" style={{ fontWeight: "900" }}>
+          <CardTitle className="flex items-center gap-2 text-xs font-black text-slate-800">
             <FileText className="h-3.5 w-3.5 text-emerald-600" />
             适用场景
           </CardTitle>
@@ -1036,11 +1036,11 @@ function McpDetails({
     <div className="space-y-3 font-sans">
       <Card className="rounded-lg bg-white shadow-none border-slate-100">
         <CardHeader className="flex-row items-center justify-between space-y-0 p-4 pb-2 text-left">
-          <CardTitle className="flex items-center gap-2 text-xs font-black text-slate-800" style={{ fontWeight: "900" }}>
+          <CardTitle className="flex items-center gap-2 text-xs font-black text-slate-800">
             <Database className="h-3.5 w-3.5 text-violet-600" />
             MCP 能力概览
           </CardTitle>
-          <Button variant="outline" size="sm" className="h-7 font-black cursor-pointer" style={{ fontWeight: "900" }} onClick={onCopy}>
+          <Button variant="outline" size="sm" className="h-7 font-black cursor-pointer" onClick={onCopy}>
             {copiedText ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
             <span>{copiedText ? "已复制" : "复制"}</span>
           </Button>
@@ -1054,7 +1054,7 @@ function McpDetails({
 
       <Card className="rounded-lg bg-white shadow-none border-slate-100">
         <CardHeader className="p-4 pb-2 text-left">
-          <CardTitle className="flex items-center gap-2 text-xs font-black text-slate-800" style={{ fontWeight: "900" }}>
+          <CardTitle className="flex items-center gap-2 text-xs font-black text-slate-800">
             <Lock className="h-3.5 w-3.5 text-slate-600" />
             已发现工具
           </CardTitle>
@@ -1063,12 +1063,12 @@ function McpDetails({
           {(item.toolsList ?? []).map((tool) => (
             <div key={tool.name} className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-left">
               <div className="mb-1 flex flex-wrap items-center gap-2">
-                <code className="rounded bg-white px-1.5 py-0.5 text-[11px] font-bold text-slate-900 font-mono">{tool.name}</code>
-                <Badge variant={tool.isReadonly ? "secondary" : "destructive"} className="text-[10px] font-bold h-5 border-none">
+                <code className="rounded bg-white px-1.5 py-0.5 text-xs font-bold text-slate-900 font-mono">{tool.name}</code>
+                <Badge variant={tool.isReadonly ? "secondary" : "destructive"} className="text-xs font-bold h-5 border-none">
                   {tool.isReadonly ? "只读" : "写入"}
                 </Badge>
               </div>
-              <p className="text-[11px] leading-5 text-muted-foreground text-xs">{tool.description}</p>
+              <p className="text-xs leading-5 text-muted-foreground text-xs">{tool.description}</p>
             </div>
           ))}
         </CardContent>

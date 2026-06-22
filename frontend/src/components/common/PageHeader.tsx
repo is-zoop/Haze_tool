@@ -24,12 +24,12 @@ export function PageHeader({ title, description, breadcrumbs: _breadcrumbs, onBa
               &larr; 返回
             </Button>
           )}
-          <h2 className="text-base sm:text-lg font-bold text-foreground font-sans tracking-tight">
+          <h2 className="text-page-title text-foreground tracking-tight">
             {title}
           </h2>
         </div>
         {description && (
-          <p className="text-xs text-muted-foreground font-sans leading-relaxed">
+          <p className="text-supporting text-muted-foreground leading-relaxed">
             {description}
           </p>
         )}

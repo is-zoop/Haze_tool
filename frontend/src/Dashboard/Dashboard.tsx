@@ -355,12 +355,12 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
             {/* Logo Group */}
             <div className="h-[72px] px-[18px] flex items-center border-b border-black/[0.04]">
               {isSidebarCollapsed ? (
-                <span className="font-sans text-[19px] font-bold tracking-[-0.03em] text-foreground select-none mx-auto">
+                <span className="font-sans text-xl font-bold tracking-[-0.03em] text-foreground select-none mx-auto">
                   H.
                 </span>
               ) : (
                 <div className="flex flex-col truncate leading-tight">
-                  <span className="font-sans text-[19px] font-bold tracking-[-0.03em] text-foreground select-none">
+                  <span className="font-sans text-xl font-bold tracking-[-0.03em] text-foreground select-none">
                     {t.brandName}
                   </span>
                   <span className="text-xs text-muted-foreground font-sans mt-0.5 whitespace-nowrap">
@@ -381,7 +381,7 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                   <div className="space-y-1.5 pt-1">
                     <div className="border-t border-black/[0.04] mx-1 my-2" />
                     {!isSidebarCollapsed && (
-                      <div className="px-3 py-1 text-[10px] font-bold text-muted-foreground/50 tracking-wider uppercase text-left">
+                      <div className="px-3 py-1 text-xs font-bold text-muted-foreground/50 tracking-wider uppercase text-left">
                         {langCode === "ZH" ? "安全与管理" : langCode === "JA" ? "セキュリティ・管理" : langCode === "ES" ? "Seguridad y Gestión" : "Security & Admin"}
                       </div>
                     )}
@@ -401,16 +401,16 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                 <button className={`w-full flex items-center justify-between py-1 px-1 rounded-xl hover:bg-sidebar-accent transition-colors duration-150 cursor-pointer text-left focus:outline-hidden ${isSidebarCollapsed ? "justify-center" : ""}`}>
                   <div className="flex items-center gap-2.5 truncate">
                     <Avatar className="h-8 w-8 border border-neutral-200/80">
-                      <AvatarFallback className="bg-neutral-900 text-white text-[11px] font-bold">
+                      <AvatarFallback className="bg-neutral-900 text-white text-xs font-bold">
                         {userName.substring(0, 1).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     {!isSidebarCollapsed && (
                       <div className="truncate flex-1 leading-tight">
-                        <p className="text-[13px] font-medium text-foreground truncate" title={userName}>
+                        <p className="text-sm font-medium text-foreground truncate" title={userName}>
                           {userName}
                         </p>
-                        <p className="text-[12px] text-muted-foreground truncate" title={userEmail}>
+                        <p className="text-xs text-muted-foreground truncate" title={userEmail}>
                           {userEmail}
                         </p>
                       </div>
@@ -430,10 +430,10 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                     </AvatarFallback>
                   </Avatar>
                   <div className="truncate flex-1 leading-tight">
-                    <p className="text-[13px] font-medium text-foreground truncate" title={userName}>
+                    <p className="text-sm font-medium text-foreground truncate" title={userName}>
                       {userName}
                     </p>
-                    <p className="text-[12px] text-muted-foreground truncate" title={userEmail}>
+                    <p className="text-xs text-muted-foreground truncate" title={userEmail}>
                       {userEmail}
                     </p>
                   </div>
@@ -524,7 +524,7 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                         {menuItemsGroup2.length > 0 && (
                           <div className="space-y-1.5 pt-1">
                             <div className="border-t border-black/[0.04] mx-1 my-2" />
-                            <div className="px-2.5 py-1 text-[10px] font-bold text-muted-foreground/50 tracking-wider uppercase text-left">
+                            <div className="px-2.5 py-1 text-xs font-bold text-muted-foreground/50 tracking-wider uppercase text-left">
                               {langCode === "ZH" ? "安全与管理" : langCode === "JA" ? "セキュリティ・管理" : langCode === "ES" ? "Seguridad y Gestión" : "Security & Admin"}
                             </div>
                             <div className="space-y-1">
@@ -556,13 +556,13 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                   <div className="border-t border-black/[0.04] p-3 bg-muted/20 flex items-center justify-between">
                     <div className="flex items-center gap-2 truncate">
                       <Avatar className="h-8 w-8 border border-neutral-200">
-                        <AvatarFallback className="bg-neutral-900 text-white text-[10px] font-bold">
+                        <AvatarFallback className="bg-neutral-900 text-white text-xs font-bold">
                           {userName.substring(0, 1).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="truncate leading-tight">
                         <p className="text-xs font-semibold text-foreground truncate">{userName}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{userEmail}</p>
+                        <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
                       </div>
                     </div>
                     <SheetClose asChild>
@@ -574,7 +574,7 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                 </SheetContent>
               </Sheet>
  
-              <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground font-sans">
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground font-sans">
                 <span className="hover:text-foreground transition-colors cursor-pointer hidden sm:inline">
                   {t.hazeAiHub}
                 </span>
@@ -602,7 +602,7 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                       variant="ghost" 
                       size="sm"
                       onClick={handleMarkAllRead} 
-                      className="text-[11px] text-foreground p-0 h-6 hover:bg-transparent"
+                      className="text-xs text-foreground p-0 h-6 hover:bg-transparent"
                     >
                       {t.markAllRead}
                     </Button>
@@ -615,7 +615,7 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                             {n.unread && <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />}
                             <div className="flex-1 leading-tight">
                               <p className="text-foreground leading-normal text-xs">{n.text}</p>
-                              <p className="text-[10px] text-muted-foreground mt-1">{n.time}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{n.time}</p>
                             </div>
                           </div>
                         </div>
@@ -627,7 +627,7 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
 
               {/* Role Switcher Toolbar Button for V1 Demonstration */}
               <div className="flex items-center gap-1.5 p-1 bg-neutral-100/70 border border-black/[0.04] rounded-lg">
-                <span className="text-[10px] font-bold text-neutral-450 px-1 uppercase tracking-tight hidden md:inline">
+                <span className="text-xs font-bold text-neutral-450 px-1 uppercase tracking-tight hidden md:inline">
                   {langCode === "ZH" ? "测试体验角色:" : langCode === "JA" ? "体験ロール:" : langCode === "ES" ? "Rol de prueba:" : "Demo Role:"}
                 </span>
                 <Button 
@@ -640,7 +640,7 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                       setActiveMenu("workbench");
                     }
                   }}
-                  className="h-6.5 text-[10.5px] font-bold bg-white text-neutral-700 shadow-xs border border-neutral-200/80 hover:bg-neutral-50 px-2 cursor-pointer transition-all rounded-md flex items-center gap-1"
+                  className="h-6.5 text-xs font-bold bg-white text-neutral-700 shadow-xs border border-neutral-200/80 hover:bg-neutral-50 px-2 cursor-pointer transition-all rounded-md flex items-center gap-1"
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${currentRole === "Admin" ? "bg-amber-500" : "bg-purple-500"}`} />
                   <span>{currentRole === "Admin" ? "管理员 Admin 🛡️" : "普通成员 Member 👤"}</span>

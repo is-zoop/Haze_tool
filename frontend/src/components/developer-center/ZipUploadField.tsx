@@ -48,7 +48,7 @@ export function ZipUploadField({
                   <FileText className="h-4 w-4 text-slate-400 shrink-0" />
                   <span className="font-medium">{file.name}</span>
                 </div>
-                <span className="text-slate-400 font-mono text-[11px] pr-1">{file.size}</span>
+                <span className="text-slate-400 font-mono text-xs pr-1">{file.size}</span>
               </div>
             ))}
           </div>
@@ -81,7 +81,7 @@ export function ZipUploadField({
 
           <div className="space-y-1">
             <p className="text-xs font-bold text-slate-700">拖拽 zip 文件到此处，或点击选择</p>
-            <p className="text-[10px] text-slate-400 leading-normal">
+            <p className="text-xs text-slate-400 leading-normal">
               {placeholderDesc || "支持 zip 文件需包含 SKILL.md，大小不超过 10MB"}
             </p>
           </div>

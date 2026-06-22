@@ -186,6 +186,48 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Shared typography roles keep page-level type aligned with the global font stack. */
+.text-page-title {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 700;
+}
+
+.text-section-title {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 700;
+}
+
+.text-body {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.text-control,
+.text-table,
+.text-supporting {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.text-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .text-page-title {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+}
+
 /* Dashboard shell background as requested */
 .dashboard-shell-background {
   position: relative;

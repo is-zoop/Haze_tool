@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
 import { GoogleIcon } from "./GoogleIcon";
 import { motion, AnimatePresence } from "motion/react";
+import { Input } from "@/components/ui/input";
 
 interface LoginFormProps {
   onLoginSuccess: (email: string) => void;
@@ -203,7 +204,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
               {/* Or divider */}
               <div className="flex items-center gap-3 py-1">
                 <div className="flex-1 h-px bg-border"></div>
-                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">or</span>
+                <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider">or</span>
                 <div className="flex-1 h-px bg-border"></div>
               </div>
 
@@ -211,13 +212,13 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5 rounded-xl border border-input focus-within:border-ring bg-card px-3.5 py-3 shadow-2xs focus-within:ring-1 focus-within:ring-ring transition-all">
                   <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <input
+                  <Input
                     type="email"
                     placeholder="Your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}
-                    className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground font-sans outline-hidden border-none"
+                    className="h-auto w-full rounded-none border-none bg-transparent p-0 text-sm text-foreground shadow-none outline-hidden placeholder:text-muted-foreground focus-visible:ring-0"
                   />
                 </div>
               </div>
@@ -226,13 +227,13 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5 rounded-xl border border-input focus-within:border-ring bg-card px-3.5 py-3 shadow-2xs focus-within:ring-1 focus-within:ring-ring transition-all">
                   <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <input
+                  <Input
                     type={showPassword ? "text" : "password"}
                     placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
-                    className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground font-sans outline-hidden border-none"
+                    className="h-auto w-full rounded-none border-none bg-transparent p-0 text-sm text-foreground shadow-none outline-hidden placeholder:text-muted-foreground focus-visible:ring-0"
                   />
                   <button
                     type="button"
@@ -326,13 +327,13 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
               {/* Full Name */}
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5 rounded-xl border border-input focus-within:border-ring bg-card px-3.5 py-3 shadow-2xs focus-within:ring-1 focus-within:ring-ring transition-all">
-                  <input
+                  <Input
                     type="text"
                     placeholder="Full Name"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     disabled={isLoading}
-                    className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground font-sans outline-hidden border-none"
+                    className="h-auto w-full rounded-none border-none bg-transparent p-0 text-sm text-foreground shadow-none outline-hidden placeholder:text-muted-foreground focus-visible:ring-0"
                   />
                 </div>
               </div>
@@ -341,13 +342,13 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5 rounded-xl border border-input focus-within:border-ring bg-card px-3.5 py-3 shadow-2xs focus-within:ring-1 focus-within:ring-ring transition-all">
                   <Mail className="h-4 w-4 text-muted-foreground" />
-                  <input
+                  <Input
                     type="email"
                     placeholder="Your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}
-                    className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground font-sans outline-hidden border-none"
+                    className="h-auto w-full rounded-none border-none bg-transparent p-0 text-sm text-foreground shadow-none outline-hidden placeholder:text-muted-foreground focus-visible:ring-0"
                   />
                 </div>
               </div>
@@ -356,13 +357,13 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5 rounded-xl border border-input focus-within:border-ring bg-card px-3.5 py-3 shadow-2xs focus-within:ring-1 focus-within:ring-ring transition-all">
                   <Lock className="h-4 w-4 text-muted-foreground" />
-                  <input
+                  <Input
                     type="password"
                     placeholder="Password (min 6 chars)"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
-                    className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground font-sans outline-hidden border-none"
+                    className="h-auto w-full rounded-none border-none bg-transparent p-0 text-sm text-foreground shadow-none outline-hidden placeholder:text-muted-foreground focus-visible:ring-0"
                   />
                 </div>
               </div>
@@ -421,13 +422,13 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5 rounded-xl border border-input focus-within:border-ring bg-card px-3.5 py-3 shadow-2xs focus-within:ring-1 focus-within:ring-ring transition-all">
                   <Mail className="h-4 w-4 text-muted-foreground" />
-                  <input
+                  <Input
                     type="email"
                     placeholder="Your email address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}
-                    className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground font-sans outline-hidden border-none"
+                    className="h-auto w-full rounded-none border-none bg-transparent p-0 text-sm text-foreground shadow-none outline-hidden placeholder:text-muted-foreground focus-visible:ring-0"
                   />
                 </div>
               </div>

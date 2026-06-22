@@ -111,7 +111,7 @@ export function DeveloperAssetFormDialog({
                   placeholder={currentAsset.type === "MCP Server" ? "请输入 MCP 连接服务器名称" : "财务报表摘要智能生成器"}
                   className={`h-9 pr-14 text-xs bg-white rounded-lg ${formErrors.name ? "border-destructive focus-visible:ring-destructive" : "border-slate-200"}`}
                 />
-                <span className="absolute right-3 text-[10px] select-none text-muted-foreground/60 font-mono">
+                <span className="absolute right-3 text-xs select-none text-muted-foreground/60 font-mono">
                   {(currentAsset.name || "").length} / 100
                 </span>
               </div>
@@ -214,7 +214,7 @@ export function DeveloperAssetFormDialog({
                 }`}>
                   <SelectValue placeholder="选择业务分类" />
                 </SelectTrigger>
-                <SelectContent className="bg-white rounded-lg">
+                <SelectContent position="popper" align="start" className="w-[var(--radix-select-trigger-width)] bg-popover">
                   {CUSTOM_CATEGORIES.filter((c) => c.id !== "all").map((c) => (
                     <SelectItem key={c.id} value={c.zh} className="text-xs">
                       {c.zh}
@@ -298,7 +298,7 @@ export function DeveloperAssetFormDialog({
                   formErrors.description ? "border-destructive focus-visible:ring-destructive" : ""
                 }`}
               />
-              <div className={`absolute right-3 bottom-2 text-[10px] font-mono select-none ${
+              <div className={`absolute right-3 bottom-2 text-xs font-mono select-none ${
                   (currentAsset.description || "").length > 300 ? "text-rose-500 font-bold" : "text-muted-foreground/60"
                 }`}
               >

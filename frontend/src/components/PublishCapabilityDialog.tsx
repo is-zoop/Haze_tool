@@ -2,6 +2,7 @@ import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 interface PublishCapabilityDialogProps {
   open: boolean;
@@ -75,7 +76,7 @@ export function PublishCapabilityDialog({
           {/* Description Textarea */}
           <div className="space-y-1.5 text-left">
             <label className="font-medium text-zinc-650">能力功能描述 (Description)</label>
-            <textarea
+            <Textarea
               required
               value={newCapDesc}
               onChange={(e) => setNewCapDesc(e.target.value)}

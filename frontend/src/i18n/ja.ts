@@ -145,5 +145,32 @@ export const ja = {
   memberMgmt_msgPasswordSuccess: "パスワードのリセットメールが送信されました。",
   memberMgmt_today: "今日",
   memberMgmt_yesterday: "昨日",
-  memberMgmt_daysAgo: "日前"
+  memberMgmt_daysAgo: "日前",
+  // Shared status labels
+  statusPublished: "公開済み",
+  statusDraft: "下書き",
+  statusReviewing: "審査中",
+  statusRejected: "却下",
+  statusOffline: "オフライン",
+  statusPending: "審査待ち",
+  statusApproved: "承認済",
+  statusProcessing: "処理中",
+  statusWithdrawn: "撤回済",
+  statusPass: "テスト成功",
+  statusFail: "テスト失敗",
+  statusTesting: "テスト中",
+  statusNoTestRequired: "テスト不要",
+  statusNotTested: "未テスト",
+
+  // Audit and developer actions
+  auditRefreshSuccess: "データを更新し、最新の監査シーケンスを同期しました。",
+  auditViewLogs: "申請ID {id} の監査履歴を表示しています...",
+  auditCopiedRequestId: "申請IDをクリップボードにコピーしました: {id}",
+  auditExpediteSuccess: "部門責任者に優先処理を依頼しました。",
+  developerUploadSkill: "Skill をアップロード",
+  developerRegisterMcp: "MCP を登録",
+  developerVersionRequired: "バージョン番号を入力してください",
+  developerVersionFormat: "形式が正しくありません。x.y.z を使用してください",
+  developerDescriptionRequired: "バージョン説明を入力してください",
+  developerSkillZipRequired: "Skill ZIP ファイルをアップロードしてください"
 };

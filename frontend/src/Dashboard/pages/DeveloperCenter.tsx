@@ -40,6 +40,7 @@ import { MOCK_DEVELOPER_MCP_SERVERS } from "../../temp/developerMcpServers";
 import { AssetStatus, DeveloperAsset } from "../../types/developer-center";
 import { PageHeader } from "../../components/common/PageHeader";
 import { DataTableFooter } from "../../components/common/DataTableFooter";
+import { getI18n } from "../../i18n";
 
 // Modular Developer Center Subcomponents
 import { DeveloperAssetTable } from "../../components/developer-center/DeveloperAssetTable";
@@ -67,6 +68,7 @@ export function DeveloperCenter({
   langCode: _langCode = "ZH",
   currentRole = "Admin",
 }: PageProps) {
+  const t = getI18n(_langCode);
   const [assets, setAssets] = useState<DeveloperAsset[]>(() => [
     ...MOCK_DEVELOPER_SKILLS,
     ...MOCK_DEVELOPER_MCP_SERVERS,
@@ -370,17 +372,17 @@ export function DeveloperCenter({
 
     const errors: Record<string, string> = {};
     if (!newVersionNum.trim()) {
-      errors.version = "版本号不能为空";
+      errors.version = t.developerVersionRequired;
     } else if (!/^\d+\.\d+\.\d+$/.test(newVersionNum.trim())) {
-      errors.version = "格式不正确，应为 x.y.z";
+      errors.version = t.developerVersionFormat;
     }
 
     if (!newVersionDesc.trim()) {
-      errors.description = "版本说明不能为空";
+      errors.description = t.developerDescriptionRequired;
     }
 
     if (newVersionAsset.type === "Skill" && !newVersionZipName) {
-      errors.zipName = "请上传 Skill 压缩包文件";
+      errors.zipName = t.developerSkillZipRequired;
     }
 
     if (Object.keys(errors).length > 0) {
@@ -568,14 +570,14 @@ export function DeveloperCenter({
                 className="cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center gap-1.5 animate-none"
               >
                 <Code size={12} className="text-slate-400 animate-none" />
-                <span>{_langCode === "ZH" ? "上传 Skill" : "Upload Skill"}</span>
+                <span>{t.developerUploadSkill}</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => handleOpenAddAsset("MCP Server")}
                 className="cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center gap-1.5 animate-none"
               >
                 <Cpu size={12} className="text-slate-400 animate-none" />
-                <span>{_langCode === "ZH" ? "注册 MCP" : "Register MCP"}</span>
+                <span>{t.developerRegisterMcp}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

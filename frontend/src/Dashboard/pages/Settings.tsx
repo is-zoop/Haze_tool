@@ -343,7 +343,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t.memberMgmt_tabAll} <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold">{allCount}</span>
+            {t.memberMgmt_tabAll} <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold">{allCount}</span>
           </button>
           <button 
             onClick={() => { setStatusTab("active"); setCurrentPage(1); }}
@@ -353,7 +353,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t.memberMgmt_tabActive} <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-bold">{activeCount}</span>
+            {t.memberMgmt_tabActive} <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-bold">{activeCount}</span>
           </button>
           <button 
             onClick={() => { setStatusTab("disabled"); setCurrentPage(1); }}
@@ -363,7 +363,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t.memberMgmt_tabDisabled} <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-rose-600 font-bold">{disabledCount}</span>
+            {t.memberMgmt_tabDisabled} <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-rose-600 font-bold">{disabledCount}</span>
           </button>
         </div>
 
@@ -680,7 +680,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                   <label className="block text-xs font-bold text-muted-foreground pb-1.5">
                     {t.memberMgmt_formName}
                   </label>
-                  <input
+                  <Input
                     type="text"
                     required
                     value={currentMember.name || ""}
@@ -693,7 +693,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                   <label className="block text-xs font-bold text-muted-foreground pb-1.5">
                     {t.memberMgmt_formEmail}
                   </label>
-                  <input
+                  <Input
                     type="email"
                     required
                     value={currentMember.email || ""}
@@ -706,7 +706,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                   <label className="block text-xs font-bold text-muted-foreground pb-1.5">
                     {t.memberMgmt_formPhone}
                   </label>
-                  <input
+                  <Input
                     type="text"
                     required
                     value={currentMember.phone || ""}
@@ -720,7 +720,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                     {t.memberMgmt_formDept}
                   </label>
                   <div className="relative flex items-center">
-                    <input
+                    <Input
                       type="text"
                       required
                       value={currentMember.department || ""}
