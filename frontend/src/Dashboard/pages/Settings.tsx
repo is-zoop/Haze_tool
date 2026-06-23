@@ -63,7 +63,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
 
   // Add/Edit Dialog states
   const [showEditModal, setShowEditModal] = useState(false);

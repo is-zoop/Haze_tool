@@ -86,8 +86,6 @@ const i18n = {
     notifCenter: "通知中心",
     markAllRead: "标记全部已读",
     docs: "帮助文档",
-    roleLabel: "角色权限",
-    roleValue: "企业普通开发者",
     personalCenter: "个人中心",
     devGuideDdown: "开发指南",
     logout: "退出登录",
@@ -116,8 +114,6 @@ const i18n = {
     notifCenter: "Notifications",
     markAllRead: "Mark all read",
     docs: "Help Docs",
-    roleLabel: "Role Permission",
-    roleValue: "Standard Developer",
     personalCenter: "Personal Center",
     devGuideDdown: "Development Guide",
     logout: "Log out",
@@ -146,8 +142,6 @@ const i18n = {
     notifCenter: "通知センター",
     markAllRead: "すべて既読にする",
     docs: "ヘルプドキュメント",
-    roleLabel: "ロール権限",
-    roleValue: "一般开发者",
     personalCenter: "マイページ",
     devGuideDdown: "開発ガイド",
     logout: "ログアウト",
@@ -176,8 +170,6 @@ const i18n = {
     notifCenter: "Centro de Notificaciones",
     markAllRead: "Marcar todo como leído",
     docs: "Manual de Ayuda",
-    roleLabel: "Rol / Permisos",
-    roleValue: "Desarrollador Estándar",
     personalCenter: "Centro Personal",
     devGuideDdown: "Guía de Desarrollo",
     logout: "Cerrar sesión",
@@ -214,8 +206,6 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
   // Selected Sidebar Tab
   const [activeMenu, setActiveMenu] = useState<MenuKey>("workbench");
   
-  // Current demo role state: "Admin" or "Member"
-  const [currentRole, setCurrentRole] = useState<"Admin" | "Member">("Admin");
   
   // Global Search Term
   const searchQuery = "";
@@ -284,12 +274,11 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
   }, [t, langCode]);
 
   const menuItemsGroup2 = useMemo(() => {
-    if (currentRole !== "Admin") return [];
     return [
       { key: "audit" as const, label: langCode === "ZH" ? "发布审核" : langCode === "JA" ? "リリース審査" : langCode === "ES" ? "Control de Auditoría" : "Audit Center", icon: ShieldCheck },
       { key: "settings" as const, label: langCode === "ZH" ? "成员管理" : langCode === "JA" ? "メンバー管理" : langCode === "ES" ? "Gestión de Miembros" : "Member Management", icon: Settings }
     ];
-  }, [currentRole, langCode]);
+  }, [langCode]);
 
   const menuItems = useMemo(() => {
     return [...menuItemsGroup1, ...menuItemsGroup2];
@@ -625,28 +614,6 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Role Switcher Toolbar Button for V1 Demonstration */}
-              <div className="flex items-center gap-1.5 p-1 bg-neutral-100/70 border border-black/[0.04] rounded-lg">
-                <span className="text-xs font-bold text-neutral-450 px-1 uppercase tracking-tight hidden md:inline">
-                  {langCode === "ZH" ? "测试体验角色:" : langCode === "JA" ? "体験ロール:" : langCode === "ES" ? "Rol de prueba:" : "Demo Role:"}
-                </span>
-                <Button 
-                  size="sm"
-                  onClick={() => {
-                    const nextRole = currentRole === "Admin" ? "Member" : "Admin";
-                    setCurrentRole(nextRole);
-                    // Reset to Home to avoid leaving restricted pages blank
-                    if (nextRole === "Member" && (activeMenu === "audit" || activeMenu === "settings")) {
-                      setActiveMenu("workbench");
-                    }
-                  }}
-                  className="h-6.5 text-xs font-bold bg-white text-neutral-700 shadow-xs border border-neutral-200/80 hover:bg-neutral-50 px-2 cursor-pointer transition-all rounded-md flex items-center gap-1"
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${currentRole === "Admin" ? "bg-amber-500" : "bg-purple-500"}`} />
-                  <span>{currentRole === "Admin" ? "管理员 Admin 🛡️" : "普通成员 Member 👤"}</span>
-                </Button>
-              </div>
-
             </div>
           </header>
 
@@ -670,9 +637,9 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                 />
               )}
               {activeMenu === "market" && <Market onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} setActiveMenu={(menu) => setActiveMenu(menu as MenuKey)} />}
-              {activeMenu === "developer" && <DeveloperCenter onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} currentRole={currentRole} />}
-              {activeMenu === "audit" && currentRole === "Admin" && <AuditCenter onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
-              {activeMenu === "settings" && currentRole === "Admin" && <SettingsPage onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
+              {activeMenu === "developer" && <DeveloperCenter onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
+              {activeMenu === "audit" && <AuditCenter onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
+              {activeMenu === "settings" && <SettingsPage onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
               {activeMenu === "guide" && <Guide onBackToHome={() => setActiveMenu("workbench")} setActiveMenu={(menu) => setActiveMenu(menu as MenuKey)} />}
             </div>
           </main>

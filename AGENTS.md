@@ -1,84 +1,77 @@
 # AGENTS.md
 
-## Project Rules
+## Core Rules
 
-This project prefers small, safe, and readable changes. Do not rewrite large parts of the codebase unless the user explicitly asks for it.
+- Prefer small, safe, readable changes.
+- Do not rewrite large areas unless explicitly requested.
+- Keep existing behavior, API shape, UI structure, and style unless the task requires a change.
+- Do not change unrelated modules while fixing or adding one feature.
 
-## Frontend Change Policy
+## Backend Rules
 
-1. Avoid modifying frontend code unless the task clearly requires it.
-2. When frontend changes are necessary, keep the existing UI structure and visual style as much as possible.
-3. Do not redesign pages, layouts, modals, tables, cards, buttons, spacing, or colors unless explicitly requested.
-4. Prefer minimal patches over large refactors.
+- For backend tasks, modify backend files only.
+- Do not edit `frontend/` unless the user explicitly asks for frontend changes.
+- Before any backend add/change/fix, read `function_register.md` to understand registered features and avoid breaking stable work.
+- After any backend add/change/fix, update `function_register.md`.
+- If `function_register.md` does not exist, create it.
+- Keep backend changes inside the existing feature boundary when a related feature is already registered.
+- Do not refactor registered stable features unless the user explicitly asks for it.
 
-## Styling Rules
+## Function Register
 
-1. Frontend styles must follow the existing `index.css` theme and global design tokens first.
-2. Do not introduce new colors, font sizes, shadows, borders, or spacing rules when existing styles can be reused.
-3. Prefer existing Tailwind utility patterns already used in the project.
-4. Avoid arbitrary values such as `text-[10px]`, `bg-[#xxxxxx]`, or custom spacing unless there is a strong reason.
-5. If a shared style is needed, add a small reusable class or token instead of repeating custom styles across files.
+`function_register.md` records completed backend features.
 
-## Component Reuse
+Each backend change must register or update:
 
-1. Prefer existing component library components before creating new custom components.
-2. Reuse existing UI components, shared components, dialogs, tables, forms, badges, buttons, inputs, tabs, and layout components whenever possible.
-3. Do not duplicate component logic that already exists elsewhere.
-4. If a repeated UI pattern appears more than once, extract a small reusable component.
+- feature name
+- module
+- status: added / changed / fixed / stable
+- APIs
+- tables
+- main files
+- change summary
+- impact on existing features
+- verification method
 
-## File and Structure Rules
+For fixes, update the existing feature entry instead of creating a duplicate.
 
-1. Avoid adding too many unrelated features into a single file.
-2. Keep files focused on one responsibility.
-3. Split large files into smaller components when it improves readability, but preserve existing UI and behavior.
-4. Page files should mainly compose components and handle page-level state.
-5. Shared UI should live in shared component folders.
-6. Temporary/mock data should not be hardcoded inside page components. Put temporary data in the project’s temp/mock data location if available.
+## Frontend Policy
 
-## Cleanup Rules
+- Avoid frontend changes unless required.
+- Preserve the existing page structure, layout, components, spacing, colors, and interactions.
+- Do not redesign pages, modals, cards, tables, buttons, or forms unless requested.
+- Temporary/mock data must stay in the project temp/mock location, not inside page components.
+- User-facing text must use the existing i18n system when available.
 
-1. When updating a feature, remove code that has become invalid or unused, as long as removing it does not break current functionality.
-2. Remove unused imports, unused variables, dead branches, obsolete comments, and abandoned mock logic.
-3. Do not keep placeholder functionality that only shows a toast unless it is clearly marked as not implemented.
-4. Do not delete working code just to simplify the file.
+## Styling
+
+- Follow `index.css`, design tokens, and existing Tailwind patterns.
+- Prefer existing components and shared UI before creating new ones.
+- Avoid arbitrary values like `text-[10px]`, `bg-[#xxxxxx]`, custom shadows, or custom spacing unless necessary.
+- Extract small reusable components/classes when a pattern repeats.
 
 ## Code Style
 
-1. Prefer simple, readable, and maintainable code.
-2. Avoid clever abstractions unless they clearly reduce duplication.
-3. Keep naming clear and consistent with the existing project.
-4. Keep business logic and UI rendering separated where practical.
-5. Avoid large rewrites when a small targeted fix is enough.
-
-## Internationalization
-
-1. Do not hardcode new user-facing text directly in components if the project has an i18n system.
-2. Add new text to the existing i18n files and use the existing translation helper.
-3. Keep all supported languages consistent when adding new copy.
-
-## Safety Checklist Before Finishing
-
-Before completing a task, check:
-
-1. Did the change avoid unnecessary frontend modifications?
-2. Did the frontend style follow `index.css` and existing components?
-3. Did the change reuse existing components before creating new ones?
-4. Did any file become too large or mix unrelated responsibilities?
-5. Was obsolete or unused code safely removed?
-6. Is the code simple, readable, and easy to maintain?
-7. Were user-facing strings added to i18n when required?
-8. Did the change avoid unintended UI redesign?
-
+- Keep files focused on one responsibility.
+- Prefer simple code over clever abstractions.
+- Separate business logic and UI rendering where practical.
+- Remove unused imports, variables, dead branches, obsolete comments, and invalid mock logic.
+- Do not delete working code just to simplify a file.
 
 ## Preview / Browser Policy
 
-1. Do not start browser preview unless the user explicitly asks for it.
-2. Do not automatically run Vite dev server for visual verification.
-3. Do not use browser automation, Playwright, Chrome DevTools, or screenshots unless explicitly requested.
-4. For frontend tasks, prefer static validation:
-   - npm run build
-   - TypeScript check
-   - lint if available
-   - git diff review
-5. If visual verification is needed, stop and ask the user before starting any dev server or browser.
-6. Do not keep background dev server processes running after checks.
+- Do not start browser preview, Vite dev server, Playwright, Chrome DevTools, or screenshots unless explicitly requested.
+- Prefer static checks: build, TypeScript check, lint, and git diff review.
+- Do not leave background dev server processes running.
+
+## Final Checklist
+
+Before finishing, verify:
+
+- No unrelated files changed.
+- Backend task did not edit frontend unless requested.
+- Backend task read and updated `function_register.md`.
+- Frontend changes, if any, follow existing UI, style, components, and i18n.
+- Obsolete code was safely removed.
+- Validation or test result is reported.
+- Existing registered features were not unintentionally changed.

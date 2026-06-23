@@ -21,8 +21,6 @@ export const es = {
   notifCenter: "Notificaciones",
   markAllRead: "Marcar todo como leído",
   docs: "Documentos",
-  roleLabel: "Permisos de rol",
-  roleValue: "Desarrollador estándar",
   personalCenter: "Centro personal",
   devGuideDdown: "Guía de desarrollo",
   logout: "Cerrar sesión",

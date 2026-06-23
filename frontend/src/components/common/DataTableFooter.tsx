@@ -29,10 +29,10 @@ export function DataTableFooter({
   let finalTotalLabel = totalLabel || "共";
   let finalItemsLabel = itemsLabel || "项";
   let defaultPageSizes = pageSizeOptions || [
-    { value: 6, label: "6 项/页" },
-    { value: 12, label: "12 项/页" },
-    { value: 18, label: "18 项/页" },
-    { value: 24, label: "24 项/页" },
+    { value: 10, label: "10 项/页" },
+    { value: 20, label: "20 项/页" },
+    { value: 50, label: "50 项/页" },
+    { value: 100, label: "100 项/页" },
   ];
 
   if (langCode === "EN") {
@@ -40,10 +40,10 @@ export function DataTableFooter({
     finalItemsLabel = itemsLabel || "items";
     if (!pageSizeOptions) {
       defaultPageSizes = [
-        { value: 6, label: "6 / page" },
-        { value: 12, label: "12 / page" },
-        { value: 18, label: "18 / page" },
-        { value: 24, label: "24 / page" },
+        { value: 10, label: "10 / page" },
+        { value: 20, label: "20 / page" },
+        { value: 50, label: "50 / page" },
+        { value: 100, label: "100 / page" },
       ];
     }
   } else if (langCode === "JA") {
@@ -51,10 +51,10 @@ export function DataTableFooter({
     finalItemsLabel = itemsLabel || "件";
     if (!pageSizeOptions) {
       defaultPageSizes = [
-        { value: 6, label: "6 件/ページ" },
-        { value: 12, label: "12 件/ページ" },
-        { value: 18, label: "18 件/ページ" },
-        { value: 24, label: "24 件/ページ" },
+        { value: 10, label: "10 件/ページ" },
+        { value: 20, label: "20 件/ページ" },
+        { value: 50, label: "50 件/ページ" },
+        { value: 100, label: "100 件/ページ" },
       ];
     }
   } else if (langCode === "ES") {
@@ -62,10 +62,10 @@ export function DataTableFooter({
     finalItemsLabel = itemsLabel || "ítems";
     if (!pageSizeOptions) {
       defaultPageSizes = [
-        { value: 6, label: "6 / pág." },
-        { value: 12, label: "12 / pág." },
-        { value: 18, label: "18 / pág." },
-        { value: 24, label: "24 / pág." },
+        { value: 10, label: "10 / pág." },
+        { value: 20, label: "20 / pág." },
+        { value: 50, label: "50 / pág." },
+        { value: 100, label: "100 / pág." },
       ];
     }
   }

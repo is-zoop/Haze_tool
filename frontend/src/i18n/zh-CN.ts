@@ -21,8 +21,6 @@ export const zhCN = {
   notifCenter: "通知中心",
   markAllRead: "标记全部已读",
   docs: "帮助文档",
-  roleLabel: "角色权限",
-  roleValue: "企业普通开发者",
   personalCenter: "个人中心",
   devGuideDdown: "开发指南",
   logout: "退出登录",

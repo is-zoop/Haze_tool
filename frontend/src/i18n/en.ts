@@ -21,8 +21,6 @@ export const en = {
   notifCenter: "Notifications",
   markAllRead: "Mark all read",
   docs: "Help Docs",
-  roleLabel: "Role Permission",
-  roleValue: "Standard Developer",
   personalCenter: "Personal Center",
   devGuideDdown: "Development Guide",
   logout: "Log out",

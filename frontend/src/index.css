@@ -2,7 +2,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  --font-sans: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", "Inter", system-ui, sans-serif;
   --font-display: "Space Grotesk", sans-serif;
 
   --color-background: hsl(var(--background));
@@ -96,10 +96,10 @@
     sans-serif;
 
   --font-zh:
-    "Inter",
+    "PingFang SC",
     "Noto Sans SC",
     "Microsoft YaHei",
-    "PingFang SC",
+    "Inter",
     system-ui,
     sans-serif;
 
@@ -178,6 +178,11 @@ select {
   font-family: inherit;
 }
 
+button,
+button * {
+  font-weight: 500 !important;
+}
+
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
@@ -190,8 +195,9 @@ input:-webkit-autofill:active {
 }
 
 body {
+  font-family: var(--font-sans);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
   font-weight: 400;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -308,7 +314,7 @@ body {
 .login-button-text {
   font-size: 14px;
   line-height: 20px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .login-helper-text {

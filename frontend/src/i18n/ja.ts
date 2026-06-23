@@ -21,8 +21,6 @@ export const ja = {
   notifCenter: "通知センター",
   markAllRead: "すべて既読にする",
   docs: "ヘルプドキュメント",
-  roleLabel: "ロール権限",
-  roleValue: "一般開発者",
   personalCenter: "個人ユーザー",
   devGuideDdown: "開発ガイド",
   logout: "ログアウト",

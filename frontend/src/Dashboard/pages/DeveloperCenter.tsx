@@ -58,7 +58,6 @@ import {
 interface PageProps {
   onBackToHome: () => void;
   langCode?: "ZH" | "EN" | "JA" | "ES";
-  currentRole?: "Admin" | "Member";
 }
 
 type AssetTypeFilter = "all" | "Skill" | "MCP Server";
@@ -66,7 +65,6 @@ type AssetTypeFilter = "all" | "Skill" | "MCP Server";
 export function DeveloperCenter({
   onBackToHome: _onBackToHome,
   langCode: _langCode = "ZH",
-  currentRole = "Admin",
 }: PageProps) {
   const t = getI18n(_langCode);
   const [assets, setAssets] = useState<DeveloperAsset[]>(() => [
@@ -299,8 +297,7 @@ export function DeveloperCenter({
   };
 
   const handlePublishAsset = (asset: DeveloperAsset) => {
-    // Requirement 9: Resolve invalid currentRole check inside handlePublishAsset
-    const targetStatus: AssetStatus = currentRole === "Member" ? "reviewing" : "published";
+    const targetStatus: AssetStatus = "published";
     setAssets((prev) =>
       prev.map((item) =>
         item.id === asset.id
@@ -309,16 +306,10 @@ export function DeveloperCenter({
       ),
     );
 
-    const isSubmitted = currentRole === "Member";
-    const msg = isSubmitted
-      ? (_langCode === "ZH" ? `已成功提交能力 [${asset.name}] 的发布申请至审核中心`
-         : _langCode === "JA" ? `機能 [${asset.name}] の公開申請を送信しました`
-         : _langCode === "ES" ? `La solicitud de publicación para [${asset.name}] ha sido enviada`
-         : `Capability [${asset.name}] has been submitted for review`)
-      : (_langCode === "ZH" ? `能力 [${asset.name}] 已发布到能力市场`
-         : _langCode === "JA" ? `機能 [${asset.name}] をマーケットに公開しました`
-         : _langCode === "ES" ? `La capacidad [${asset.name}] ha sido publicada en el mercado`
-         : `Capability [${asset.name}] has been published to market`);
+    const msg = _langCode === "ZH" ? `能力 [${asset.name}] 已发布到能力市场`
+      : _langCode === "JA" ? `機能 [${asset.name}] をマーケットに公開しました`
+      : _langCode === "ES" ? `La capacidad [${asset.name}] ha sido publicada en el mercado`
+      : `Capability [${asset.name}] has been published to market`;
 
     triggerFlashAlert(msg);
   };

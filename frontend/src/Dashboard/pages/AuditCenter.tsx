@@ -111,7 +111,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
 
   // Detail Sheet / Overlay Drawer state
   const [selectedReview, setSelectedReview] = useState<AuditRequest | null>(null);

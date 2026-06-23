@@ -212,7 +212,7 @@ export function Market({
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
+  const [pageSize, setPageSize] = useState(10);
 
   const allItems = useMemo<MarketItem[]>(() => {
     return [
