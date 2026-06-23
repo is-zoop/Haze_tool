@@ -42,6 +42,7 @@ interface DeveloperAssetFormDialogProps {
   setFormErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   onSave: (event: React.FormEvent) => void;
   onZipUploaded: (file: File) => void;
+  onIconUploaded: (file: File, previewUrl: string) => void;
   onClearZip: () => void;
 }
 
@@ -56,6 +57,7 @@ export function DeveloperAssetFormDialog({
   setFormErrors,
   onSave,
   onZipUploaded,
+  onIconUploaded,
   onClearZip,
 }: DeveloperAssetFormDialogProps) {
   return (
@@ -172,7 +174,7 @@ export function DeveloperAssetFormDialog({
                     if (file) {
                       const reader = new FileReader();
                       reader.onload = (e) => {
-                        setCurrentAsset((prev) => ({ ...prev, icon: e.target?.result as string }));
+                        onIconUploaded(file, e.target?.result as string);
                       };
                       reader.readAsDataURL(file);
                     }

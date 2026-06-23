@@ -3,10 +3,12 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func, text
+from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+BIGINT_PK = BigInteger().with_variant(Integer, "sqlite")
 
 
 class Capability(Base):
@@ -16,7 +18,7 @@ class Capability(Base):
         {"comment": "能力资产主表，Skill / MCP 共用"},
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment="能力ID")
+    id: Mapped[int] = mapped_column(BIGINT_PK, primary_key=True, autoincrement=True, comment="能力ID")
     code: Mapped[str] = mapped_column(String(100), nullable=False, comment="能力编码")
     name: Mapped[str] = mapped_column(String(200), nullable=False, comment="能力名称")
     type: Mapped[str] = mapped_column(String(50), nullable=False, comment="能力类型：skill/mcp")
@@ -57,7 +59,8 @@ class Capability(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        server_default=text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
+        server_default=func.now(),
+        onupdate=func.now(),
         comment="更新时间",
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, comment="软删除时间")
@@ -74,7 +77,7 @@ class CapabilityVersion(Base):
         {"comment": "能力版本表"},
     )
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment="能力版本ID")
+    id: Mapped[int] = mapped_column(BIGINT_PK, primary_key=True, autoincrement=True, comment="能力版本ID")
     capability_id: Mapped[int] = mapped_column(
         BigInteger,
         ForeignKey("capabilities.id", ondelete="CASCADE"),

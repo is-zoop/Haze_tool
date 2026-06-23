@@ -1,4 +1,3 @@
-import React, { useMemo, useState } from "react";
 import {
   Plus,
   RotateCcw,
@@ -35,497 +34,60 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { MOCK_DEVELOPER_SKILLS } from "../../temp/developerSkills";
-import { MOCK_DEVELOPER_MCP_SERVERS } from "../../temp/developerMcpServers";
-import { AssetStatus, DeveloperAsset } from "../../types/developer-center";
 import { PageHeader } from "../../components/common/PageHeader";
 import { DataTableFooter } from "../../components/common/DataTableFooter";
 import { getI18n } from "../../i18n";
-
-// Modular Developer Center Subcomponents
 import { DeveloperAssetTable } from "../../components/developer-center/DeveloperAssetTable";
 import { DeveloperAssetFormDialog } from "../../components/developer-center/DeveloperAssetFormDialog";
 import { NewVersionDialog } from "../../components/developer-center/NewVersionDialog";
 import { McpConnectionTestDialog } from "../../components/developer-center/McpConnectionTestDialog";
-
-// Shared options & Temporary data imports
-import {
-  DEFAULT_ASSET,
-  SIMULATION_LOGS,
-  SIMULATION_FINISH_DELAY,
-} from "../../temp/developerCenterTestData";
+import { AssetTypeFilter, useDeveloperCapabilities } from "../../components/developer-center/useDeveloperCapabilities";
 
 interface PageProps {
   onBackToHome: () => void;
   langCode?: "ZH" | "EN" | "JA" | "ES";
 }
 
-type AssetTypeFilter = "all" | "Skill" | "MCP Server";
-
 export function DeveloperCenter({
   onBackToHome: _onBackToHome,
   langCode: _langCode = "ZH",
 }: PageProps) {
   const t = getI18n(_langCode);
-  const [assets, setAssets] = useState<DeveloperAsset[]>(() => [
-    ...MOCK_DEVELOPER_SKILLS,
-    ...MOCK_DEVELOPER_MCP_SERVERS,
-  ]);
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTypeTab, setActiveTypeTab] = useState<AssetTypeFilter>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | AssetStatus>("all");
-  const [pageSize, setPageSize] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentAsset, setCurrentAsset] = useState<Partial<DeveloperAsset>>(DEFAULT_ASSET);
-  const [tagsInputText, setTagsInputText] = useState("");
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
-  const [showNewVersionModal, setShowNewVersionModal] = useState(false);
-  const [newVersionAsset, setNewVersionAsset] = useState<DeveloperAsset | null>(null);
-  const [newVersionNum, setNewVersionNum] = useState("");
-  const [newVersionDesc, setNewVersionDesc] = useState("");
-  const [newVersionZipName, setNewVersionZipName] = useState("");
-  const [newVersionZipSize, setNewVersionZipSize] = useState("");
-  const [newVersionZipFiles, setNewVersionZipFiles] = useState<{ name: string; size: string }[]>([]);
-  const [newVersionErrors, setNewVersionErrors] = useState<Record<string, string>>({});
-
-  const [showDebugModal, setShowDebugModal] = useState(false);
-  const [debugAsset, setDebugAsset] = useState<DeveloperAsset | null>(null);
-  const [debugStatus, setDebugStatus] = useState<"idle" | "testing" | "pass" | "fail">("idle");
-  const [currentStepIndex, setCurrentStepIndex] = useState<number>(-1);
-  const [terminalLogs, setTerminalLogs] = useState<Array<{ time: string; type: string; text: string }>>([]);
-  const [testStarted, setTestStarted] = useState(false);
-  const timeoutsRef = React.useRef<any[]>([]);
-
-  const [deleteTarget, setDeleteTarget] = useState<DeveloperAsset | null>(null);
-  const [flashMessage, setFlashMessage] = useState<string | null>(null);
-
-  const filteredAssets = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    return assets.filter((item) => {
-      const matchesSearch =
-        !query ||
-        item.name.toLowerCase().includes(query) ||
-        item.code.toLowerCase().includes(query) ||
-        item.project.toLowerCase().includes(query) ||
-        item.description.toLowerCase().includes(query);
-
-      const matchesType = activeTypeTab === "all" || item.type === activeTypeTab;
-      const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-
-      return matchesSearch && matchesType && matchesStatus;
-    });
-  }, [assets, searchQuery, activeTypeTab, statusFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / pageSize));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedAssets = useMemo(() => {
-    const start = (safeCurrentPage - 1) * pageSize;
-    return filteredAssets.slice(start, start + pageSize);
-  }, [filteredAssets, pageSize, safeCurrentPage]);
-
-  const triggerFlashAlert = (msg: string) => {
-    setFlashMessage(msg);
-    setTimeout(() => setFlashMessage(null), 3000);
-  };
-
-  const resetToFirstPage = () => setCurrentPage(1);
-
-  const handleResetFilters = () => {
-    setSearchQuery("");
-    setActiveTypeTab("all");
-    setStatusFilter("all");
-    setCurrentPage(1);
-  };
-
-  const handleOpenAddAsset = (type: "Skill" | "MCP Server" = "Skill") => {
-    setIsEditing(false);
-    setFormErrors({});
-    setTagsInputText("");
-    setCurrentAsset({
-      ...DEFAULT_ASSET,
-      type,
-      project: "企业办公",
-      version: "v1.2.0",
-      description: "",
-      skillMd: "# 新能力说明\n\n描述该能力的运行机制、适用范围 and prompt 配置。",
-      tools: ["query_schema_list", "retrieve_active_logs"],
-      resources: ["db://default_schemas"],
-      testCases: [
-        {
-          id: "case-1",
-          name: "基础用例",
-          input: "列出当前所有汇总记录",
-          expected: "返回成功，展示列表",
-        },
-      ],
-    });
-    setShowEditModal(true);
-  };
-
-  const handleOpenEditAsset = (asset: DeveloperAsset) => {
-    setIsEditing(true);
-    setFormErrors({});
-    setTagsInputText((asset.tags || []).join("，"));
-    const updated = { ...asset };
-    if (updated.type === "Skill") {
-      if (!updated.zipName) {
-        updated.zipName = `${updated.code || "skill"}_${updated.version || "v1.2.0"}.zip`;
-      }
-      if (!updated.zipSize) {
-        updated.zipSize = "32.1 KB";
-      }
-      if (!updated.zipFiles) {
-        updated.zipFiles = [
-          { name: "business_analysis_README.md", size: "18.2 KB" },
-          { name: "TASK_TEMPLATE.md", size: "14.0 KB" }
-        ];
-      }
-    }
-    setCurrentAsset(updated);
-    setShowEditModal(true);
-  };
-
-  const handleZipFileUploaded = (file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
-      setFormErrors(prev => ({ ...prev, zipName: "zip 大小不能超过 10MB" }));
-      return;
-    }
-    const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || "skill";
-    setCurrentAsset(prev => ({
-      ...prev,
-      zipName: file.name,
-      zipSize: `${(file.size / 1024).toFixed(1)} KB`,
-      zipFiles: [
-        { name: `${baseName}_README.md`, size: `${Math.max(1, Math.round(file.size * 0.45 / 1024))} KB` },
-        { name: "index.ts", size: `${Math.max(1, Math.round(file.size * 0.4 / 1024))} KB` },
-        { name: "package.json", size: "380 B" }
-      ]
-    }));
-    setFormErrors(prev => ({ ...prev, zipName: "" }));
-  };
-
-  const handleSaveAssetForm = (event: React.FormEvent) => {
-    event.preventDefault();
-
-    const errors: Record<string, string> = {};
-    if (currentAsset.type === "Skill") {
-      if (!currentAsset.name || !currentAsset.name.trim()) {
-        errors.name = "Skill 名称不能为空";
-      } else if (currentAsset.name.length > 100) {
-        errors.name = "Skill 名称不能超过 100 个字符";
-      }
-
-      if (!currentAsset.code || !currentAsset.code.trim()) {
-        errors.code = "Slug 不能为空";
-      } else if (!/^[a-z0-9_-]{3,50}$/.test(currentAsset.code)) {
-        errors.code = "Slug 只允许小写字母、数字、下划线和中划线，3-50 个字符";
-      }
-
-      if (!currentAsset.project || !currentAsset.project.trim()) {
-        errors.project = "请选择业务分类";
-      }
-
-      const versionStr = currentAsset.version || "";
-      if (!versionStr.trim()) {
-        errors.version = "版本必填";
-      } else if (!/^v\d+\.\d+\.\d+$/.test(versionStr)) {
-        errors.version = "版本建议格式为 v1.2.0";
-      }
-
-      if (!currentAsset.zipName) {
-        errors.zipName = "Skill 文件必填";
-      }
-
-      const descStr = currentAsset.description || "";
-      if (!descStr.trim()) {
-        errors.description = "Skill 描述不能为空";
-      } else if (descStr.length > 300) {
-        errors.description = "Skill 描述不能超过 300 个字符";
-      }
-    } else {
-      if (!currentAsset.name || !currentAsset.name.trim()) {
-        errors.name = "能力资产名称不能为空";
-      }
-      if (!currentAsset.code || !currentAsset.code.trim()) {
-        errors.code = "系统唯一 Code 不能为空";
-      }
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
-
-    if (isEditing) {
-      setAssets((prev) =>
-        prev.map((item) =>
-          item.id === currentAsset.id ? ({ ...item, ...currentAsset } as DeveloperAsset) : item,
-        ),
-      );
-      triggerFlashAlert(
-        _langCode === "ZH" ? `能力 [${currentAsset.name}] 更新成功`
-        : _langCode === "JA" ? `機能 [${currentAsset.name}] を更新しました`
-        : _langCode === "ES" ? `Capacidad [${currentAsset.name}] actualizada con éxito`
-        : `Capability [${currentAsset.name}] updated successfully`
-      );
-    } else {
-      const newlyCreated: DeveloperAsset = {
-        ...DEFAULT_ASSET,
-        ...currentAsset,
-        id: `asset-${assets.length + 1}`,
-        calls: 0,
-        recentTestStatus: "none",
-        visibility: "internal",
-        updatedAt: new Date().toISOString().replace("T", " ").substring(0, 19),
-      } as DeveloperAsset;
-      setAssets((prev) => [newlyCreated, ...prev]);
-      triggerFlashAlert(
-        _langCode === "ZH" ? `新建能力 [${currentAsset.name}] 成功并保存为草稿`
-        : _langCode === "JA" ? `新規機能 [${currentAsset.name}] を作成し、下書きとして保存しました`
-        : _langCode === "ES" ? `Nueva capacidad [${currentAsset.name}] creada y guardada como borrador`
-        : `New capability [${currentAsset.name}] created and saved as draft`
-      );
-    }
-
-    setShowEditModal(false);
-  };
-
-  const handlePublishAsset = (asset: DeveloperAsset) => {
-    const targetStatus: AssetStatus = "published";
-    setAssets((prev) =>
-      prev.map((item) =>
-        item.id === asset.id
-          ? { ...item, status: targetStatus, updatedAt: new Date().toISOString().replace("T", " ").substring(0, 19) }
-          : item,
-      ),
-    );
-
-    const msg = _langCode === "ZH" ? `能力 [${asset.name}] 已发布到能力市场`
-      : _langCode === "JA" ? `機能 [${asset.name}] をマーケットに公開しました`
-      : _langCode === "ES" ? `La capacidad [${asset.name}] ha sido publicada en el mercado`
-      : `Capability [${asset.name}] has been published to market`;
-
-    triggerFlashAlert(msg);
-  };
-
-  const handleOfflineAsset = (asset: DeveloperAsset) => {
-    setAssets((prev) => prev.map((item) => (item.id === asset.id ? { ...item, status: "offline" } : item)));
-    triggerFlashAlert(
-      _langCode === "ZH" ? `能力 [${asset.name}] 已下线`
-      : _langCode === "JA" ? `機能 [${asset.name}] はオフラインになりました`
-      : _langCode === "ES" ? `La capacidad [${asset.name}] ahora está fuera de línea`
-      : `Capability [${asset.name}] is now offline`
-    );
-  };
-
-  const handleIncrementVersion = (asset: DeveloperAsset) => {
-    const parts = asset.version.replace("v", "").split(".");
-    let nextVersion = "1.3.0";
-    if (parts.length === 3) {
-      parts[1] = String(Number(parts[1]) + 1);
-      nextVersion = parts.join(".");
-    }
-    setNewVersionAsset(asset);
-    setNewVersionNum(nextVersion);
-    setNewVersionDesc("");
-    setNewVersionZipName("");
-    setNewVersionZipSize("");
-    setNewVersionZipFiles([]);
-    setNewVersionErrors({});
-    setShowNewVersionModal(true);
-  };
-
-  const handleNewVersionZipUploaded = (file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
-      setNewVersionErrors(prev => ({ ...prev, zipName: "zip 大小不能超过 10MB" }));
-      return;
-    }
-    const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || "skill";
-    setNewVersionZipName(file.name);
-    setNewVersionZipSize(`${(file.size / 1024).toFixed(1)} KB`);
-    setNewVersionZipFiles([
-      { name: `${baseName}_README.md`, size: `${Math.max(1, Math.round(file.size * 0.45 / 1024))} KB` },
-      { name: "index.ts", size: `${Math.max(1, Math.round(file.size * 0.4 / 1024))} KB` },
-      { name: "package.json", size: "380 B" }
-    ]);
-    setNewVersionErrors(prev => ({ ...prev, zipName: "" }));
-  };
-
-  const handleSaveNewVersion = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!newVersionAsset) return;
-
-    const errors: Record<string, string> = {};
-    if (!newVersionNum.trim()) {
-      errors.version = t.developerVersionRequired;
-    } else if (!/^\d+\.\d+\.\d+$/.test(newVersionNum.trim())) {
-      errors.version = t.developerVersionFormat;
-    }
-
-    if (!newVersionDesc.trim()) {
-      errors.description = t.developerDescriptionRequired;
-    }
-
-    if (newVersionAsset.type === "Skill" && !newVersionZipName) {
-      errors.zipName = t.developerSkillZipRequired;
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setNewVersionErrors(errors);
-      return;
-    }
-
-    const versionStr = `v${newVersionNum.trim()}`;
-    setAssets((prev) =>
-      prev.map((item) =>
-        item.id === newVersionAsset.id
-          ? {
-              ...item,
-              version: versionStr,
-              zipName: newVersionAsset.type === "Skill" ? newVersionZipName : item.zipName,
-              zipSize: newVersionAsset.type === "Skill" ? newVersionZipSize : item.zipSize,
-              zipFiles: newVersionAsset.type === "Skill" ? newVersionZipFiles : item.zipFiles,
-              updatedAt: new Date().toISOString().replace("T", " ").substring(0, 19),
-            }
-          : item
-      )
-    );
-
-    triggerFlashAlert(
-      _langCode === "ZH" ? `已成功创建新版本 [${newVersionAsset.name}] ${versionStr}`
-      : `Successfully created new version ${versionStr} for [${newVersionAsset.name}]`
-    );
-    setShowNewVersionModal(false);
-  };
-
-  const handleDeleteAsset = (asset: DeveloperAsset) => {
-    setAssets((prev) => prev.filter((item) => item.id !== asset.id));
-    setDeleteTarget(null);
-    triggerFlashAlert(
-      _langCode === "ZH" ? `资产能力 [${asset.name}] 已从工作区移除`
-      : _langCode === "JA" ? `機能 [${asset.name}] をワークスペースから削除しました`
-      : _langCode === "ES" ? `La capacidad [${asset.name}] ha sido de-registrada`
-      : `Capability [${asset.name}] was removed from active workspace`
-    );
-  };
-
-  const handleCopyAssetCode = (asset: DeveloperAsset) => {
-    const textToCopy = asset.type === "Skill" ? `${asset.name} (Slug: ${asset.code}):\n${asset.description || ""}` : asset.code;
-    navigator.clipboard.writeText(textToCopy);
-    triggerFlashAlert(
-      _langCode === "ZH" ? `已复制 Prompt 到剪贴板`
-      : _langCode === "JA" ? `Prompt をクリップボードにコピーしました`
-      : _langCode === "ES" ? `Prompt copiado al portapapeles`
-      : `Prompt copied to clipboard`
-    );
-  };
-
-  const handleOpenDebug = (asset: DeveloperAsset) => {
-    setDebugAsset({ ...asset });
-    setDebugStatus("idle");
-    setCurrentStepIndex(-1);
-    setTerminalLogs([]);
-    setTestStarted(false);
-    setShowDebugModal(true);
-  };
-
-  const formatTerminalTime = () => {
-    const d = new Date();
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mm = String(d.getMinutes()).padStart(2, '0');
-    const ss = String(d.getSeconds()).padStart(2, '0');
-    const mmm = String(d.getMilliseconds()).padStart(3, '0');
-    return `${hh}:${mm}:${ss}.${mmm}`;
-  };
-
-  const runSimulation = (assetArg?: DeveloperAsset) => {
-    const targetAsset = assetArg || debugAsset;
-    if (!targetAsset) return;
-
-    // Clear prior timeouts
-    timeoutsRef.current.forEach((t) => clearTimeout(t));
-    timeoutsRef.current = [];
-
-    setTerminalLogs([]);
-    setCurrentStepIndex(0);
-    setDebugStatus("testing");
-
-    const pushLog = (type: string, text: string) => {
-      setTerminalLogs((prev) => [
-        ...prev,
-        {
-          time: formatTerminalTime(),
-          type,
-          text,
-        },
-      ]);
-    };
-
-    const serverUrl = targetAsset.serverUrl || `http://127.0.0.1:3000/api/mcp/${targetAsset.code}`;
-
-    pushLog("START", `开始测试 MCP 服务: ${serverUrl}`);
-
-    // Offload simulation logs & steps to separate config
-    SIMULATION_LOGS.forEach((log) => {
-      const t = setTimeout(() => {
-        if (log.type === "SYSTEM_STEP") {
-          setCurrentStepIndex(log.nextStepIdx);
-        } else {
-          pushLog(log.type, log.text);
-        }
-      }, log.delay);
-      timeoutsRef.current.push(t);
-    });
-
-    const tFinish = setTimeout(() => {
-      setDebugStatus("pass");
-      setAssets((prev) =>
-        prev.map((item) =>
-          item.id === targetAsset.id ? { ...item, recentTestStatus: "pass" } : item
-        )
-      );
-    }, SIMULATION_FINISH_DELAY);
-    timeoutsRef.current.push(tFinish);
-  };
-
-  // Dynamic Type Tab Counts
-  const allCount = assets.length;
-  const skillCount = assets.filter((item) => item.type === "Skill").length;
-  const mcpCount = assets.filter((item) => item.type === "MCP Server").length;
+  const {
+    assets, tabCounts, totalItems, totalPages, safeCurrentPage,
+    searchQuery, setSearchQuery, activeTypeTab, setActiveTypeTab, statusFilter, setStatusFilter,
+    pageSize, setPageSize, setCurrentPage, resetToFirstPage, handleResetFilters,
+    showEditModal, setShowEditModal, currentAsset, setCurrentAsset,
+    tagsInputText, setTagsInputText, formErrors, setFormErrors,
+    handleOpenAddAsset, handleOpenEditAsset, handleIconFileUploaded, handleZipFileUploaded, handleSaveAssetForm,
+    showNewVersionModal, setShowNewVersionModal, newVersionAsset, newVersionNum, setNewVersionNum,
+    newVersionDesc, setNewVersionDesc, newVersionZipName, setNewVersionZipName,
+    newVersionZipSize, setNewVersionZipSize, newVersionZipFiles, setNewVersionZipFiles, setNewVersionPackageToken,
+    newVersionErrors, handleIncrementVersion, handleNewVersionZipUploaded, handleSaveNewVersion,
+    handlePublishAsset, handleOfflineAsset, handleDeleteAsset, deleteTarget, setDeleteTarget,
+    handleCopyAssetCode, handleOpenDebug, showDebugModal, setShowDebugModal, debugAsset,
+    debugStatus, currentStepIndex, terminalLogs, setTerminalLogs, testStarted, setTestStarted, runSimulation,
+    flashMessage, triggerFlashAlert,
+  } = useDeveloperCapabilities(_langCode);
 
   const developerCenterTabs: TabItem[] = [
     {
       value: "all",
       label: (
         <span className="flex items-center gap-1">
-          {_langCode === "ZH" ? "全部" : _langCode === "JA" ? "全て" : _langCode === "ES" ? "Todo" : "All"} <span className="font-normal opacity-80">{allCount}</span>
+          {_langCode === "ZH" ? "全部" : _langCode === "JA" ? "全て" : _langCode === "ES" ? "Todo" : "All"} <span className="font-normal opacity-80">{tabCounts.all}</span>
         </span>
       ),
     },
     {
       value: "Skill",
-      label: (
-        <span className="flex items-center gap-1">
-          Skill <span className="font-normal opacity-80">{skillCount}</span>
-        </span>
-      ),
+      label: <span className="flex items-center gap-1">Skill <span className="font-normal opacity-80">{tabCounts.skill}</span></span>,
     },
     {
       value: "MCP Server",
-      label: (
-        <span className="flex items-center gap-1">
-          MCP <span className="font-normal opacity-80">{mcpCount}</span>
-        </span>
-      ),
+      label: <span className="flex items-center gap-1">MCP <span className="font-normal opacity-80">{tabCounts.mcp}</span></span>,
     },
   ];
-
   return (
     <div className="dashboard-page-stack h-full overflow-hidden text-left font-sans flex flex-col gap-3 animate-in fade-in duration-300" id="haze-developer-center-container">
       {/* Dynamic Animated Toast */}
@@ -654,7 +216,7 @@ export function DeveloperCenter({
         {/* Assets Main Table Content and Pagination Wrapper */}
         <div className="flex-grow flex-1 min-h-0 flex flex-col gap-2" id="haze-developer-table-wrapper">
           <DeveloperAssetTable
-            paginatedAssets={paginatedAssets}
+            paginatedAssets={assets}
             langCode={_langCode}
             onOpenDebug={handleOpenDebug}
             onOpenEditAsset={handleOpenEditAsset}
@@ -666,7 +228,7 @@ export function DeveloperCenter({
           />
 
           <DataTableFooter
-            totalItems={filteredAssets.length}
+            totalItems={totalItems}
             currentPage={safeCurrentPage}
             totalPages={totalPages}
             pageSize={pageSize}
@@ -716,8 +278,9 @@ export function DeveloperCenter({
         setFormErrors={setFormErrors}
         onSave={handleSaveAssetForm}
         onZipUploaded={handleZipFileUploaded}
+        onIconUploaded={handleIconFileUploaded}
         onClearZip={() => {
-          setCurrentAsset(prev => ({ ...prev, zipName: undefined, zipSize: undefined, zipFiles: undefined }));
+          setCurrentAsset(prev => ({ ...prev, packageUploadToken: undefined, zipName: undefined, zipSize: undefined, zipFiles: undefined }));
         }}
       />
 
@@ -738,6 +301,7 @@ export function DeveloperCenter({
           setNewVersionZipName("");
           setNewVersionZipSize("");
           setNewVersionZipFiles([]);
+          setNewVersionPackageToken(undefined);
         }}
         newVersionErrors={newVersionErrors}
         onSave={handleSaveNewVersion}

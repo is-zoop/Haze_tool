@@ -40,6 +40,8 @@ export interface DeveloperAsset {
   zipName?: string;
   zipSize?: string;
   zipFiles?: { name: string; size: string }[];
+  iconUploadToken?: string;
+  packageUploadToken?: string;
 
   // MCP Server-specific fields
   transport?: "HTTP" | "STDIO";
@@ -66,36 +68,4 @@ export interface DeveloperAsset {
   parameterNotice?: string;
   readWrite?: "readonly" | "readwrite";
   needConfirm?: boolean;
-}
-
-export interface TestRun {
-  id: string;
-  testName: string;
-  assetId: string;
-  assetName: string;
-  assetType: AssetType;
-  testVersion: string;
-  environment: string;
-  status: "unexecuted" | "executing" | "pass" | "fail" | "cancelled";
-  duration: number; // in ms
-  executor: string;
-  executionTime: string;
-  input: string;
-  expectedResult: string;
-  actualResult: string;
-  steps: string[];
-  toolCalls: { toolName: string; args: string; result: string }[];
-  errorSummary?: string;
-}
-
-export interface VersionRecord {
-  id: string;
-  version: string;
-  assetId: string;
-  assetName: string;
-  status: "draft" | "beta" | "release" | "deprecated"; // 草稿版, 测试版, 正式版, 已废弃
-  changelog: string;
-  creator: string;
-  createdAt: string;
-  publishedAt?: string;
 }

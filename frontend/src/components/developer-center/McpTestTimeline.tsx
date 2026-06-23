@@ -1,5 +1,5 @@
 import { Check, HelpCircle } from "lucide-react";
-import { MCP_TEST_STEPS } from "../../temp/developerCenterTestData";
+import { MCP_TEST_STEPS } from "./config";
 
 interface McpTestTimelineProps {
   currentStepIndex: number;

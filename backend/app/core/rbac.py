@@ -24,10 +24,30 @@ PERMISSION_DEFINITIONS = {
     "members.reset_password": ("Reset member passwords", "Reset a member password"),
     "members.status": ("Change member status", "Enable or disable members"),
     "members.delete": ("Remove members", "Soft-delete enterprise members"),
+    "capabilities.read": ("Read capabilities", "View developer capabilities"),
+    "capabilities.create": ("Create capabilities", "Register Skill and MCP capabilities"),
+    "capabilities.update": ("Update capabilities", "Edit capability configuration"),
+    "capabilities.version": ("Create capability versions", "Create immutable capability versions"),
+    "capabilities.publish": ("Publish capabilities", "Publish capabilities"),
+    "capabilities.offline": ("Offline capabilities", "Take capabilities offline"),
+    "capabilities.delete": ("Delete capabilities", "Soft-delete capabilities"),
+    "capabilities.test_result": ("Write capability test results", "Write MCP test status"),
 }
 
 ROLE_PERMISSION_CODES = {
     ADMIN: set(PERMISSION_DEFINITIONS),
-    DEVELOPER: {"page.home", "page.marketplace", "page.developer", "page.guide"},
+    DEVELOPER: {
+        "page.home",
+        "page.marketplace",
+        "page.developer",
+        "page.guide",
+        "capabilities.read",
+        "capabilities.create",
+        "capabilities.update",
+        "capabilities.version",
+        "capabilities.publish",
+        "capabilities.offline",
+        "capabilities.delete",
+    },
     USER: {"page.home", "page.marketplace", "page.guide"},
 }

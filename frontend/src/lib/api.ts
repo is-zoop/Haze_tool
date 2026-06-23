@@ -93,3 +93,22 @@ export async function apiRequest<T>(
   }
   return payload;
 }
+export async function apiBlobRequest(path: string): Promise<Blob> {
+  const accessToken = localStorage.getItem(AUTH_TOKEN_KEY) ?? undefined;
+  const headers = new Headers();
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const response = await fetch(`${apiBaseUrl}${normalizedPath}`, { headers });
+  if (!response.ok) {
+    if (response.status === 401 && accessToken) {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
+    }
+    throw new ApiError(response.statusText || "API request failed", {
+      status: response.status,
+      code: response.status,
+      requestId: response.headers.get("X-Request-ID") ?? undefined,
+    });
+  }
+  return response.blob();
+}

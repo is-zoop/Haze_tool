@@ -1,6 +1,5 @@
 import { FileText, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DEFAULT_ZIP_FILES } from "../../temp/developerCenterTestData";
 
 interface ZipUploadFieldProps {
   zipName?: string;
@@ -30,7 +29,7 @@ export function ZipUploadField({
         <div className="space-y-2 w-full animate-fade-in text-left">
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500 font-medium select-none">
-              已选择 {zipFiles?.length || 2} 个文件，总大小 {zipSize || "32.1 KB"}
+              已选择 {zipFiles?.length || 0} 个文件，总大小 {zipSize || "0 B"}
             </span>
             <button
               type="button"
@@ -42,7 +41,7 @@ export function ZipUploadField({
           </div>
 
           <div className="border border-slate-200 rounded-lg bg-white divide-y divide-slate-100 overflow-hidden shadow-2xs">
-            {(zipFiles || DEFAULT_ZIP_FILES).map((file, idx) => (
+            {(zipFiles || []).map((file, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 text-xs">
                 <div className="flex items-center gap-2 text-slate-700">
                   <FileText className="h-4 w-4 text-slate-400 shrink-0" />

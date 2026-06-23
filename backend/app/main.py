@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.response import ApiResponse, success_response
 from app.modules.auth.router import router as auth_router
+from app.modules.capabilities.router import router as capabilities_router
 from app.modules.users.router import router as users_router
 
 REQUEST_ID_HEADER = "X-Request-ID"
@@ -57,6 +58,7 @@ def create_app() -> FastAPI:
     application.add_middleware(RequestIdMiddleware)
     register_exception_handlers(application)
     application.include_router(auth_router)
+    application.include_router(capabilities_router)
     application.include_router(users_router)
 
     @application.get(
