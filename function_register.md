@@ -63,3 +63,16 @@
 - 是否影响已有功能：前端会话改为真实 JWT；401 自动清理会话并返回登录页，侧边栏按页面权限显示。
 - 验证方式：pytest 15 项通过；前端 TypeScript 检查通过。
 - 更新时间：2026-06-23
+
+### Developer center capability asset tables
+
+- 所属模块：capabilities / developer center
+- 功能状态：新增
+- 涉及接口：无
+- 涉及数据表：`capabilities`、`capability_versions`
+- 涉及主要文件：`backend/app/modules/capabilities/models.py`、`backend/alembic/versions/20260623_0002_capability_assets.py`、`backend/app/db/base.py`
+- 功能说明：建立 Skill / MCP 共用的能力资产主表与能力版本快照表，支持负责人、部门、创建人、更新人、扩展 JSON、软删除和版本历史。
+- 本次改动说明：新增带完整中文表注释和字段注释的数据库迁移及 SQLAlchemy 模型；本次不迁移或预置业务数据，不调整 UI 和 API。
+- 是否影响已有功能：仅新增数据库表和 ORM 元数据注册，不改变现有认证、成员管理、接口响应和前端行为。
+- 验证方式：Python 编译检查、Alembic revision 链检查、MySQL 离线迁移 SQL 核对；可用数据库环境下执行升级并核对 information_schema。
+- 更新时间：2026-06-23
