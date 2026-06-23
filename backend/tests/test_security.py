@@ -45,11 +45,11 @@ def test_invalid_access_token_is_rejected() -> None:
 
 
 def test_capability_dependency_accepts_and_rejects() -> None:
-    payload = decode_access_token(
-        create_access_token("user-1", capabilities=["users.read"])
-    )
-    assert require_capabilities("users.read")(payload) is payload
+    permission = type("Permission", (), {"code": "users.read"})()
+    role = type("Role", (), {"permissions": [permission]})()
+    user = type("User", (), {"roles": [role]})()
+    assert require_capabilities("users.read")(user) is user
     with pytest.raises(AppException) as exc_info:
-        require_capabilities("users.write")(payload)
+        require_capabilities("users.write")(user)
     assert exc_info.value.status_code == 403
     assert exc_info.value.data == {"missing_capabilities": ["users.write"]}

@@ -42,6 +42,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { GuidelineSheet } from "@/components/GuidelineSheet";
 import { PublishCapabilityDialog } from "@/components/PublishCapabilityDialog";
+import { AuthUser } from "@/lib/auth";
 
 // Import real, typed mock data from homeData
 import {
@@ -53,7 +54,7 @@ import {
 } from "@/temp/homeData";
 
 interface DashboardProps {
-  userEmail: string;
+  user: AuthUser;
   onLogout: () => void;
   currentLang?: {
     code: string;
@@ -196,7 +197,7 @@ interface SkillItem {
   time: string;
 }
 
-export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) {
+export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
   const langCode = (currentLang?.code || "ZH") as keyof typeof i18n;
   const t = i18n[langCode] || i18n.ZH;
 
@@ -265,27 +266,37 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
   };
 
   const menuItemsGroup1 = useMemo(() => {
+    const permissionMap: Partial<Record<MenuKey, string>> = {
+      workbench: "page.home", market: "page.marketplace", developer: "page.developer", guide: "page.guide",
+    };
     return [
       { key: "workbench" as const, label: t.workbench, icon: LayoutDashboard },
       { key: "market" as const, label: t.market, icon: ShoppingBag },
       { key: "developer" as const, label: t.developer, icon: Code },
       { key: "guide" as const, label: langCode === "ZH" ? "开发者指南" : langCode === "JA" ? "開発者ガイド" : langCode === "ES" ? "Guía de Desarrolladores" : "Developer Guide", icon: BookOpen }
-    ];
-  }, [t, langCode]);
+    ].filter(item => user.permissions.includes(permissionMap[item.key]!));
+  }, [t, langCode, user.permissions]);
 
   const menuItemsGroup2 = useMemo(() => {
+    const permissionMap: Partial<Record<MenuKey, string>> = { audit: "page.audit", settings: "page.members" };
     return [
       { key: "audit" as const, label: langCode === "ZH" ? "发布审核" : langCode === "JA" ? "リリース審査" : langCode === "ES" ? "Control de Auditoría" : "Audit Center", icon: ShieldCheck },
       { key: "settings" as const, label: langCode === "ZH" ? "成员管理" : langCode === "JA" ? "メンバー管理" : langCode === "ES" ? "Gestión de Miembros" : "Member Management", icon: Settings }
-    ];
-  }, [langCode]);
+    ].filter(item => user.permissions.includes(permissionMap[item.key]!));
+  }, [langCode, user.permissions]);
 
   const menuItems = useMemo(() => {
     return [...menuItemsGroup1, ...menuItemsGroup2];
   }, [menuItemsGroup1, menuItemsGroup2]);
 
+  useEffect(() => {
+    if (!menuItems.some(item => item.key === activeMenu)) {
+      setActiveMenu("workbench");
+    }
+  }, [activeMenu, menuItems]);
+
   const currentMenuLabel = menuItems.find(item => item.key === activeMenu)?.label || t.workbench;
-  const userName = userEmail.split("@")[0] || "企业成员";
+  const userName = user.name || "Enterprise Member";
 
   const handleMarkAllRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
@@ -399,8 +410,8 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                         <p className="text-sm font-medium text-foreground truncate" title={userName}>
                           {userName}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate" title={userEmail}>
-                          {userEmail}
+                        <p className="text-xs text-muted-foreground truncate" title={user.email}>
+                          {user.email}
                         </p>
                       </div>
                     )}
@@ -422,8 +433,8 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                     <p className="text-sm font-medium text-foreground truncate" title={userName}>
                       {userName}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate" title={userEmail}>
-                      {userEmail}
+                    <p className="text-xs text-muted-foreground truncate" title={user.email}>
+                      {user.email}
                     </p>
                   </div>
                 </div>
@@ -551,7 +562,7 @@ export function Dashboard({ userEmail, onLogout, currentLang }: DashboardProps) 
                       </Avatar>
                       <div className="truncate leading-tight">
                         <p className="text-xs font-semibold text-foreground truncate">{userName}</p>
-                        <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                       </div>
                     </div>
                     <SheetClose asChild>

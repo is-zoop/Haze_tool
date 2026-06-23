@@ -10,9 +10,13 @@ from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from pwdlib import PasswordHash
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.exceptions import AppException
+from app.db.session import get_db
+from app.modules.users.models import User
 
 password_hash = PasswordHash.recommended()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -24,6 +28,7 @@ class TokenPayload(BaseModel):
     sub: str
     roles: list[str] = Field(default_factory=list)
     capabilities: list[str] = Field(default_factory=list)
+    ver: int = 0
     exp: datetime
 
 
@@ -40,6 +45,7 @@ def create_access_token(
     *,
     roles: Sequence[str] = (),
     capabilities: Sequence[str] = (),
+    token_version: int = 0,
     expires_delta: timedelta | None = None,
     extra_claims: dict[str, Any] | None = None,
 ) -> str:
@@ -53,6 +59,7 @@ def create_access_token(
         "sub": subject,
         "roles": list(roles),
         "capabilities": list(capabilities),
+        "ver": token_version,
         "exp": expires_at,
     }
     if extra_claims:
@@ -87,13 +94,35 @@ def get_current_token_payload(
     return decode_access_token(token)
 
 
+def get_current_user(
+    payload: Annotated[TokenPayload, Depends(get_current_token_payload)],
+    db: Annotated[Session, Depends(get_db)],
+) -> User:
+    user = db.scalar(select(User).where(User.member_no == payload.sub, User.deleted == 0))
+    if user is None or user.status != "active" or user.token_version != payload.ver:
+        raise AppException(
+            code=4010,
+            message="invalid or expired token",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+    return user
+
+
+def get_user_permission_codes(user: User) -> set[str]:
+    return {
+        permission.code
+        for role in user.roles
+        for permission in role.permissions
+    }
+
+
 def require_capabilities(
     *required_capabilities: str,
-) -> Callable[[TokenPayload], TokenPayload]:
+) -> Callable[[User], User]:
     def capability_dependency(
-        payload: Annotated[TokenPayload, Depends(get_current_token_payload)],
-    ) -> TokenPayload:
-        missing = set(required_capabilities) - set(payload.capabilities)
+        user: Annotated[User, Depends(get_current_user)],
+    ) -> User:
+        missing = set(required_capabilities) - get_user_permission_codes(user)
         if missing:
             raise AppException(
                 code=4030,
@@ -101,6 +130,6 @@ def require_capabilities(
                 status_code=status.HTTP_403_FORBIDDEN,
                 data={"missing_capabilities": sorted(missing)},
             )
-        return payload
+        return user
 
     return capability_dependency

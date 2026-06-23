@@ -24,7 +24,12 @@ class Settings(BaseSettings):
     )
     jwt_secret_key: SecretStr = SecretStr("change-me-in-production-use-32-bytes")
     jwt_algorithm: str = "HS256"
-    jwt_access_token_expire_minutes: int = Field(default=30, ge=1)
+    jwt_access_token_expire_minutes: int = Field(default=60, ge=1)
+    initial_admin_name: str | None = None
+    initial_admin_phone: str | None = None
+    initial_admin_email: str | None = None
+    initial_admin_password: SecretStr | None = None
+    initial_admin_department: str | None = None
     cors_origins: list[str] = Field(
         default_factory=lambda: [
             "http://localhost:3000",

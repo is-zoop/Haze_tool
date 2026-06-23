@@ -6,9 +6,11 @@ import { LandscapePanel } from "./components/LandscapePanel";
 import { Dashboard } from "./Dashboard/Dashboard";
 import { DotScannerBackground } from "./components/DotScannerBackground";
 import { getPersistedLanguageCode, persistLanguageCode } from "./i18n";
+import { AUTH_UNAUTHORIZED_EVENT, AuthUser, getAccessToken, getCurrentUser, logout } from "./lib/auth";
 
 export default function App() {
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [currentLang, setCurrentLang] = useState<Language>(() => {
     const code = getPersistedLanguageCode();
     const map: Record<string, Language> = {
@@ -20,14 +22,34 @@ export default function App() {
     return map[code] || map.ZH;
   });
 
-  const handleLoginSuccess = (email: string) => {
-    setUserEmail(email);
+  const handleLoginSuccess = (user: AuthUser) => {
+    setCurrentUser(user);
   };
 
-  const handleLogout = () => {
-    setUserEmail(null);
+  const handleLogout = async () => {
+    await logout();
+    setCurrentUser(null);
   };
 
+  React.useEffect(() => {
+    const restoreSession = async () => {
+      if (!getAccessToken()) {
+        setIsRestoringSession(false);
+        return;
+      }
+      try {
+        setCurrentUser(await getCurrentUser());
+      } catch {
+        setCurrentUser(null);
+      } finally {
+        setIsRestoringSession(false);
+      }
+    };
+    const handleUnauthorized = () => setCurrentUser(null);
+    window.addEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
+    void restoreSession();
+    return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
+  }, []);
   React.useEffect(() => {
     persistLanguageCode(currentLang.code);
     if (currentLang.code === "ZH") {
@@ -41,14 +63,18 @@ export default function App() {
     }
   }, [currentLang.code]);
 
+  if (isRestoringSession) {
+    return <div className="min-h-screen w-full bg-slate-50" />;
+  }
+
   return (
-    <div className={`min-h-screen w-full bg-slate-50 flex items-center justify-center font-sans selection:bg-neutral-900 selection:text-white relative overflow-hidden ${userEmail ? "" : "p-4 sm:p-6 md:p-10"}`}>
+    <div className={`min-h-screen w-full bg-slate-50 flex items-center justify-center font-sans selection:bg-neutral-900 selection:text-white relative overflow-hidden ${currentUser ? "" : "p-4 sm:p-6 md:p-10"}`}>
       {/* Dynamic Blue & White Dot-Matrix Scanner Ambient Background */}
       <DotScannerBackground />
 
-      <div className={`w-full relative z-10 ${userEmail ? "max-w-full h-screen" : "max-w-5xl"}`}>
+      <div className={`w-full relative z-10 ${currentUser ? "max-w-full h-screen" : "max-w-5xl"}`}>
         <AnimatePresence mode="wait">
-          {!userEmail ? (
+          {!currentUser ? (
             <motion.div
               key="auth-card"
               initial={{ opacity: 0, y: 20 }}
@@ -92,7 +118,7 @@ export default function App() {
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.4, ease: "easeOut" }}
             >
-              <Dashboard userEmail={userEmail} onLogout={handleLogout} currentLang={currentLang} />
+              <Dashboard user={currentUser} onLogout={handleLogout} currentLang={currentLang} />
             </motion.div>
           )}
         </AnimatePresence>

@@ -1,51 +1,30 @@
-import React, { useState, useMemo } from "react";
-import { 
-  Search, 
-  Plus, 
-  Edit3, 
-  X, 
-  UserPlus, 
-  Shield, 
-  Power,
-  MoreHorizontal,
-  Eye,
-  Key,
-  Trash2,
-  Check,
-  RotateCcw,
-  ChevronDown
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  Search, Plus, Edit3, X, UserPlus, Shield, Power, MoreHorizontal,
+  Eye, Key, Trash2, Check, RotateCcw, ChevronDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { 
-  TableBody, 
-  TableHead, 
-  TableRow, 
-  TableCell 
-} from "@/components/ui/table";
+import { TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { MOCK_SYSTEM_MEMBERS, SystemMember, LOCALIZED_DEPARTMENTS, LOCALIZED_NAMES } from "../../temp/systemMembers";
 import { PageHeader } from "../../components/common/PageHeader";
 import { DataTableFooter } from "../../components/common/DataTableFooter";
 import { getI18n } from "../../i18n";
+import { ApiError } from "@/lib/api";
+import {
+  changeMemberRole, changeMemberStatus, createMember, listDepartments,
+  listMembers, MemberRole, removeMember, resetMemberPassword,
+  SystemMember, updateMember,
+} from "@/lib/members";
 
 interface PageProps {
   onBackToHome: () => void;
@@ -54,76 +33,73 @@ interface PageProps {
 
 export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "ZH" }: PageProps) {
   const t = getI18n(_langCode);
-  const [members, setMembers] = useState<SystemMember[]>(MOCK_SYSTEM_MEMBERS);
-  
-  // Filters
+  const [members, setMembers] = useState<SystemMember[]>([]);
+  const [counts, setCounts] = useState({ all: 0, active: 0, disabled: 0 });
+  const [totalItems, setTotalItems] = useState(0);
+  const [departments, setDepartments] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"All" | "Admin" | "Member">("All");
+  const [roleFilter, setRoleFilter] = useState<MemberRole | "All">("All");
   const [statusTab, setStatusTab] = useState<"All" | "active" | "disabled">("All");
-
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
-  // Add/Edit Dialog states
   const [showEditModal, setShowEditModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentMember, setCurrentMember] = useState<Partial<SystemMember>>({
-    name: "",
-    email: "",
-    department: "",
-    phone: "",
-    role: "Member",
-    status: "active"
+    name: "", email: "", department: "", phone: "", role: "User", status: "active"
   });
   const [formError, setFormError] = useState("");
-
-  // Change Role Dialog states
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [targetMemberForRole, setTargetMemberForRole] = useState<SystemMember | null>(null);
-  const [selectedNewRole, setSelectedNewRole] = useState<"Admin" | "Member">("Member");
-
-  // Details Dialog states
+  const [selectedNewRole, setSelectedNewRole] = useState<MemberRole>("User");
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsMember, setDetailsMember] = useState<SystemMember | null>(null);
-
-  // Confirmation AlertDialog states (for delete or toggle status)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"disable" | "enable" | "remove" | null>(null);
   const [confirmMember, setConfirmMember] = useState<SystemMember | null>(null);
-
-  // Toast / Flash Message
   const [flashMessage, setFlashMessage] = useState<string | null>(null);
 
-  const showFlash = (msg: string) => {
-    setFlashMessage(msg);
-    setTimeout(() => {
-      setFlashMessage(prev => prev === msg ? null : prev);
-    }, 4000);
+  const showFlash = (message: string) => {
+    setFlashMessage(message);
+    window.setTimeout(() => setFlashMessage(value => value === message ? null : value), 6000);
   };
 
-  // Dynamic login time mapper based on user data/ID
+  const getErrorMessage = (error: unknown) => error instanceof ApiError ? error.message : "Request failed";
+  const getRoleLabel = (role: MemberRole) => role === "SystemAdmin"
+    ? t.memberMgmt_roleSystemAdmin
+    : role === "Admin"
+    ? t.memberMgmt_roleAdmin
+    : role === "Developer"
+      ? t.memberMgmt_roleDeveloper
+      : t.memberMgmt_roleMember;
+
+  const loadMembers = useCallback(async () => {
+    try {
+      const result = await listMembers({
+        page: currentPage, pageSize, search: searchQuery.trim(), role: roleFilter, status: statusTab,
+      });
+      setMembers(result.items);
+      setCounts(result.counts);
+      setTotalItems(result.total);
+    } catch (error) {
+      showFlash(getErrorMessage(error));
+    }
+  }, [currentPage, pageSize, searchQuery, roleFilter, statusTab]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadMembers(), 250);
+    return () => window.clearTimeout(timer);
+  }, [loadMembers]);
+
+  useEffect(() => {
+    void listDepartments().then(setDepartments).catch(error => showFlash(getErrorMessage(error)));
+  }, []);
+
   const getRecentLogin = (id: string) => {
-    const member = members.find(m => m.id === id);
-    if (!member || !member.lastLoginAt) return `4${t.memberMgmt_daysAgo}`;
-    const date = new Date(member.lastLoginAt);
-    const now = new Date("2026-06-17T12:00:00");
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMins / 60);
-    const days = Math.floor(diffHours / 24);
-
-    const pad = (n: number) => n.toString().padStart(2, "0");
-    if (days === 0) {
-      return `${t.memberMgmt_today} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    }
-    if (days === 1) {
-      return `${t.memberMgmt_yesterday} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    }
-    return `${days}${t.memberMgmt_daysAgo}`;
+    const member = members.find(item => item.id === id);
+    if (!member?.lastLoginAt) return "-";
+    return new Date(member.lastLoginAt).toLocaleString();
   };
 
-  // Generate clean dynamic pastel backgrounds for user avatars
   const getAvatarBgClass = (id: string) => {
     const num = parseInt(id.replace(/\D/g, "")) || 0;
     const bgs = [
@@ -132,187 +108,104 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
       "bg-purple-50 text-purple-600 border border-purple-100/50",
       "bg-emerald-50 text-emerald-600 border border-emerald-100/50",
       "bg-amber-50 text-amber-600 border border-amber-100/50",
-      "bg-rose-50 text-rose-600 border border-rose-100/50"
+      "bg-rose-50 text-rose-600 border border-rose-100/50",
     ];
     return bgs[num % bgs.length];
   };
 
-  // Counts for tabs
-  const allCount = members.length;
-  const activeCount = members.filter(m => m.status === "active").length;
-  const disabledCount = members.filter(m => m.status === "disabled").length;
+  const allCount = counts.all;
+  const activeCount = counts.active;
+  const disabledCount = counts.disabled;
+  const paginatedMembers = members;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const validatedPage = Math.min(currentPage, totalPages);
 
-  // Sync / Reset filters and search
   const handleResetFilters = () => {
-    setSearchQuery("");
-    setRoleFilter("All");
-    setStatusTab("All");
-    setCurrentPage(1);
+    setSearchQuery(""); setRoleFilter("All"); setStatusTab("All"); setCurrentPage(1);
     showFlash(t.memberMgmt_msgResetFilters);
   };
 
-  // Filtering Logic
-  const filteredMembers = useMemo(() => {
-    return members.filter(m => {
-      const query = searchQuery.trim().toLowerCase();
-      // Match ID, name or email
-      const matchesSearch = !query || 
-        m.name.toLowerCase().includes(query) ||
-        m.email.toLowerCase().includes(query) ||
-        m.id.toLowerCase().includes(query);
-      
-      const matchesRole = roleFilter === "All" || m.role === roleFilter;
-      const matchesStatus = statusTab === "All" || m.status === statusTab;
-
-      return matchesSearch && matchesRole && matchesStatus;
-    });
-  }, [members, searchQuery, roleFilter, statusTab]);
-
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredMembers.length / pageSize) || 1;
-  
-  // Safe page guard
-  const validatedPage = Math.min(currentPage, totalPages);
-  
-  const paginatedMembers = useMemo(() => {
-    const startIndex = (validatedPage - 1) * pageSize;
-    return filteredMembers.slice(startIndex, startIndex + pageSize);
-  }, [filteredMembers, validatedPage, pageSize]);
-
-  // Open Add Dialog
   const handleOpenAdd = () => {
     setIsEditing(false);
-    setCurrentMember({
-      name: "",
-      email: "",
-      department: "",
-      phone: "",
-      role: "Member",
-      status: "active"
-    });
-    setFormError("");
-    setShowEditModal(true);
+    setCurrentMember({ name: "", email: "", department: "", phone: "", role: "User", status: "active" });
+    setFormError(""); setShowEditModal(true);
   };
 
-  // Open Edit Dialog
   const handleOpenEdit = (member: SystemMember) => {
-    setIsEditing(true);
-    setCurrentMember({ ...member });
-    setFormError("");
-    setShowEditModal(true);
+    setIsEditing(true); setCurrentMember({ ...member }); setFormError(""); setShowEditModal(true);
   };
 
-  // Save Dialog Form for Add & Edit
-  const handleSaveForm = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentMember.name?.trim()) {
-      setFormError(t.memberMgmt_errName);
-      return;
-    }
-    if (!currentMember.email?.trim()) {
-      setFormError(t.memberMgmt_errEmail);
-      return;
-    }
-    if (!currentMember.department?.trim()) {
-      setFormError(t.memberMgmt_errDept);
-      return;
-    }
-    if (!currentMember.phone?.trim()) {
-      setFormError(t.memberMgmt_errPhone);
-      return;
-    }
-
-    if (isEditing) {
-      // Edit existing
-      setMembers(prev => prev.map(m => {
-        if (m.id === currentMember.id) {
-          return currentMember as SystemMember;
-        }
-        return m;
-      }));
-      showFlash(`${t.memberMgmt_msgSaveSuccess}: ${currentMember.name}`);
-    } else {
-      // Add new
-      const nextIdNum = members.reduce((max, curr) => {
-        const val = parseInt(curr.id.replace(/\D/g, "")) || 0;
-        return val > max ? val : max;
-      }, 1000) + 1;
-      const nextId = "M" + nextIdNum;
-      
-      const newMember: SystemMember = {
-        id: nextId,
-        name: currentMember.name.trim(),
-        email: currentMember.email.trim(),
-        department: currentMember.department.trim(),
-        phone: currentMember.phone.trim(),
-        role: (currentMember.role || "Member") as "Admin" | "Member",
-        status: (currentMember.status || "active") as "active" | "disabled"
-      };
-      setMembers(prev => [...prev, newMember]);
-      showFlash(`${t.memberMgmt_msgAddSuccess}: ${newMember.name}`);
-    }
-
-    setShowEditModal(false);
-  };
-
-  // Open Confirm Dialog for status and removal
-  const triggerConfirmAction = (action: "disable" | "enable" | "remove", member: SystemMember) => {
-    setConfirmAction(action);
-    setConfirmMember(member);
-    setShowConfirmDialog(true);
-  };
-
-  // Execute Action from AlertDialog
-  const executeConfirmAction = () => {
-    if (!confirmMember || !confirmAction) return;
-
-    if (confirmAction === "disable") {
-      setMembers(prev => prev.map(m => m.id === confirmMember.id ? { ...m, status: "disabled" } : m));
-      showFlash(`${t.memberMgmt_msgDisableSuccess}: ${confirmMember.name}`);
-    } else if (confirmAction === "enable") {
-      setMembers(prev => prev.map(m => m.id === confirmMember.id ? { ...m, status: "active" } : m));
-      showFlash(`${t.memberMgmt_msgEnableSuccess}: ${confirmMember.name}`);
-    } else if (confirmAction === "remove") {
-      setMembers(prev => prev.filter(m => m.id !== confirmMember.id));
-      showFlash(`${t.memberMgmt_msgRemoveSuccess}: ${confirmMember.name}`);
-    }
-
-    setShowConfirmDialog(false);
-    setConfirmAction(null);
-    setConfirmMember(null);
-  };
-
-  // Open Change Role Modal
-  const handleOpenChangeRole = (member: SystemMember) => {
-    setTargetMemberForRole(member);
-    setSelectedNewRole(member.role);
-    setShowRoleModal(true);
-  };
-
-  // Save Role Change
-  const saveRoleChange = () => {
-    if (!targetMemberForRole) return;
-    setMembers(prev => prev.map(m => {
-      if (m.id === targetMemberForRole.id) {
-        return { ...m, role: selectedNewRole };
+  const handleSaveForm = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!currentMember.name?.trim()) return setFormError(t.memberMgmt_errName);
+    if (!currentMember.email?.trim()) return setFormError(t.memberMgmt_errEmail);
+    if (!currentMember.department?.trim()) return setFormError(t.memberMgmt_errDept);
+    if (!currentMember.phone?.trim()) return setFormError(t.memberMgmt_errPhone);
+    try {
+      if (isEditing) {
+        await updateMember(currentMember as SystemMember);
+        showFlash(`${t.memberMgmt_msgSaveSuccess}: ${currentMember.name}`);
+      } else {
+        const result = await createMember(currentMember as Omit<SystemMember, "id" | "lastLoginAt">);
+        showFlash(`${t.memberMgmt_msgAddSuccess}: ${result.member.name}; Temporary password: ${result.temporaryPassword}`);
       }
-      return m;
-    }));
-    setShowRoleModal(false);
-    showFlash(`${t.memberMgmt_msgRoleSuccess}: ${targetMemberForRole.name} -> ${selectedNewRole === "Admin" ? t.memberMgmt_roleAdmin : t.memberMgmt_roleMember}`);
+      setShowEditModal(false);
+      await loadMembers();
+    } catch (error) {
+      setFormError(getErrorMessage(error));
+    }
   };
 
-  // Reset Password action
-  const handleResetPassword = (member: SystemMember) => {
-    showFlash(`${t.memberMgmt_msgPasswordSuccess} (${member.email})`);
+  const triggerConfirmAction = (action: "disable" | "enable" | "remove", member: SystemMember) => {
+    setConfirmAction(action); setConfirmMember(member); setShowConfirmDialog(true);
   };
 
-  // View Details action
+  const executeConfirmAction = async () => {
+    if (!confirmMember || !confirmAction) return;
+    try {
+      if (confirmAction === "remove") {
+        await removeMember(confirmMember.id);
+        showFlash(`${t.memberMgmt_msgRemoveSuccess}: ${confirmMember.name}`);
+      } else {
+        await changeMemberStatus(confirmMember.id, confirmAction === "disable" ? "disabled" : "active");
+        showFlash(`${confirmAction === "disable" ? t.memberMgmt_msgDisableSuccess : t.memberMgmt_msgEnableSuccess}: ${confirmMember.name}`);
+      }
+      await loadMembers();
+    } catch (error) {
+      showFlash(getErrorMessage(error));
+    } finally {
+      setShowConfirmDialog(false); setConfirmAction(null); setConfirmMember(null);
+    }
+  };
+
+  const handleOpenChangeRole = (member: SystemMember) => {
+    setTargetMemberForRole(member); setSelectedNewRole(member.role); setShowRoleModal(true);
+  };
+
+  const saveRoleChange = async () => {
+    if (!targetMemberForRole) return;
+    try {
+      await changeMemberRole(targetMemberForRole.id, selectedNewRole);
+      showFlash(`${t.memberMgmt_msgRoleSuccess}: ${targetMemberForRole.name} -> ${getRoleLabel(selectedNewRole)}`);
+      setShowRoleModal(false);
+      await loadMembers();
+    } catch (error) {
+      showFlash(getErrorMessage(error));
+    }
+  };
+
+  const handleResetPassword = async (member: SystemMember) => {
+    try {
+      const password = await resetMemberPassword(member.id);
+      showFlash(`${t.memberMgmt_msgPasswordSuccess} ${password}`);
+    } catch (error) {
+      showFlash(getErrorMessage(error));
+    }
+  };
+
   const handleViewDetails = (member: SystemMember) => {
-    setDetailsMember(member);
-    setShowDetailsModal(true);
+    setDetailsMember(member); setShowDetailsModal(true);
   };
-
   return (
     <div className="dashboard-page-stack h-full overflow-hidden text-left font-sans flex flex-col gap-3 animate-in fade-in duration-300" id="haze-settings-page-container">
       <PageHeader
@@ -335,31 +228,31 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
         {/* 2. Status Tabs */}
         <div className="flex border-b border-border/70 text-sm font-medium shrink-0" id="haze-member-tabs">
-          <button 
+          <button
             onClick={() => { setStatusTab("All"); setCurrentPage(1); }}
             className={`pb-3 px-4 font-bold border-b-2 transition-all duration-200 cursor-pointer text-xs ${
-              statusTab === "All" 
-                ? "border-blue-600 text-blue-600" 
+              statusTab === "All"
+                ? "border-blue-600 text-blue-600"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             {t.memberMgmt_tabAll} <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold">{allCount}</span>
           </button>
-          <button 
+          <button
             onClick={() => { setStatusTab("active"); setCurrentPage(1); }}
             className={`pb-3 px-4 font-bold border-b-2 transition-all duration-200 cursor-pointer text-xs ${
-              statusTab === "active" 
-                ? "border-blue-600 text-blue-600" 
+              statusTab === "active"
+                ? "border-blue-600 text-blue-600"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             {t.memberMgmt_tabActive} <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-bold">{activeCount}</span>
           </button>
-          <button 
+          <button
             onClick={() => { setStatusTab("disabled"); setCurrentPage(1); }}
             className={`pb-3 px-4 font-bold border-b-2 transition-all duration-200 cursor-pointer text-xs ${
-              statusTab === "disabled" 
-                ? "border-blue-600 text-blue-600" 
+              statusTab === "disabled"
+                ? "border-blue-600 text-blue-600"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -385,41 +278,43 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
             {/* Role select - Width 140px, Height 40px */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-10 w-[140px] px-3.5 text-xs bg-background border border-input rounded-lg flex items-center justify-between font-semibold text-foreground cursor-pointer shadow-none hover:bg-slate-50 transition-colors"
                 >
                   <span>
-                    {roleFilter === "All" 
-                      ? t.memberMgmt_filterRoleAll 
-                      : roleFilter === "Admin" 
-                      ? t.memberMgmt_roleAdmin 
-                      : t.memberMgmt_roleMember}
+                    {roleFilter === "All" ? t.memberMgmt_filterRoleAll : getRoleLabel(roleFilter)}
                   </span>
                   <ChevronDown size={14} className="opacity-60 ml-1 shrink-0" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-[140px] text-xs bg-white text-slate-700 border border-slate-200 shadow-md rounded-xl p-1 z-50 animate-fade-in" align="start">
-                <DropdownMenuItem 
-                  onClick={() => { setRoleFilter("All"); setCurrentPage(1); }} 
+                <DropdownMenuItem
+                  onClick={() => { setRoleFilter("All"); setCurrentPage(1); }}
                   className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${roleFilter === "All" ? "text-blue-600 bg-blue-50/50" : ""}`}
                 >
                   <span>{t.memberMgmt_filterRoleAll}</span>
                   {roleFilter === "All" && <Check size={12} className="text-blue-600" />}
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => { setRoleFilter("Admin"); setCurrentPage(1); }} 
+                <DropdownMenuItem
+                  onClick={() => { setRoleFilter("Admin"); setCurrentPage(1); }}
                   className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${roleFilter === "Admin" ? "text-blue-600 bg-blue-50/50" : ""}`}
                 >
                   <span>{t.memberMgmt_roleAdmin}</span>
                   {roleFilter === "Admin" && <Check size={12} className="text-blue-600" />}
+                </DropdownMenuItem>                <DropdownMenuItem
+                  onClick={() => { setRoleFilter("Developer"); setCurrentPage(1); }}
+                  className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${roleFilter === "Developer" ? "text-blue-600 bg-blue-50/50" : ""}`}
+                >
+                  <span>{t.memberMgmt_roleDeveloper}</span>
+                  {roleFilter === "Developer" && <Check size={12} className="text-blue-600" />}
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => { setRoleFilter("Member"); setCurrentPage(1); }} 
-                  className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${roleFilter === "Member" ? "text-blue-600 bg-blue-50/50" : ""}`}
+                <DropdownMenuItem
+                  onClick={() => { setRoleFilter("User"); setCurrentPage(1); }}
+                  className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${roleFilter === "User" ? "text-blue-600 bg-blue-50/50" : ""}`}
                 >
                   <span>{t.memberMgmt_roleMember}</span>
-                  {roleFilter === "Member" && <Check size={12} className="text-blue-600" />}
+                  {roleFilter === "User" && <Check size={12} className="text-blue-600" />}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -477,11 +372,11 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                     <TableCell className="w-[16%] px-4 py-3 min-w-0">
                       <div className="flex items-center gap-3">
                         <div className={`h-10 w-10 shrink-0 font-bold text-xs rounded-full flex items-center justify-center ${getAvatarBgClass(member.id)}`}>
-                          {(LOCALIZED_NAMES[member.name]?.[_langCode] || member.name).charAt(0)}
+                          {(member.name).charAt(0)}
                         </div>
                         <div className="flex flex-col min-w-0">
                           <span className="font-bold text-sm text-foreground truncate">
-                            {LOCALIZED_NAMES[member.name]?.[_langCode] || member.name}
+                            {member.name}
                           </span>
                           <span className="text-xs text-muted-foreground/80 font-medium truncate mt-0.5 animate-none">
                             {member.id}
@@ -502,7 +397,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
                     {/* Department (14%) */}
                     <TableCell className="w-[14%] px-4 py-3 text-sm font-semibold text-foreground/80 truncate">
-                      {LOCALIZED_DEPARTMENTS[member.department]?.[_langCode] || member.department}
+                      {member.department}
                     </TableCell>
 
                     {/* Role (10%) */}
@@ -513,7 +408,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="border-none bg-slate-100 text-slate-500 hover:bg-slate-100 font-bold text-xs py-0.5 px-2.5 rounded-md">
-                          {t.memberMgmt_roleMember}
+                          {getRoleLabel(member.role)}
                         </Badge>
                       )}
                     </TableCell>
@@ -559,7 +454,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="text-xs bg-white text-slate-700 border border-slate-100 shadow-md rounded-xl p-1 w-[140px] z-50">
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => handleViewDetails(member)}
                               className="cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center gap-1.5"
                             >
@@ -567,15 +462,15 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                               <span>{t.memberMgmt_viewDetails}</span>
                             </DropdownMenuItem>
 
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => handleOpenChangeRole(member)}
                               className="cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center gap-1.5"
                             >
                               <Shield size={12} className="text-slate-400" />
                               <span>{t.memberMgmt_changeRole}</span>
                             </DropdownMenuItem>
-                            
-                            <DropdownMenuItem 
+
+                            <DropdownMenuItem
                               onClick={() => handleResetPassword(member)}
                               className="cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center gap-1.5"
                             >
@@ -586,7 +481,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                             <DropdownMenuSeparator />
 
                             {member.status === "active" ? (
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={() => triggerConfirmAction("disable", member)}
                                 className="cursor-pointer font-bold p-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700 focus:bg-rose-50 rounded-lg flex items-center gap-1.5"
                               >
@@ -594,7 +489,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                                 <span>{t.memberMgmt_disableAccount}</span>
                               </DropdownMenuItem>
                             ) : (
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={() => triggerConfirmAction("enable", member)}
                                 className="cursor-pointer font-bold p-2 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 focus:bg-emerald-50 rounded-lg flex items-center gap-1.5"
                               >
@@ -603,7 +498,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                               </DropdownMenuItem>
                             )}
 
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => triggerConfirmAction("remove", member)}
                               className="cursor-pointer font-bold p-2 text-destructive hover:bg-destructive/10 focus:bg-destructive/10 rounded-lg flex items-center gap-1.5"
                             >
@@ -629,7 +524,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
           {/* 5. Pagination controls */}
           <DataTableFooter
-            totalItems={filteredMembers.length}
+            totalItems={totalItems}
             currentPage={validatedPage}
             totalPages={totalPages}
             pageSize={pageSize}
@@ -661,7 +556,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                     {isEditing ? t.memberMgmt_editDetails : t.memberMgmt_addNew}
                   </span>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowEditModal(false)}
                   className="text-muted-foreground hover:text-foreground cursor-pointer rounded-lg p-0.5 hover:bg-slate-100 transition-colors"
                 >
@@ -730,17 +625,17 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                     <div className="absolute right-1">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="icon" 
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-md cursor-pointer"
                           >
                             <ChevronDown size={14} />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-[200px] text-xs bg-white text-slate-700 border border-slate-200 shadow-md rounded-xl p-1 z-[100]" align="end">
-                          {Object.keys(LOCALIZED_DEPARTMENTS[_langCode] || LOCALIZED_DEPARTMENTS.ZH).map((dept) => (
+                          {departments.map((dept) => (
                             <DropdownMenuItem
                               key={dept}
                               onClick={() => setCurrentMember(prev => ({ ...prev, department: dept }))}
@@ -762,26 +657,32 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                     </label>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button 
+                        <Button
                           type="button"
-                          variant="outline" 
+                          variant="outline"
                           className="w-full h-10 px-3 text-xs bg-background border border-input rounded-lg flex items-center justify-between font-semibold text-foreground cursor-pointer shadow-none hover:bg-slate-50 transition-colors"
                         >
                           <span>
-                            {currentMember.role === "Admin" ? t.memberMgmt_roleAdmin : t.memberMgmt_roleMember}
+                            {getRoleLabel((currentMember.role || "User") as MemberRole)}
                           </span>
                           <ChevronDown size={14} className="opacity-60 shrink-0" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-[180px] text-xs bg-white text-slate-700 border border-slate-200 shadow-md rounded-xl p-1 z-[100]" align="start">
-                        <DropdownMenuItem 
-                          onClick={() => setCurrentMember(prev => ({ ...prev, role: "Member" }))}
-                          className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${currentMember.role !== "Admin" ? "text-blue-600 bg-blue-50/50" : ""}`}
+                      <DropdownMenuContent className="w-[180px] text-xs bg-white text-slate-700 border border-slate-200 shadow-md rounded-xl p-1 z-[100]" align="start">                        <DropdownMenuItem
+                          onClick={() => setCurrentMember(prev => ({ ...prev, role: "Developer" }))}
+                          className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${currentMember.role === "Developer" ? "text-blue-600 bg-blue-50/50" : ""}`}
+                        >
+                          <span>{t.memberMgmt_roleDeveloper}</span>
+                          {currentMember.role === "Developer" && <Check size={12} className="text-blue-600" />}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setCurrentMember(prev => ({ ...prev, role: "User" }))}
+                          className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${currentMember.role === "User" ? "text-blue-600 bg-blue-50/50" : ""}`}
                         >
                           <span>{t.memberMgmt_roleMember}</span>
-                          {currentMember.role !== "Admin" && <Check size={12} className="text-blue-600" />}
+                          {currentMember.role === "User" && <Check size={12} className="text-blue-600" />}
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => setCurrentMember(prev => ({ ...prev, role: "Admin" }))}
                           className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${currentMember.role === "Admin" ? "text-blue-600 bg-blue-50/50" : ""}`}
                         >
@@ -798,9 +699,9 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                     </label>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button 
+                        <Button
                           type="button"
-                          variant="outline" 
+                          variant="outline"
                           className="w-full h-10 px-3 text-xs bg-background border border-input rounded-lg flex items-center justify-between font-semibold text-foreground cursor-pointer shadow-none hover:bg-slate-50 transition-colors"
                         >
                           <span>
@@ -810,14 +711,14 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-[180px] text-xs bg-white text-slate-700 border border-slate-200 shadow-md rounded-xl p-1 z-[100]" align="start">
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => setCurrentMember(prev => ({ ...prev, status: "active" }))}
                           className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${currentMember.status !== "disabled" ? "text-blue-600 bg-blue-50/50" : ""}`}
                         >
                           <span>{t.memberMgmt_tabActive}</span>
                           {currentMember.status !== "disabled" && <Check size={12} className="text-blue-600" />}
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => setCurrentMember(prev => ({ ...prev, status: "disabled" }))}
                           className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${currentMember.status === "disabled" ? "text-blue-600 bg-blue-50/50" : ""}`}
                         >
@@ -866,7 +767,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                   <Shield size={16} className="text-blue-600" />
                   <span>{t.memberMgmt_changeRole}</span>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowRoleModal(false)}
                   className="text-muted-foreground hover:text-foreground cursor-pointer rounded-lg p-0.5 hover:bg-slate-100 transition-colors"
                 >
@@ -876,10 +777,10 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
               <div className="my-4 space-y-3">
                 <p className="text-xs text-muted-foreground">
-                  {_langCode === "ZH" ? <>请为成员 <strong className="text-foreground">{LOCALIZED_NAMES[targetMemberForRole.name]?.[_langCode] || targetMemberForRole.name}</strong> 选择新的企业控制台角色。</> 
-                   : _langCode === "JA" ? <>メンバー <strong className="text-foreground">{LOCALIZED_NAMES[targetMemberForRole.name]?.[_langCode] || targetMemberForRole.name}</strong> の新しいロールを選択してください。</> 
-                   : _langCode === "ES" ? <>Seleccione el rol de consola para <strong className="text-foreground">{LOCALIZED_NAMES[targetMemberForRole.name]?.[_langCode] || targetMemberForRole.name}</strong>.</> 
-                   : <>Select console role for <strong className="text-foreground">{LOCALIZED_NAMES[targetMemberForRole.name]?.[_langCode] || targetMemberForRole.name}</strong>.</>}
+                  {_langCode === "ZH" ? <>请为成员 <strong className="text-foreground">{targetMemberForRole.name}</strong> 选择新的企业控制台角色。</>
+                   : _langCode === "JA" ? <>メンバー <strong className="text-foreground">{targetMemberForRole.name}</strong> の新しいロールを選択してください。</>
+                   : _langCode === "ES" ? <>Seleccione el rol de consola para <strong className="text-foreground">{targetMemberForRole.name}</strong>.</>
+                   : <>Select console role for <strong className="text-foreground">{targetMemberForRole.name}</strong>.</>}
                 </p>
                 <div>
                   <label className="block text-xs font-bold text-muted-foreground pb-1.5">
@@ -887,30 +788,36 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                   </label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         className="w-full h-10 px-3 text-xs bg-background border border-input rounded-lg flex items-center justify-between font-semibold text-foreground cursor-pointer shadow-none hover:bg-slate-50 transition-colors"
                       >
                         <span>
-                          {selectedNewRole === "Admin" ? t.memberMgmt_roleAdmin : t.memberMgmt_roleMember}
+                          {getRoleLabel(selectedNewRole)}
                         </span>
                         <ChevronDown size={14} className="opacity-60 shrink-0" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-[220px] text-xs bg-white text-slate-700 border border-slate-200 shadow-md rounded-xl p-1 z-[100]" align="start">
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => setSelectedNewRole("Admin")}
                         className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${selectedNewRole === "Admin" ? "text-blue-600 bg-blue-50/50" : ""}`}
                       >
                         <span>{t.memberMgmt_roleAdmin}</span>
                         {selectedNewRole === "Admin" && <Check size={12} className="text-blue-600" />}
+                      </DropdownMenuItem>                      <DropdownMenuItem
+                        onClick={() => setSelectedNewRole("Developer")}
+                        className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${selectedNewRole === "Developer" ? "text-blue-600 bg-blue-50/50" : ""}`}
+                      >
+                        <span>{t.memberMgmt_roleDeveloper}</span>
+                        {selectedNewRole === "Developer" && <Check size={12} className="text-blue-600" />}
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => setSelectedNewRole("Member")}
-                        className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${selectedNewRole === "Member" ? "text-blue-600 bg-blue-50/50" : ""}`}
+                      <DropdownMenuItem
+                        onClick={() => setSelectedNewRole("User")}
+                        className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between ${selectedNewRole === "User" ? "text-blue-600 bg-blue-50/50" : ""}`}
                       >
                         <span>{t.memberMgmt_roleMember}</span>
-                        {selectedNewRole === "Member" && <Check size={12} className="text-blue-600" />}
+                        {selectedNewRole === "User" && <Check size={12} className="text-blue-600" />}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -953,7 +860,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                   <Eye size={16} className="text-blue-600" />
                   <span>{t.memberMgmt_viewDetails}</span>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowDetailsModal(false)}
                   className="text-muted-foreground hover:text-foreground cursor-pointer rounded-lg p-0.5 hover:bg-slate-100 transition-colors"
                 >
@@ -965,10 +872,10 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                 {/* Header Avatar and Name info */}
                 <div className="flex items-center gap-4 bg-slate-50/50 p-3 rounded-lg border border-slate-100">
                   <div className={`h-12 w-12 shrink-0 font-bold text-base rounded-full flex items-center justify-center ${getAvatarBgClass(detailsMember.id)}`}>
-                    {(LOCALIZED_NAMES[detailsMember.name]?.[_langCode] || detailsMember.name).charAt(0)}
+                    {(detailsMember.name).charAt(0)}
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-sm text-foreground">{LOCALIZED_NAMES[detailsMember.name]?.[_langCode] || detailsMember.name}</h3>
+                    <h3 className="font-extrabold text-sm text-foreground">{detailsMember.name}</h3>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {_langCode === "ZH" ? `工号: ${detailsMember.id}` : _langCode === "JA" ? `社員番号: ${detailsMember.id}` : _langCode === "ES" ? `ID: ${detailsMember.id}` : `ID: ${detailsMember.id}`}
                     </p>
@@ -987,7 +894,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                     <span className="text-muted-foreground font-semibold">
                       {t.memberMgmt_colDept}
                     </span>
-                    <span className="text-foreground font-bold">{LOCALIZED_DEPARTMENTS[detailsMember.department]?.[_langCode] || detailsMember.department}</span>
+                    <span className="text-foreground font-bold">{detailsMember.department}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-50 border-border/40">
                     <span className="text-muted-foreground font-semibold">
@@ -1006,7 +913,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="border-none bg-slate-100 text-slate-500 font-bold text-xs py-0 px-1.5 rounded-sm">
-                          {t.memberMgmt_roleMember}
+                          {getRoleLabel(detailsMember.role)}
                         </Badge>
                       )}
                     </span>
@@ -1059,26 +966,26 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
             <AlertDialogDescription className="text-xs text-muted-foreground text-left mt-2 leading-relaxed">
               {confirmAction === "remove" && (
                 <>
-                  {_langCode === "ZH" ? <>您正在执行危险操作：将成员 <strong className="text-red-600">{LOCALIZED_NAMES[confirmMember?.name]?.[_langCode] || confirmMember?.name}</strong> 从企业管理控制台中彻底移除。此操作不可逆，移除后其将无法再次登录。是否确认继续？</>
-                   : _langCode === "JA" ? <>危険：メンバー <strong className="text-red-600">{LOCALIZED_NAMES[confirmMember?.name]?.[_langCode] || confirmMember?.name}</strong> を企業リストから完全に削除します。この操作は元に戻せません。続行しますか？</>
-                   : _langCode === "ES" ? <>Acción peligrosa: eliminar permanentemente al miembro <strong className="text-red-600">{LOCALIZED_NAMES[confirmMember?.name]?.[_langCode] || confirmMember?.name}</strong> de la consola. Esta acción es irreversible. ¿Desea continuar?</>
-                   : <>Dangerous action: permanently remove member <strong className="text-red-600">{LOCALIZED_NAMES[confirmMember?.name]?.[_langCode] || confirmMember?.name}</strong> from the roster. This action is irreversible. Do you wish to continue?</>}
+                  {_langCode === "ZH" ? <>您正在执行危险操作：将成员 <strong className="text-red-600">{confirmMember?.name}</strong> 从企业管理控制台中彻底移除。此操作不可逆，移除后其将无法再次登录。是否确认继续？</>
+                   : _langCode === "JA" ? <>危険：メンバー <strong className="text-red-600">{confirmMember?.name}</strong> を企業リストから完全に削除します。この操作は元に戻せません。続行しますか？</>
+                   : _langCode === "ES" ? <>Acción peligrosa: eliminar permanentemente al miembro <strong className="text-red-600">{confirmMember?.name}</strong> de la consola. Esta acción es irreversible. ¿Desea continuar?</>
+                   : <>Dangerous action: permanently remove member <strong className="text-red-600">{confirmMember?.name}</strong> from the roster. This action is irreversible. Do you wish to continue?</>}
                 </>
               )}
               {confirmAction === "disable" && (
                 <>
-                  {_langCode === "ZH" ? <>您正在执行禁用操作：挂起成员 <strong className="text-slate-900">{LOCALIZED_NAMES[confirmMember?.name]?.[_langCode] || confirmMember?.name}</strong> 的账号凭证。禁用后，该成员将暂时无法进入工作台或使用任何 Skill，但其历史数据和发布信息将被保留。是否继续？</>
-                   : _langCode === "JA" ? <>アカウント無効化：メンバー <strong className="text-slate-900">{LOCALIZED_NAMES[confirmMember?.name]?.[_langCode] || confirmMember?.name}</strong> を一时的に無効にします。これにより、一部機能へのアクセスが一時停止されますが、データは維持されます。続行しますか？</>
-                   : _langCode === "ES" ? <>Deshabilitar: suspender temporalmente la cuenta del miembro <strong className="text-slate-900">{LOCALIZED_NAMES[confirmMember?.name]?.[_langCode] || confirmMember?.name}</strong>. Se conservarán los datos históricos. ¿Desea continuar?</>
-                   : <>Disable: temporarily suspend member <strong className="text-slate-900">{LOCALIZED_NAMES[confirmMember?.name]?.[_langCode] || confirmMember?.name}</strong>. Historical data and records will be retained. Do you wish to continue?</>}
+                  {_langCode === "ZH" ? <>您正在执行禁用操作：挂起成员 <strong className="text-slate-900">{confirmMember?.name}</strong> 的账号凭证。禁用后，该成员将暂时无法进入工作台或使用任何 Skill，但其历史数据和发布信息将被保留。是否继续？</>
+                   : _langCode === "JA" ? <>アカウント無効化：メンバー <strong className="text-slate-900">{confirmMember?.name}</strong> を一时的に無効にします。これにより、一部機能へのアクセスが一時停止されますが、データは維持されます。続行しますか？</>
+                   : _langCode === "ES" ? <>Deshabilitar: suspender temporalmente la cuenta del miembro <strong className="text-slate-900">{confirmMember?.name}</strong>. Se conservarán los datos históricos. ¿Desea continuar?</>
+                   : <>Disable: temporarily suspend member <strong className="text-slate-900">{confirmMember?.name}</strong>. Historical data and records will be retained. Do you wish to continue?</>}
                 </>
               )}
               {confirmAction === "enable" && (
                 <>
-                  {_langCode === "ZH" ? <>您正准备重新启用成员 <strong className="text-slate-900">{LOCALIZED_NAMES[confirmMember?.name]?.[_langCode] || confirmMember?.name}</strong> 的账号访问权限。启用后，该成员可立即登录使用平台。是否继续？</>
-                   : _langCode === "JA" ? <>アカウント再有効化：メンバー <strong className="text-slate-900">{LOCALIZED_NAMES[confirmMember?.name]?.[_langCode] || confirmMember?.name}</strong> のアカウントを有効に戻します。ログインを直ちに許可します。続行しますか？</>
-                   : _langCode === "ES" ? <>Habilitar: restaurar permisos de acceso para <strong className="text-slate-900">{LOCALIZED_NAMES[confirmMember?.name]?.[_langCode] || confirmMember?.name}</strong>. ¿Desea continuar?</>
-                   : <>Enable: restore login and workspace permissions for <strong className="text-slate-900">{LOCALIZED_NAMES[confirmMember?.name]?.[_langCode] || confirmMember?.name}</strong>. Do you wish to continue?</>}
+                  {_langCode === "ZH" ? <>您正准备重新启用成员 <strong className="text-slate-900">{confirmMember?.name}</strong> 的账号访问权限。启用后，该成员可立即登录使用平台。是否继续？</>
+                   : _langCode === "JA" ? <>アカウント再有効化：メンバー <strong className="text-slate-900">{confirmMember?.name}</strong> のアカウントを有効に戻します。ログインを直ちに許可します。続行しますか？</>
+                   : _langCode === "ES" ? <>Habilitar: restaurar permisos de acceso para <strong className="text-slate-900">{confirmMember?.name}</strong>. ¿Desea continuar?</>
+                   : <>Enable: restore login and workspace permissions for <strong className="text-slate-900">{confirmMember?.name}</strong>. Do you wish to continue?</>}
                 </>
               )}
             </AlertDialogDescription>

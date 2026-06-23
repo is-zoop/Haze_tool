@@ -3,9 +3,11 @@ import { Mail, User, Lock, Eye, EyeOff, Loader2, ArrowLeft, CheckCircle } from "
 import { GoogleIcon } from "./GoogleIcon";
 import { motion, AnimatePresence } from "motion/react";
 import { Input } from "@/components/ui/input";
+import { ApiError } from "@/lib/api";
+import { AuthUser, login } from "@/lib/auth";
 
 interface LoginFormProps {
-  onLoginSuccess: (email: string) => void;
+  onLoginSuccess: (user: AuthUser) => void;
 }
 
 type AuthMode = "signin" | "signup" | "forgot";
@@ -23,6 +25,10 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
   const [successMsg, setSuccessMsg] = useState("");
 
   const handleModeChange = (mode: AuthMode) => {
+    if (mode !== "signin") {
+      setErrorMsg(mode === "signup" ? "Registration is not available yet." : "Password recovery is not available yet.");
+      return;
+    }
     setAuthMode(mode);
     setErrorMsg("");
     setSuccessMsg("");
@@ -31,91 +37,36 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
     setFullName("");
   };
 
-  const validateEmail = (val: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-  };
-
   const handleGoogleLogin = () => {
-    setIsLoading(true);
-    setErrorMsg("");
-    // Simulate minor delay
-    setTimeout(() => {
-      setIsLoading(false);
-      onLoginSuccess("google.creatives@haze.ai");
-    }, 1200);
+    setErrorMsg("Google login is not available yet.");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
 
-    if (authMode === "signin") {
-      if (!email.trim()) {
-        setErrorMsg("Please enter your username.");
-        return;
-      }
-      if (!password) {
-        setErrorMsg("Please enter your password.");
-        return;
-      }
-      if (password.length < 6) {
-        setErrorMsg("Password must be at least 6 characters.");
-        return;
-      }
+    if (authMode !== "signin") {
+      setErrorMsg(authMode === "signup" ? "Registration is not available yet." : "Password recovery is not available yet.");
+      return;
+    }
+    if (!/^1\d{10}$/.test(email.trim())) {
+      setErrorMsg("Please enter a valid 11-digit mobile number.");
+      return;
+    }
+    if (!password) {
+      setErrorMsg("Please enter your password.");
+      return;
+    }
 
-      // Successful simulated login
-      setIsLoading(true);
-      setTimeout(() => {
-        setIsLoading(false);
-        onLoginSuccess(email);
-      }, 1500);
-
-    } else if (authMode === "signup") {
-      if (!email) {
-        setErrorMsg("Please enter your email address.");
-        return;
-      }
-      if (!validateEmail(email)) {
-        setErrorMsg("Please enter a valid email address.");
-        return;
-      }
-      if (!fullName) {
-        setErrorMsg("Please enter your full name.");
-        return;
-      }
-      if (!password) {
-        setErrorMsg("Please define a secure password.");
-        return;
-      }
-      if (password.length < 6) {
-        setErrorMsg("Password must be at least 6 characters.");
-        return;
-      }
-
-      setIsLoading(true);
-      setTimeout(() => {
-        setIsLoading(false);
-        setSuccessMsg("Account created successfully! Let's log in.");
-        setAuthMode("signin");
-        setPassword("");
-      }, 1500);
-
-    } else if (authMode === "forgot") {
-      if (!email) {
-        setErrorMsg("Please enter your email address.");
-        return;
-      }
-      if (!validateEmail(email)) {
-        setErrorMsg("Please enter a valid email address.");
-        return;
-      }
-      setIsLoading(true);
-      setTimeout(() => {
-        setIsLoading(false);
-        setSuccessMsg(`We have successfully dispatched a verification code to ${email}. Check your inbox!`);
-        setEmail("");
-      }, 1500);
+    setIsLoading(true);
+    try {
+      const data = await login(email.trim(), password);
+      onLoginSuccess(data.user);
+    } catch (error) {
+      setErrorMsg(error instanceof ApiError ? error.message : "Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -225,7 +176,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
                   <User className="h-4 w-4 text-muted-foreground shrink-0" />
                   <Input
                     type="text"
-                    placeholder="Username"
+                    placeholder="手机号码"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}

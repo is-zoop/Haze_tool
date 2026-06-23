@@ -1,3 +1,6 @@
+const AUTH_TOKEN_KEY = "haze_access_token";
+const AUTH_UNAUTHORIZED_EVENT = "haze:unauthorized";
+
 export interface ApiResponse<T> {
   code: number;
   message: string;
@@ -50,9 +53,10 @@ export async function apiRequest<T>(
   const { token, body, headers: initialHeaders, ...requestInit } = options;
   const headers = new Headers(initialHeaders);
   let requestBody = body as BodyInit | null | undefined;
+  const accessToken = token ?? localStorage.getItem(AUTH_TOKEN_KEY) ?? undefined;
 
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
   }
   if (isObjectBody(body)) {
     headers.set("Content-Type", "application/json");
@@ -71,6 +75,10 @@ export async function apiRequest<T>(
     : undefined;
 
   if (!response.ok || !payload || payload.code !== 0) {
+    if (response.status === 401 && accessToken) {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
+    }
     throw new ApiError(
       payload?.message ?? response.statusText ?? "API request failed",
       {
