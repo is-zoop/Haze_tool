@@ -1,0 +1,79 @@
+from __future__ import annotations
+
+from uuid import uuid4
+
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.responses import Response
+
+from app.core.config import get_settings
+from app.core.exceptions import register_exception_handlers
+from app.core.response import ApiResponse, success_response
+
+REQUEST_ID_HEADER = "X-Request-ID"
+MAX_REQUEST_ID_LENGTH = 128
+
+
+def _get_request_id(request: Request) -> str:
+    supplied_request_id = request.headers.get(REQUEST_ID_HEADER, "").strip()
+    if supplied_request_id and len(supplied_request_id) <= MAX_REQUEST_ID_LENGTH:
+        return supplied_request_id
+    return str(uuid4())
+
+
+class RequestIdMiddleware(BaseHTTPMiddleware):
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: RequestResponseEndpoint,
+    ) -> Response:
+        request_id = _get_request_id(request)
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers[REQUEST_ID_HEADER] = request_id
+        return response
+
+
+def create_app() -> FastAPI:
+    settings = get_settings()
+    application = FastAPI(
+        title=settings.app_name,
+        version=settings.app_version,
+        debug=settings.debug,
+        docs_url="/docs",
+        redoc_url="/redoc",
+    )
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=[REQUEST_ID_HEADER],
+    )
+    application.add_middleware(RequestIdMiddleware)
+    register_exception_handlers(application)
+
+    @application.get(
+        "/api/health",
+        response_model=ApiResponse[dict[str, str]],
+        tags=["system"],
+        summary="Application liveness check",
+    )
+    async def health(request: Request) -> ApiResponse[dict[str, str]]:
+        return success_response(request, {"status": "ok"})
+
+    @application.get(
+        "/api/version",
+        response_model=ApiResponse[dict[str, str]],
+        tags=["system"],
+        summary="Application version",
+    )
+    async def version(request: Request) -> ApiResponse[dict[str, str]]:
+        return success_response(request, {"version": settings.app_version})
+
+    return application
+
+
+app = create_app()
