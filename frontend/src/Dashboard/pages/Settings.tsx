@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Search, Plus, Edit3, X, UserPlus, Shield, Power, MoreHorizontal,
-  Eye, Key, Trash2, Check, RotateCcw, ChevronDown
+  Eye, Key, Trash2, Check, RotateCcw, ChevronDown, Copy
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,67 @@ interface PageProps {
   langCode?: "ZH" | "EN" | "JA" | "ES";
 }
 
+type StoredAuthUser = {
+  id?: string;
+  userId?: string;
+  email?: string;
+  phone?: string;
+  name?: string;
+  realName?: string;
+  username?: string;
+};
+
+type TemporaryPasswordDialog = {
+  title: string;
+  description: string;
+  memberName: string;
+  temporaryPassword: string;
+};
+
+const readStoredAuthUser = (): StoredAuthUser | null => {
+  if (typeof window === "undefined") return null;
+
+  const parseCandidate = (raw: string | null): StoredAuthUser | null => {
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      const candidate = parsed?.user ?? parsed?.data?.user ?? parsed?.currentUser ?? parsed;
+      if (!candidate || typeof candidate !== "object") return null;
+      if (candidate.id || candidate.userId || candidate.email || candidate.phone || candidate.name || candidate.realName || candidate.username) {
+        return candidate as StoredAuthUser;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  };
+
+  const preferredKeys = [
+    "haze_auth_user",
+    "haze_user",
+    "auth_user",
+    "currentUser",
+    "current_user",
+    "user",
+  ];
+
+  for (const storage of [window.localStorage, window.sessionStorage]) {
+    for (const key of preferredKeys) {
+      const candidate = parseCandidate(storage.getItem(key));
+      if (candidate) return candidate;
+    }
+
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if (!key || !/(auth|user|profile|member)/i.test(key)) continue;
+      const candidate = parseCandidate(storage.getItem(key));
+      if (candidate) return candidate;
+    }
+  }
+
+  return null;
+};
+
 export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "ZH" }: PageProps) {
   const t = getI18n(_langCode);
   const [members, setMembers] = useState<SystemMember[]>([]);
@@ -57,6 +118,9 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
   const [confirmAction, setConfirmAction] = useState<"disable" | "enable" | "remove" | null>(null);
   const [confirmMember, setConfirmMember] = useState<SystemMember | null>(null);
   const [flashMessage, setFlashMessage] = useState<string | null>(null);
+  const [currentAuthUser, setCurrentAuthUser] = useState<StoredAuthUser | null>(null);
+  const [temporaryPasswordDialog, setTemporaryPasswordDialog] = useState<TemporaryPasswordDialog | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const showFlash = (message: string) => {
     setFlashMessage(message);
@@ -71,6 +135,80 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
     : role === "Developer"
       ? t.memberMgmt_roleDeveloper
       : t.memberMgmt_roleMember;
+
+  const getTempPasswordText = (key: "createdTitle" | "resetTitle" | "createdDesc" | "resetDesc" | "copy" | "copied" | "close") => {
+    const dict = {
+      ZH: {
+        createdTitle: "成员创建成功",
+        resetTitle: "临时密码已生成",
+        createdDesc: "请复制临时密码并安全发送给成员。关闭弹窗后将无法再次查看该密码。",
+        resetDesc: "请复制新的临时密码并安全发送给成员。关闭弹窗后将无法再次查看该密码。",
+        copy: "复制密码",
+        copied: "已复制",
+        close: "关闭",
+      },
+      EN: {
+        createdTitle: "Member Created",
+        resetTitle: "Temporary Password Generated",
+        createdDesc: "Copy the temporary password and send it to the member securely. It will not be shown again after closing this dialog.",
+        resetDesc: "Copy the new temporary password and send it to the member securely. It will not be shown again after closing this dialog.",
+        copy: "Copy password",
+        copied: "Copied",
+        close: "Close",
+      },
+      JA: {
+        createdTitle: "メンバーを作成しました",
+        resetTitle: "一時パスワードを生成しました",
+        createdDesc: "一時パスワードをコピーし、メンバーへ安全に共有してください。このダイアログを閉じると再表示できません。",
+        resetDesc: "新しい一時パスワードをコピーし、メンバーへ安全に共有してください。このダイアログを閉じると再表示できません。",
+        copy: "パスワードをコピー",
+        copied: "コピー済み",
+        close: "閉じる",
+      },
+      ES: {
+        createdTitle: "Miembro creado",
+        resetTitle: "Contraseña temporal generada",
+        createdDesc: "Copie la contraseña temporal y envíela de forma segura. No se volverá a mostrar al cerrar este cuadro.",
+        resetDesc: "Copie la nueva contraseña temporal y envíela de forma segura. No se volverá a mostrar al cerrar este cuadro.",
+        copy: "Copiar contraseña",
+        copied: "Copiada",
+        close: "Cerrar",
+      },
+    };
+    return dict[_langCode][key];
+  };
+
+  const isSelfMember = useCallback((member?: Partial<SystemMember> | null) => {
+    if (!member || !currentAuthUser) return false;
+
+    const authId = currentAuthUser.id || currentAuthUser.userId;
+    const authEmail = currentAuthUser.email?.toLowerCase();
+    const authPhone = currentAuthUser.phone;
+    const authName = currentAuthUser.name || currentAuthUser.realName || currentAuthUser.username;
+
+    return Boolean(
+      (authId && member.id === authId)
+      || (authEmail && member.email?.toLowerCase() === authEmail)
+      || (authPhone && member.phone === authPhone)
+      || (authName && member.name === authName)
+    );
+  }, [currentAuthUser]);
+
+  const openTemporaryPasswordDialog = (payload: TemporaryPasswordDialog) => {
+    setCopySuccess(false);
+    setTemporaryPasswordDialog(payload);
+  };
+
+  const copyTemporaryPassword = async () => {
+    if (!temporaryPasswordDialog?.temporaryPassword) return;
+    try {
+      await navigator.clipboard.writeText(temporaryPasswordDialog.temporaryPassword);
+      setCopySuccess(true);
+      window.setTimeout(() => setCopySuccess(false), 1800);
+    } catch {
+      showFlash(temporaryPasswordDialog.temporaryPassword);
+    }
+  };
 
   const loadMembers = useCallback(async () => {
     try {
@@ -89,6 +227,10 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
     const timer = window.setTimeout(() => void loadMembers(), 250);
     return () => window.clearTimeout(timer);
   }, [loadMembers]);
+
+  useEffect(() => {
+    setCurrentAuthUser(readStoredAuthUser());
+  }, []);
 
   useEffect(() => {
     void listDepartments().then(setDepartments).catch(error => showFlash(getErrorMessage(error)));
@@ -119,6 +261,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
   const paginatedMembers = members;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const validatedPage = Math.min(currentPage, totalPages);
+  const isEditingSelf = isEditing && isSelfMember(currentMember);
 
   const handleResetFilters = () => {
     setSearchQuery(""); setRoleFilter("All"); setStatusTab("All"); setCurrentPage(1);
@@ -140,14 +283,31 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
     if (!currentMember.name?.trim()) return setFormError(t.memberMgmt_errName);
     if (!currentMember.email?.trim()) return setFormError(t.memberMgmt_errEmail);
     if (!currentMember.department?.trim()) return setFormError(t.memberMgmt_errDept);
-    if (!currentMember.phone?.trim()) return setFormError(t.memberMgmt_errPhone);
+    if (!isEditing && !currentMember.phone?.trim()) return setFormError(t.memberMgmt_errPhone);
+
     try {
       if (isEditing) {
-        await updateMember(currentMember as SystemMember);
+        const originalMember = members.find(item => item.id === currentMember.id);
+        const payload = { ...currentMember } as SystemMember;
+
+        if (originalMember) {
+          payload.phone = originalMember.phone;
+          if (isSelfMember(originalMember)) {
+            payload.role = originalMember.role;
+            payload.status = originalMember.status;
+          }
+        }
+
+        await updateMember(payload);
         showFlash(`${t.memberMgmt_msgSaveSuccess}: ${currentMember.name}`);
       } else {
         const result = await createMember(currentMember as Omit<SystemMember, "id" | "lastLoginAt">);
-        showFlash(`${t.memberMgmt_msgAddSuccess}: ${result.member.name}; Temporary password: ${result.temporaryPassword}`);
+        openTemporaryPasswordDialog({
+          title: getTempPasswordText("createdTitle"),
+          description: getTempPasswordText("createdDesc"),
+          memberName: result.member.name,
+          temporaryPassword: result.temporaryPassword,
+        });
       }
       setShowEditModal(false);
       await loadMembers();
@@ -157,11 +317,20 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
   };
 
   const triggerConfirmAction = (action: "disable" | "enable" | "remove", member: SystemMember) => {
+    if ((action === "disable" || action === "enable") && isSelfMember(member)) {
+      showFlash(_langCode === "ZH" ? "不能修改自己的启用状态" : "You cannot change your own account status");
+      return;
+    }
     setConfirmAction(action); setConfirmMember(member); setShowConfirmDialog(true);
   };
 
   const executeConfirmAction = async () => {
     if (!confirmMember || !confirmAction) return;
+    if ((confirmAction === "disable" || confirmAction === "enable") && isSelfMember(confirmMember)) {
+      showFlash(_langCode === "ZH" ? "不能修改自己的启用状态" : "You cannot change your own account status");
+      setShowConfirmDialog(false);
+      return;
+    }
     try {
       if (confirmAction === "remove") {
         await removeMember(confirmMember.id);
@@ -179,11 +348,20 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
   };
 
   const handleOpenChangeRole = (member: SystemMember) => {
+    if (isSelfMember(member)) {
+      showFlash(_langCode === "ZH" ? "不能修改自己的角色" : "You cannot change your own role");
+      return;
+    }
     setTargetMemberForRole(member); setSelectedNewRole(member.role); setShowRoleModal(true);
   };
 
   const saveRoleChange = async () => {
     if (!targetMemberForRole) return;
+    if (isSelfMember(targetMemberForRole)) {
+      showFlash(_langCode === "ZH" ? "不能修改自己的角色" : "You cannot change your own role");
+      setShowRoleModal(false);
+      return;
+    }
     try {
       await changeMemberRole(targetMemberForRole.id, selectedNewRole);
       showFlash(`${t.memberMgmt_msgRoleSuccess}: ${targetMemberForRole.name} -> ${getRoleLabel(selectedNewRole)}`);
@@ -197,7 +375,12 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
   const handleResetPassword = async (member: SystemMember) => {
     try {
       const password = await resetMemberPassword(member.id);
-      showFlash(`${t.memberMgmt_msgPasswordSuccess} ${password}`);
+      openTemporaryPasswordDialog({
+        title: getTempPasswordText("resetTitle"),
+        description: getTempPasswordText("resetDesc"),
+        memberName: member.name,
+        temporaryPassword: password,
+      });
     } catch (error) {
       showFlash(getErrorMessage(error));
     }
@@ -463,8 +646,9 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                             </DropdownMenuItem>
 
                             <DropdownMenuItem
+                              disabled={isSelfMember(member)}
                               onClick={() => handleOpenChangeRole(member)}
-                              className="cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center gap-1.5"
+                              className={`cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center gap-1.5 ${isSelfMember(member) ? "opacity-45 pointer-events-none" : ""}`}
                             >
                               <Shield size={12} className="text-slate-400" />
                               <span>{t.memberMgmt_changeRole}</span>
@@ -482,16 +666,18 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
                             {member.status === "active" ? (
                               <DropdownMenuItem
+                                disabled={isSelfMember(member)}
                                 onClick={() => triggerConfirmAction("disable", member)}
-                                className="cursor-pointer font-bold p-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700 focus:bg-rose-50 rounded-lg flex items-center gap-1.5"
+                                className={`cursor-pointer font-bold p-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700 focus:bg-rose-50 rounded-lg flex items-center gap-1.5 ${isSelfMember(member) ? "opacity-45 pointer-events-none" : ""}`}
                               >
                                 <Power size={12} />
                                 <span>{t.memberMgmt_disableAccount}</span>
                               </DropdownMenuItem>
                             ) : (
                               <DropdownMenuItem
+                                disabled={isSelfMember(member)}
                                 onClick={() => triggerConfirmAction("enable", member)}
-                                className="cursor-pointer font-bold p-2 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 focus:bg-emerald-50 rounded-lg flex items-center gap-1.5"
+                                className={`cursor-pointer font-bold p-2 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 focus:bg-emerald-50 rounded-lg flex items-center gap-1.5 ${isSelfMember(member) ? "opacity-45 pointer-events-none" : ""}`}
                               >
                                 <Power size={12} />
                                 <span>{t.memberMgmt_enableAccount}</span>
@@ -604,9 +790,10 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                   <Input
                     type="text"
                     required
+                    disabled={isEditing}
                     value={currentMember.phone || ""}
                     onChange={(e) => setCurrentMember(prev => ({ ...prev, phone: e.target.value }))}
-                    className="w-full h-10 px-3 text-xs bg-background border border-input rounded-lg focus:outline-hidden focus:border-blue-500 font-medium text-foreground"
+                    className={`w-full h-10 px-3 text-xs border border-input rounded-lg focus:outline-hidden focus:border-blue-500 font-medium text-foreground ${isEditing ? "bg-slate-50 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
                   />
                 </div>
 
@@ -660,7 +847,8 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                         <Button
                           type="button"
                           variant="outline"
-                          className="w-full h-10 px-3 text-xs bg-background border border-input rounded-lg flex items-center justify-between font-semibold text-foreground cursor-pointer shadow-none hover:bg-slate-50 transition-colors"
+                          disabled={isEditingSelf}
+                          className={`w-full h-10 px-3 text-xs bg-background border border-input rounded-lg flex items-center justify-between font-semibold text-foreground shadow-none hover:bg-slate-50 transition-colors ${isEditingSelf ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
                         >
                           <span>
                             {getRoleLabel((currentMember.role || "User") as MemberRole)}
@@ -702,7 +890,8 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                         <Button
                           type="button"
                           variant="outline"
-                          className="w-full h-10 px-3 text-xs bg-background border border-input rounded-lg flex items-center justify-between font-semibold text-foreground cursor-pointer shadow-none hover:bg-slate-50 transition-colors"
+                          disabled={isEditingSelf}
+                          className={`w-full h-10 px-3 text-xs bg-background border border-input rounded-lg flex items-center justify-between font-semibold text-foreground shadow-none hover:bg-slate-50 transition-colors ${isEditingSelf ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
                         >
                           <span>
                             {currentMember.status === "disabled" ? t.memberMgmt_tabDisabled : t.memberMgmt_tabActive}
@@ -845,7 +1034,79 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
         )}
       </AnimatePresence>
 
-      {/* 8. View Details Modal */}
+      {/* 8. Temporary Password Modal */}
+      <AnimatePresence>
+        {temporaryPasswordDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-[380px] p-6 bg-card border border-border rounded-xl shadow-lg text-left"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <div className="flex items-center gap-2 text-sm text-foreground font-bold">
+                  <Key size={16} className="text-blue-600" />
+                  <span>{temporaryPasswordDialog.title}</span>
+                </div>
+                <button
+                  onClick={() => setTemporaryPasswordDialog(null)}
+                  className="text-muted-foreground hover:text-foreground cursor-pointer rounded-lg p-0.5 hover:bg-slate-100 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="my-4 space-y-3">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {temporaryPasswordDialog.description}
+                </p>
+                <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-3">
+                  <div className="text-xs font-bold text-muted-foreground mb-1.5">
+                    {_langCode === "ZH" ? "成员" : _langCode === "JA" ? "メンバー" : _langCode === "ES" ? "Miembro" : "Member"}
+                  </div>
+                  <div className="text-sm font-extrabold text-foreground">
+                    {temporaryPasswordDialog.memberName}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground pb-1.5">
+                    {_langCode === "ZH" ? "临时密码" : _langCode === "JA" ? "一時パスワード" : _langCode === "ES" ? "Contraseña temporal" : "Temporary password"}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      readOnly
+                      value={temporaryPasswordDialog.temporaryPassword}
+                      className="h-10 flex-1 px-3 text-sm bg-background border border-input rounded-lg font-mono font-bold tracking-wide text-foreground"
+                    />
+                    <Button
+                      type="button"
+                      onClick={copyTemporaryPassword}
+                      className="h-10 px-3 text-xs font-bold cursor-pointer bg-slate-900 hover:bg-slate-800 text-white rounded-lg flex items-center gap-1.5"
+                    >
+                      {copySuccess ? <Check size={13} /> : <Copy size={13} />}
+                      <span>{copySuccess ? getTempPasswordText("copied") : getTempPasswordText("copy")}</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-border flex items-center justify-end gap-2 shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setTemporaryPasswordDialog(null)}
+                  className="h-8 text-xs font-bold px-3.5 cursor-pointer text-foreground"
+                >
+                  {getTempPasswordText("close")}
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 9. View Details Modal */}
       <AnimatePresence>
         {showDetailsModal && detailsMember && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs">
@@ -956,7 +1217,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
         )}
       </AnimatePresence>
 
-      {/* 9. AlertDialog for Danger actions (Disabling / Enabling / Removing) */}
+      {/* 10. AlertDialog for Danger actions (Disabling / Enabling / Removing) */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent className="bg-white border rounded-xl shadow-lg w-full max-w-sm p-6">
           <AlertDialogHeader>
@@ -1014,7 +1275,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 10. Dynamic Floating Interactive Success Toast notifications */}
+      {/* 11. Dynamic Floating Interactive Success Toast notifications */}
       <AnimatePresence>
         {flashMessage && (
           <motion.div
