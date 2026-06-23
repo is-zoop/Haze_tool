@@ -26,7 +26,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
   const handleModeChange = (mode: AuthMode) => {
     if (mode !== "signin") {
-      setErrorMsg(mode === "signup" ? "Registration is not available yet." : "Password recovery is not available yet.");
+      setErrorMsg(mode === "signup" ? "注册功能尚未开放." : "密码重置功能尚未开放.");
       return;
     }
     setAuthMode(mode);
@@ -38,7 +38,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
   };
 
   const handleGoogleLogin = () => {
-    setErrorMsg("Google login is not available yet.");
+    setErrorMsg("功能尚未开放.");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,15 +47,15 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
     setSuccessMsg("");
 
     if (authMode !== "signin") {
-      setErrorMsg(authMode === "signup" ? "Registration is not available yet." : "Password recovery is not available yet.");
+      setErrorMsg(authMode === "signup" ? "注册功能尚未开放." : "密码重置功能尚未开放.");
       return;
     }
     if (!/^1\d{10}$/.test(email.trim())) {
-      setErrorMsg("Please enter a valid 11-digit mobile number.");
+      setErrorMsg("请输入有效的11位手机号码.");
       return;
     }
     if (!password) {
-      setErrorMsg("Please enter your password.");
+      setErrorMsg("请输入密码.");
       return;
     }
 
@@ -64,7 +64,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
       const data = await login(email.trim(), password);
       onLoginSuccess(data.user);
     } catch (error) {
-      setErrorMsg(error instanceof ApiError ? error.message : "Login failed. Please try again.");
+      setErrorMsg(error instanceof ApiError ? error.message : "登录失败，请重试！");
     } finally {
       setIsLoading(false);
     }
