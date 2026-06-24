@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-from typing import Annotated, Literal
+import json
+from typing import Annotated, AsyncGenerator, Literal
 
 from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 from app.core.response import ApiResponse, success_response
 from app.core.security import require_capabilities
 from app.db.session import get_db
 from app.modules.capabilities import service
+from app.modules.capabilities.models import Capability
+from app.modules.capabilities.test_runner import run_http_mcp_test, run_stdio_mcp_test
 from app.modules.capabilities.schemas import (
     CapabilityCreate,
     CapabilityData,
@@ -176,6 +180,61 @@ def update_test_status(
     actor: Annotated[User, Depends(require_capabilities("capabilities.test_result"))],
 ) -> ApiResponse[CapabilityData]:
     return success_response(request, service.update_test_status(db, capability_id, actor, payload))
+
+
+@router.get("/capabilities/{capability_id}/test-run")
+async def run_capability_test(
+    capability_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    actor: Annotated[User, Depends(require_capabilities("capabilities.read"))],
+) -> StreamingResponse:
+    capability = db.scalar(
+        select(Capability).where(Capability.id == capability_id, Capability.deleted_at.is_(None))
+    )
+    if capability is None:
+        from app.core.exceptions import AppException
+        raise AppException(code=4042, message="Capability not found", status_code=404)
+
+    config = (capability.extension_json or {}).get("config", {})
+    transport = config.get("transport", "HTTP")
+    server_url: str = config.get("serverUrl", "")
+    start_command: str = config.get("startCommand", "")
+    start_args: str = config.get("startArgs", "")
+
+    async def event_stream() -> AsyncGenerator[str, None]:
+        final_status = "fail"
+        try:
+            if transport == "STDIO":
+                gen = run_stdio_mcp_test(start_command, start_args)
+            else:
+                if not server_url:
+                    yield f"data: {json.dumps({'type': 'error', 'step': 0, 'message': 'serverUrl 未配置'})}\n\n"
+                    yield f"data: {json.dumps({'type': 'done', 'status': 'fail'})}\n\n"
+                    return
+                gen = run_http_mcp_test(server_url, capability.code)
+
+            async for event in gen:
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                if event.get("type") == "done":
+                    final_status = event.get("status", "fail")
+        except Exception as exc:
+            yield f"data: {json.dumps({'type': 'error', 'step': -1, 'message': str(exc)})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'status': 'fail'})}\n\n"
+            final_status = "fail"
+        finally:
+            ext = dict(capability.extension_json or {})
+            ext["recent_test_status"] = "pass" if final_status == "pass" else "fail"
+            capability.extension_json = ext
+            db.commit()
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.delete("/capabilities/{capability_id}", response_model=ApiResponse[DeleteResult])

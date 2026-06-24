@@ -15,7 +15,9 @@ import {
 } from "../../lib/capabilities";
 import { getI18n } from "../../i18n";
 import { AssetStatus, DeveloperAsset } from "../../types/developer-center";
-import { DEFAULT_ASSET, SIMULATION_FINISH_DELAY, SIMULATION_LOGS } from "./config";
+import { DEFAULT_ASSET } from "./config";
+
+const AUTH_TOKEN_KEY = "haze_access_token";
 
 export type AssetTypeFilter = "all" | "Skill" | "MCP Server";
 
@@ -56,8 +58,10 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
   const [debugStatus, setDebugStatus] = useState<"idle" | "testing" | "pass" | "fail">("idle");
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
   const [terminalLogs, setTerminalLogs] = useState<Array<{ time: string; type: string; text: string }>>([]);
+  const [stepDurations, setStepDurations] = useState<Record<number, string>>({});
+  const [stepStatuses, setStepStatuses] = useState<Record<number, "pass" | "fail">>({});
   const [testStarted, setTestStarted] = useState(false);
-  const timeoutsRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  const abortRef = useRef<AbortController | null>(null);
 
   const [deleteTarget, setDeleteTarget] = useState<DeveloperAsset | null>(null);
   const [flashMessage, setFlashMessage] = useState<string | null>(null);
@@ -111,7 +115,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
 
   useEffect(() => () => {
     iconUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-    timeoutsRef.current.forEach(clearTimeout);
+    abortRef.current?.abort();
   }, []);
 
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -307,29 +311,86 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}.${String(date.getMilliseconds()).padStart(3, "0")}`;
   };
 
-  const runSimulation = (asset?: DeveloperAsset) => {
+  const runRealTest = async (asset?: DeveloperAsset) => {
     const target = asset || debugAsset;
-    if (!target) return;
-    timeoutsRef.current.forEach(clearTimeout);
-    timeoutsRef.current = [];
+    if (!target?.id) return;
+
+    // Abort any in-progress test
+    abortRef.current?.abort();
+    const abort = new AbortController();
+    abortRef.current = abort;
+
     setTerminalLogs([]);
     setCurrentStepIndex(0);
+    setStepDurations({});
+    setStepStatuses({});
     setDebugStatus("testing");
-    const pushLog = (type: string, text: string) => setTerminalLogs((previous) => [
-      ...previous,
-      { time: formatTerminalTime(), type, text },
-    ]);
-    pushLog("START", `开始测试 MCP 服务: ${target.serverUrl || `http://127.0.0.1:3000/api/mcp/${target.code}`}`);
-    SIMULATION_LOGS.forEach((log) => {
-      timeoutsRef.current.push(setTimeout(() => {
-        if (log.type === "SYSTEM_STEP") setCurrentStepIndex(log.nextStepIdx);
-        else pushLog(log.type, log.text);
-      }, log.delay));
-    });
-    timeoutsRef.current.push(setTimeout(() => {
-      setDebugStatus("pass");
-      triggerFlashAlert("模拟测试已完成，正式测试状态需管理员确认");
-    }, SIMULATION_FINISH_DELAY));
+
+    const pushLog = (type: string, text: string) =>
+      setTerminalLogs((prev) => [...prev, { time: formatTerminalTime(), type, text }]);
+
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    pushLog("START", `开始测试 MCP 服务: ${target.serverUrl || target.code}`);
+
+    try {
+      const resp = await fetch(`/api/developer/capabilities/${target.id}/test-run`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        signal: abort.signal,
+      });
+
+      if (!resp.ok || !resp.body) {
+        pushLog("ERROR", `请求失败 (${resp.status})`);
+        setDebugStatus("fail");
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith("data:")) continue;
+          try {
+            const event = JSON.parse(line.slice(5).trim());
+            if (event.type === "step_start") {
+              setCurrentStepIndex(event.step);
+            } else if (event.type === "log") {
+              pushLog(event.tag, event.text);
+            } else if (event.type === "step_done") {
+              const dur = event.duration_ms > 0
+                ? event.duration_ms < 1000
+                  ? `${event.duration_ms}ms`
+                  : `${(event.duration_ms / 1000).toFixed(2)}s`
+                : "";
+              if (dur) setStepDurations((prev) => ({ ...prev, [event.step]: dur }));
+              setStepStatuses((prev) => ({ ...prev, [event.step]: "pass" }));
+              setCurrentStepIndex(event.step + 1);
+            } else if (event.type === "error") {
+              setStepStatuses((prev) => ({ ...prev, [event.step]: "fail" }));
+            } else if (event.type === "done") {
+              const status = event.status as "pass" | "fail";
+              setDebugStatus(status);
+              triggerFlashAlert(status === "pass" ? "MCP 测试通过" : "MCP 测试失败，请查看日志");
+              // Refresh capability to pick up updated test status
+              setRefreshVersion((v) => v + 1);
+            }
+          } catch {
+            // ignore malformed event
+          }
+        }
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      pushLog("ERROR", `测试中断: ${err instanceof Error ? err.message : String(err)}`);
+      setDebugStatus("fail");
+    }
   };
 
   const tabCounts = useMemo(() => ({
@@ -351,7 +412,8 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     newVersionErrors, handleIncrementVersion, handleNewVersionZipUploaded, handleSaveNewVersion,
     handlePublishAsset, handleOfflineAsset, handleDeleteAsset, deleteTarget, setDeleteTarget,
     handleCopyAssetCode, handleOpenDebug, showDebugModal, setShowDebugModal, debugAsset,
-    debugStatus, currentStepIndex, terminalLogs, setTerminalLogs, testStarted, setTestStarted, runSimulation,
+    debugStatus, currentStepIndex, terminalLogs, setTerminalLogs, stepDurations, stepStatuses,
+    testStarted, setTestStarted, runRealTest,
     flashMessage, triggerFlashAlert,
   };
 }

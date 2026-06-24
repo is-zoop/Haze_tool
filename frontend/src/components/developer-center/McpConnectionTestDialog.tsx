@@ -18,6 +18,8 @@ interface McpConnectionTestDialogProps {
   debugStatus: "idle" | "testing" | "pass" | "fail";
   currentStepIndex: number;
   terminalLogs: Array<{ time: string; type: string; text: string }>;
+  stepDurations?: Record<number, string>;
+  stepStatuses?: Record<number, "pass" | "fail">;
   testStarted: boolean;
   onStartTest: () => void;
   onClearLogs: () => void;
@@ -32,6 +34,8 @@ export function McpConnectionTestDialog({
   debugStatus,
   currentStepIndex,
   terminalLogs,
+  stepDurations = {},
+  stepStatuses = {},
   testStarted,
   onStartTest,
   onClearLogs,
@@ -58,7 +62,7 @@ export function McpConnectionTestDialog({
         </DialogHeader>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 py-4 lg:grid-cols-[250px_1fr]">
-          <McpTestTimeline currentStepIndex={currentStepIndex} langCode={langCode} />
+          <McpTestTimeline currentStepIndex={currentStepIndex} langCode={langCode} stepDurations={stepDurations} stepStatuses={stepStatuses} />
           <McpTerminalLog
             terminalLogs={terminalLogs}
             langCode={langCode}

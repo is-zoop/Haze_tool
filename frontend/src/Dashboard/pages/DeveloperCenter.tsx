@@ -66,7 +66,8 @@ export function DeveloperCenter({
     newVersionErrors, handleIncrementVersion, handleNewVersionZipUploaded, handleSaveNewVersion,
     handlePublishAsset, handleOfflineAsset, handleDeleteAsset, deleteTarget, setDeleteTarget,
     handleCopyAssetCode, handleOpenDebug, showDebugModal, setShowDebugModal, debugAsset,
-    debugStatus, currentStepIndex, terminalLogs, setTerminalLogs, testStarted, setTestStarted, runSimulation,
+    debugStatus, currentStepIndex, terminalLogs, setTerminalLogs, stepDurations, stepStatuses,
+    testStarted, setTestStarted, runRealTest,
     flashMessage, triggerFlashAlert,
   } = useDeveloperCapabilities(_langCode);
 
@@ -317,11 +318,11 @@ export function DeveloperCenter({
         currentStepIndex={currentStepIndex}
         terminalLogs={terminalLogs}
         testStarted={testStarted}
+        stepDurations={stepDurations}
+        stepStatuses={stepStatuses}
         onStartTest={() => {
-          if (!testStarted) {
-            setTestStarted(true);
-          }
-          runSimulation(debugAsset || undefined);
+          if (!testStarted) setTestStarted(true);
+          runRealTest(debugAsset || undefined);
         }}
         onClearLogs={() => setTerminalLogs([])}
         onTriggerAlert={triggerFlashAlert}
