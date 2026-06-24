@@ -419,6 +419,10 @@ def publish_capability(db: Session, capability_id: int, actor: User) -> Capabili
     capability = _get_capability(db, capability_id, actor)
     capability.status = "reviewing"
     capability.updated_by = actor.id
+    extension = _extension(capability)
+    extension["submitted_at"] = datetime.utcnow().isoformat()
+    extension["submitted_by"] = actor.id
+    capability.extension_json = extension
     db.commit()
     db.refresh(capability)
     return _serialize(db, capability)

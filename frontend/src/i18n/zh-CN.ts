@@ -150,7 +150,7 @@ export const zhCN = {
   statusPublished: "已发布",
   statusDraft: "草稿",
   statusReviewing: "审核中",
-  statusRejected: "已拒绝",
+  statusRejected: "审核驳回",
   statusOffline: "已下线",
   statusPending: "待审核",
   statusApproved: "已通过",

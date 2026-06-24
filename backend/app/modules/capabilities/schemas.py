@@ -6,7 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 CapabilityType = Literal["skill", "mcp"]
-CapabilityStatus = Literal["draft", "reviewing", "published", "offline"]
+CapabilityStatus = Literal["draft", "reviewing", "published", "offline", "rejected"]
 TestStatus = Literal["none", "testing", "pass", "fail"]
 VERSION_PATTERN = r"^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$"
 CODE_PATTERN = r"^[a-z0-9_-]{3,100}$"
