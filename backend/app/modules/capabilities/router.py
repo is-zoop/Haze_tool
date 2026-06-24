@@ -36,7 +36,7 @@ def list_capabilities(
     page_size: int = Query(default=10, ge=1, le=100),
     search: str = "",
     capability_type: Literal["skill", "mcp"] | None = Query(default=None, alias="type"),
-    status: Literal["draft", "published", "offline"] | None = None,
+    status: Literal["draft", "reviewing", "published", "offline"] | None = None,
 ) -> ApiResponse[CapabilityListData]:
     data = service.list_capabilities(
         db,

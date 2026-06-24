@@ -16,6 +16,7 @@ from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import create_app
+from app.modules.capabilities.models import Capability
 
 
 def _zip_bytes(files: dict[str, str]) -> bytes:
@@ -33,7 +34,7 @@ def _login(client: TestClient, phone: str, password: str) -> dict[str, str]:
 
 
 @pytest.fixture
-def capability_client(tmp_path: Path) -> Generator[tuple[TestClient, dict[str, dict[str, str]]], None, None]:
+def capability_client(tmp_path: Path) -> Generator[tuple[TestClient, dict[str, dict[str, str]], sessionmaker[Session]], None, None]:
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -77,7 +78,7 @@ def capability_client(tmp_path: Path) -> Generator[tuple[TestClient, dict[str, d
             assert response.status_code == 200, response.text
             temporary_password = response.json()["data"]["temporary_password"]
             headers[f"dev{suffix}"] = _login(client, f"1380013800{suffix}", temporary_password)
-        yield client, headers
+        yield client, headers, TestingSession
     settings.local_storage_dir = original_storage
 
 
@@ -120,7 +121,7 @@ def _create_capability(
 
 
 def test_skill_lifecycle_versions_and_code_reuse(capability_client) -> None:
-    client, headers = capability_client
+    client, headers, session_factory = capability_client
     icon = client.post(
         "/api/developer/uploads/icon",
         headers=headers["dev1"],
@@ -165,6 +166,12 @@ def test_skill_lifecycle_versions_and_code_reuse(capability_client) -> None:
     assert edited.status_code == 200, edited.text
     published = client.post(f"/api/developer/capabilities/{asset['id']}/publish", headers=headers["dev1"])
     assert published.status_code == 200
+    assert published.json()["data"]["status"] == "reviewing"
+    with session_factory() as session:
+        capability = session.get(Capability, asset["id"])
+        assert capability is not None
+        capability.status = "published"
+        session.commit()
     version_upload = _upload_package(client, headers["dev1"], "skill", {"SKILL.md": "# Version 1.1"})
     versioned = client.post(
         f"/api/developer/capabilities/{asset['id']}/versions",
@@ -173,6 +180,7 @@ def test_skill_lifecycle_versions_and_code_reuse(capability_client) -> None:
     )
     assert versioned.status_code == 200, versioned.text
     assert versioned.json()["data"]["version"] == "1.1.0"
+    assert versioned.json()["data"]["status"] == "reviewing"
     assert client.get(f"/api/developer/capabilities/{asset['id']}/versions", headers=headers["dev1"]).json()["data"]["total"] == 2
     assert client.post(f"/api/developer/capabilities/{asset['id']}/offline", headers=headers["dev1"]).json()["data"]["status"] == "offline"
 
@@ -185,12 +193,10 @@ def test_skill_lifecycle_versions_and_code_reuse(capability_client) -> None:
     assert replacement["code"] == "finance_skill"
 
 
-def test_mcp_publish_gate_test_result_and_filters(capability_client) -> None:
-    client, headers = capability_client
+def test_mcp_publish_reviewing_test_result_and_filters(capability_client) -> None:
+    client, headers, _session_factory = capability_client
     asset = _create_capability(client, headers["dev1"], code="database_mcp", capability_type="mcp")
     capability_id = asset["id"]
-    blocked = client.post(f"/api/developer/capabilities/{capability_id}/publish", headers=headers["dev1"])
-    assert blocked.status_code == 409
     denied = client.patch(
         f"/api/developer/capabilities/{capability_id}/test-status",
         headers=headers["dev1"],
@@ -206,19 +212,21 @@ def test_mcp_publish_gate_test_result_and_filters(capability_client) -> None:
     assert passed.json()["data"]["recent_test_status"] == "pass"
     published = client.post(f"/api/developer/capabilities/{capability_id}/publish", headers=headers["dev1"])
     assert published.status_code == 200
+    assert published.json()["data"]["status"] == "reviewing"
     listing = client.get(
-        "/api/developer/capabilities?type=mcp&status=published&search=database",
+        "/api/developer/capabilities?type=mcp&status=reviewing&search=database",
         headers=headers["dev1"],
     )
     assert listing.status_code == 200
     data = listing.json()["data"]
     assert data["total"] == 1
     assert data["items"][0]["code"] == "database_mcp"
+    assert data["counts"]["reviewing"] == 1
     assert data["counts"]["mcp"] == 1
 
 
 def test_upload_validation_and_token_ownership(capability_client) -> None:
-    client, headers = capability_client
+    client, headers, _session_factory = capability_client
     missing_skill = client.post(
         "/api/developer/uploads/package?type=skill",
         headers=headers["dev1"],

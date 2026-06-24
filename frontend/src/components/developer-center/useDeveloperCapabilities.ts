@@ -74,13 +74,12 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     const timer = window.setTimeout(async () => {
       try {
         const type = activeTypeTab === "Skill" ? "skill" : activeTypeTab === "MCP Server" ? "mcp" : undefined;
-        const reviewing = statusFilter === "reviewing";
         const result = await listCapabilities({
           page: currentPage,
           pageSize,
           search: searchQuery.trim(),
           type,
-          status: statusFilter === "draft" || statusFilter === "published" || statusFilter === "offline" ? statusFilter : undefined,
+          status: statusFilter === "draft" || statusFilter === "reviewing" || statusFilter === "published" || statusFilter === "offline" ? statusFilter : undefined,
         });
         const hydrated = await Promise.all(result.items.map(async (asset) => {
           if (!asset.icon) return asset;
@@ -96,8 +95,8 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
         }
         iconUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
         iconUrlsRef.current = hydrated.flatMap((asset) => asset.icon?.startsWith("blob:") ? [asset.icon] : []);
-        setAssets(reviewing ? [] : hydrated);
-        setTotalItems(reviewing ? 0 : result.total);
+        setAssets(hydrated);
+        setTotalItems(result.total);
         setCounts(result.counts);
       } catch (error) {
         if (requestId === requestIdRef.current) {

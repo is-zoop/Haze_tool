@@ -2,7 +2,7 @@ import { apiBlobRequest, apiRequest } from "./api";
 import { DeveloperAsset } from "../types/developer-center";
 
 export type CapabilityApiType = "skill" | "mcp";
-export type CapabilityApiStatus = "draft" | "published" | "offline";
+export type CapabilityApiStatus = "draft" | "reviewing" | "published" | "offline";
 
 interface ApiPackageFile {
   name: string;

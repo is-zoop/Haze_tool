@@ -159,6 +159,7 @@ def list_capabilities(
     counts = {
         "all": db.scalar(select(func.count(Capability.id)).where(*base_filters)) or 0,
         "draft": db.scalar(select(func.count(Capability.id)).where(*base_filters, Capability.status == "draft")) or 0,
+        "reviewing": db.scalar(select(func.count(Capability.id)).where(*base_filters, Capability.status == "reviewing")) or 0,
         "published": db.scalar(select(func.count(Capability.id)).where(*base_filters, Capability.status == "published")) or 0,
         "offline": db.scalar(select(func.count(Capability.id)).where(*base_filters, Capability.status == "offline")) or 0,
         "skill": db.scalar(select(func.count(Capability.id)).where(*base_filters, Capability.type == "skill")) or 0,
@@ -389,6 +390,7 @@ def create_version(
             created_paths.add(package_path)
             extension["package"] = package_meta
         capability.version = version
+        capability.status = "reviewing"
         capability.extension_json = extension
         capability.updated_by = actor.id
         db.add(
@@ -415,10 +417,7 @@ def create_version(
 
 def publish_capability(db: Session, capability_id: int, actor: User) -> CapabilityData:
     capability = _get_capability(db, capability_id, actor)
-    extension = _extension(capability)
-    if capability.type == "mcp" and extension.get("recent_test_status", "none") != "pass":
-        raise AppException(code=4095, message="MCP capability must pass testing before publish", status_code=409)
-    capability.status = "published"
+    capability.status = "reviewing"
     capability.updated_by = actor.id
     db.commit()
     db.refresh(capability)

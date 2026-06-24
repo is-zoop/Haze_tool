@@ -29,7 +29,7 @@ class Capability(Base):
         String(50), nullable=False, default="1.0.0", server_default="1.0.0", comment="当前版本"
     )
     status: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="draft", server_default="draft", comment="状态：draft/published/offline"
+        String(50), nullable=False, default="draft", server_default="draft", comment="状态：draft/reviewing/published/offline"
     )
     visibility: Mapped[str] = mapped_column(
         String(50), nullable=False, default="internal", server_default="internal", comment="可见范围：internal"

@@ -84,10 +84,10 @@
 - 涉及数据表：`capabilities`、`capability_versions`
 - 涉及主要文件：`backend/app/modules/capabilities/`、`backend/app/core/rbac.py`、`backend/app/main.py`
 - 功能说明：实现开发者能力列表、Skill/MCP 注册、图标和安全 ZIP 上传解析、配置编辑、版本快照、发布下线、软删除及 MCP 测试结果回写。
-- 本次改动说明：开发者仅管理本人能力，管理员可管理全部；Skill 默认无需测试，MCP 默认未测试且测试通过后才能发布；删除时清理文件并归档 code 以允许复用。
+- 本次改动说明：开发者仅管理本人能力，管理员可管理全部；发布操作改为提交审核并写入 `reviewing` 状态，新建版本后同样进入 `reviewing`；Skill 默认无需测试，MCP 测试状态仍由管理员回写；删除时清理文件并归档 code 以允许复用。
 - 是否影响已有功能：新增后端接口和能力权限，不修改前端 UI、不实现调试执行和复制 Prompt；保持现有认证和统一响应结构。
 - 验证方式：能力 API 目标 pytest、现有认证/成员回归测试、Python 编译、路由加载和 SQLite 元数据建表检查。
-- 更新时间：2026-06-23
+- 更新时间：2026-06-24
 
 ### Developer center frontend API integration
 
@@ -97,7 +97,7 @@
 - 涉及数据表：`capabilities`、`capability_versions`
 - 涉及主要文件：`frontend/src/Dashboard/pages/DeveloperCenter.tsx`、`frontend/src/lib/capabilities.ts`、`frontend/src/components/developer-center/useDeveloperCapabilities.ts`
 - 功能说明：将开发者中心表格、Skill/MCP 注册、上传解析、编辑、新版本和状态操作接入真实后端 API，并通过鉴权 Blob 请求展示能力图标。
-- 本次改动说明：保留现有页面布局、样式和操作入口；删除开发者中心临时资产、版本和测试记录；本地 MCP 模拟不再伪造正式测试通过状态。
+- 本次改动说明：保留现有页面布局、样式和操作入口；删除开发者中心临时资产、版本和测试记录；发布/新版本提交后展示后端 `reviewing` 审核中状态；本地 MCP 模拟不再伪造正式测试通过状态。
 - 是否影响已有功能：仅替换开发者中心数据流和事件处理，不调整其他页面；复制 Prompt 与本地模拟调试入口保留。
 - 验证方式：前端 TypeScript 检查、Vite 生产构建、后端完整 pytest 和临时数据引用扫描。
-- 更新时间：2026-06-23
+- 更新时间：2026-06-24
