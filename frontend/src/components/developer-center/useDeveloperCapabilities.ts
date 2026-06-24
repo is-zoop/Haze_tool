@@ -164,12 +164,19 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     try {
       const type = currentAsset.type === "MCP Server" ? "mcp" : "skill";
       const upload = await uploadCapabilityFile(file, type);
+      const mcpConfig = upload.manifest?.["mcp.json"] as Record<string, string> | undefined;
       setCurrentAsset((previous) => ({
         ...previous,
         packageUploadToken: upload.uploadToken,
         zipName: upload.fileName,
         zipSize: formatFileSize(upload.size),
         zipFiles: upload.files.map((item) => ({ name: item.name, size: formatFileSize(item.size) })),
+        ...(mcpConfig && previous.type === "MCP Server" ? {
+          transport: mcpConfig.transport?.toLowerCase() === "stdio" ? "STDIO" : "HTTP",
+          serverUrl: mcpConfig.serverUrl ?? previous.serverUrl,
+          startCommand: mcpConfig.command ?? previous.startCommand,
+          startArgs: mcpConfig.args ?? previous.startArgs,
+        } : {}),
       }));
       setFormErrors((previous) => ({ ...previous, zipName: "" }));
     } catch (error) {
@@ -187,6 +194,10 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     if (!currentAsset.description?.trim()) errors.description = "能力描述不能为空";
     else if (currentAsset.description.length > 300) errors.description = "能力描述不能超过 300 个字符";
     if (!isEditing && !currentAsset.packageUploadToken) errors.zipName = "能力 ZIP 文件必填";
+    if (currentAsset.type === "MCP Server") {
+      if (currentAsset.transport !== "STDIO" && !currentAsset.serverUrl?.trim()) errors.serverUrl = "HTTP 模式下 Server URL 不能为空";
+      if (currentAsset.transport === "STDIO" && !currentAsset.startCommand?.trim()) errors.startCommand = "STDIO 模式下启动命令不能为空";
+    }
     return errors;
   };
 

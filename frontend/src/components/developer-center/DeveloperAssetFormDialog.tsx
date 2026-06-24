@@ -148,6 +148,45 @@ export function DeveloperAssetFormDialog({
             )}
           </div>
 
+          {/* MCP 连接配置：HTTP → serverUrl；STDIO → startCommand + startArgs */}
+          {currentAsset.type === "MCP Server" && currentAsset.transport === "HTTP" && (
+            <FormField label="Server URL" required error={formErrors.serverUrl}>
+              <Input
+                value={currentAsset.serverUrl || ""}
+                onChange={(e) => {
+                  setCurrentAsset((prev) => ({ ...prev, serverUrl: e.target.value }));
+                  if (formErrors.serverUrl) setFormErrors((prev) => ({ ...prev, serverUrl: "" }));
+                }}
+                placeholder="http://127.0.0.1:8765"
+                className={`h-9 text-xs font-mono bg-white rounded-lg ${formErrors.serverUrl ? "border-destructive focus-visible:ring-destructive" : "border-slate-200"}`}
+              />
+            </FormField>
+          )}
+
+          {currentAsset.type === "MCP Server" && currentAsset.transport === "STDIO" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField label="启动命令" required error={formErrors.startCommand} description="如 python 或 node">
+                <Input
+                  value={currentAsset.startCommand || ""}
+                  onChange={(e) => {
+                    setCurrentAsset((prev) => ({ ...prev, startCommand: e.target.value }));
+                    if (formErrors.startCommand) setFormErrors((prev) => ({ ...prev, startCommand: "" }));
+                  }}
+                  placeholder="python"
+                  className={`h-9 text-xs font-mono bg-white rounded-lg ${formErrors.startCommand ? "border-destructive focus-visible:ring-destructive" : "border-slate-200"}`}
+                />
+              </FormField>
+              <FormField label="启动参数" description="如 server.py 或 dist/index.js">
+                <Input
+                  value={currentAsset.startArgs || ""}
+                  onChange={(e) => setCurrentAsset((prev) => ({ ...prev, startArgs: e.target.value }))}
+                  placeholder="mcp_demo_server.py"
+                  className="h-9 text-xs font-mono bg-white rounded-lg border-slate-200"
+                />
+              </FormField>
+            </div>
+          )}
+
           {/* ROW 2: 图标 | 业务分类 | 标签 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
             {/* 图标 (Requirement 5 / Image 3) */}
