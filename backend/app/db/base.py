@@ -6,5 +6,6 @@ class Base(DeclarativeBase):
 
 
 from app.modules.capabilities import models as capability_models  # noqa: E402,F401
+from app.modules.marketplace import models as marketplace_models  # noqa: E402,F401
 from app.modules.roles import models as role_models  # noqa: E402,F401
 from app.modules.users import models as user_models  # noqa: E402,F401

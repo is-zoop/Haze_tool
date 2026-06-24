@@ -101,3 +101,16 @@
 - 是否影响已有功能：仅替换开发者中心数据流和事件处理，不调整其他页面；复制 Prompt 与本地模拟调试入口保留。
 - 验证方式：前端 TypeScript 检查、Vite 生产构建、后端完整 pytest 和临时数据引用扫描。
 - 更新时间：2026-06-24
+
+### Marketplace capability listing and favorites
+
+- 所属模块：marketplace
+- 功能状态：新增
+- 涉及接口：`GET /api/marketplace/capabilities`、`POST /api/marketplace/capabilities/{id}/favorite`
+- 涉及数据表：`capability_favorites`（新增）、`capabilities`（只读）
+- 涉及主要文件：`backend/alembic/versions/20260624_0003_marketplace_favorites.py`、`backend/app/modules/marketplace/models.py`、`backend/app/modules/marketplace/schemas.py`、`backend/app/modules/marketplace/router.py`、`backend/app/db/base.py`、`backend/app/main.py`
+- 功能说明：将 status=published 的能力展示到能力市场，支持分页、搜索、类型/分类/收藏筛选；开发者字段以「姓名 · 部门」格式返回；收藏接口幂等切换，防重复入库。
+- 本次改动说明：全新 marketplace 模块；前端删除 marketplaceSkills、marketplaceMcpServers、capabilityMarketplaceData 三个 mock 文件，Market.tsx 初始 state 改为空数组，不修改页面结构和样式。
+- 是否影响已有功能：不影响开发者中心、认证、成员管理等已有接口；marketplace router 独立挂载。
+- 验证方式：后端 pytest 18 项全部通过；前端 TypeScript 检查无报错。
+- 更新时间：2026-06-24

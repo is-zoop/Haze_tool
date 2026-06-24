@@ -64,13 +64,12 @@ import {
 } from "@/components/ui/table";
 import { getI18n } from "../../i18n";
 import { CUSTOM_CATEGORIES } from "../../temp/sharedOptions";
-import { MOCK_MARKETPLACE_SKILLS } from "../../temp/marketplaceSkills";
-import { MOCK_MARKETPLACE_MCP_SERVERS } from "../../temp/marketplaceMcpServers";
 import {
   DEFAULT_MARKETPLACE_README,
   MARKETPLACE_README_BY_ID,
 } from "../../temp/marketplaceReadmeData";
 import { CapabilityItem } from "../../types/capability";
+import { listMarketCapabilities, toggleMarketFavorite } from "../../lib/capabilities";
 import { PageHeader } from "../../components/common/PageHeader";
 import { DataTableFooter } from "../../components/common/DataTableFooter";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -175,8 +174,9 @@ export function Market({
   setActiveMenu: _setActiveMenu,
 }: MarketPageProps) {
   const t = getI18n(_langCode);
-  const [skills, setSkills] = useState<CapabilityItem[]>(MOCK_MARKETPLACE_SKILLS);
-  const [mcps, setMcps] = useState<CapabilityItem[]>(MOCK_MARKETPLACE_MCP_SERVERS);
+  const [skills, setSkills] = useState<CapabilityItem[]>([]);
+  const [mcps, setMcps] = useState<CapabilityItem[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [activeTypeTab, setActiveTypeTab] = useState<TypeTab>("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -213,6 +213,38 @@ export function Market({
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    const type = activeTypeTab === "Skill" ? "skill" : activeTypeTab === "MCP" ? "mcp" : undefined;
+    listMarketCapabilities({
+      page: currentPage,
+      pageSize,
+      search: searchQuery.trim() || undefined,
+      type,
+      favoriteOnly: showFavoritesOnly || undefined,
+    }).then(({ items, total }) => {
+      const toItem = (raw: typeof items[0]): CapabilityItem => ({
+        id: raw.id,
+        name: raw.name,
+        type: raw.type === "MCP" ? "MCP" : "Skill",
+        description: raw.description ?? "",
+        calls: raw.calls,
+        status: "active",
+        author: raw.author,
+        version: `v${raw.version}`,
+        updateTime: raw.updated_at,
+        permissionsStatus: "direct",
+        riskLevel: "low",
+        department: raw.department ?? "",
+        tags: raw.tags,
+        isFavorite: raw.is_favorite,
+        icon: raw.icon,
+      });
+      setSkills(items.filter((i) => i.type === "Skill").map(toItem));
+      setMcps(items.filter((i) => i.type === "MCP").map(toItem));
+      setTotalItems(total);
+    }).catch(() => {});
+  }, [currentPage, pageSize, searchQuery, activeTypeTab, showFavoritesOnly]);
 
   const allItems = useMemo<MarketItem[]>(() => {
     return [
@@ -276,15 +308,11 @@ export function Market({
     return items;
   }, [filteredItems, sortBy]);
 
-  // Handle current page items mapping
-  const paginatedItems = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return sortedAndFilteredItems.slice(start, start + pageSize);
-  }, [sortedAndFilteredItems, currentPage, pageSize]);
+  const paginatedItems = sortedAndFilteredItems;
 
   const totalPages = useMemo(() => {
-    return Math.max(1, Math.ceil(sortedAndFilteredItems.length / pageSize));
-  }, [sortedAndFilteredItems, pageSize]);
+    return Math.max(1, Math.ceil(totalItems / pageSize));
+  }, [totalItems, pageSize]);
 
   // Resets the current page back to 1 if filter arguments change
   useEffect(() => {
@@ -311,19 +339,12 @@ export function Market({
   ].filter(Boolean).length;
 
   const toggleFavorite = (itemId: string, isMcp: boolean) => {
-    if (isMcp) {
-      setMcps((prev) => prev.map((item) => (
-        item.id === itemId ? { ...item, isFavorite: !item.isFavorite } : item
-      )));
-    } else {
-      setSkills((prev) => prev.map((item) => (
-        item.id === itemId ? { ...item, isFavorite: !item.isFavorite } : item
-      )));
-    }
-
-    setSelectedItem((prev) => (
-      prev?.id === itemId ? { ...prev, isFavorite: !prev.isFavorite } : prev
-    ));
+    toggleMarketFavorite(itemId).then((isFavorite) => {
+      const update = (item: CapabilityItem) => item.id === itemId ? { ...item, isFavorite } : item;
+      if (isMcp) setMcps((prev) => prev.map(update));
+      else setSkills((prev) => prev.map(update));
+      setSelectedItem((prev) => prev?.id === itemId ? { ...prev, isFavorite } : prev);
+    }).catch(() => {});
   };
 
   const clearFilters = () => {
@@ -642,10 +663,12 @@ export function Market({
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div className="flex items-center gap-3 min-w-0">
                             <span className={cn(
-                              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg shadow-3xs",
+                              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg shadow-3xs overflow-hidden",
                               item.isMcp ? "bg-violet-50 text-violet-700" : "bg-blue-50 text-blue-700"
                             )}>
-                              {item.isMcp ? <Cpu className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
+                              {item.icon
+                                ? <img src={item.icon} alt={item.name} className="h-10 w-10 object-cover" />
+                                : item.isMcp ? <Cpu className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
                             </span>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
@@ -693,7 +716,7 @@ export function Market({
 
                         <div className="mt-auto flex shrink-0 flex-col gap-3 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
                           <div className="truncate text-xs text-slate-500">
-                            {display.author} · 开发者 · {formatCalls(item.calls)} 次调用
+                            {display.author} · {formatCalls(item.calls)} 次调用
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             <Button size="sm" variant="outline" className="h-7 rounded-md border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50" onClick={() => openCapabilitySheet(item, "details")}>
@@ -755,7 +778,7 @@ export function Market({
                                     {display.tags.length > 2 && <Badge variant="secondary" className="h-5 rounded-md border-none bg-slate-50 px-1.5 text-xs text-slate-500">+{display.tags.length - 2}</Badge>}
                                   </div>
                                 </TableCell>
-                                <TableCell className="whitespace-nowrap px-4 py-2.5 text-left text-xs text-slate-600">{display.author} · 开发者</TableCell>
+                                <TableCell className="whitespace-nowrap px-4 py-2.5 text-left text-xs text-slate-600">{display.author}</TableCell>
                                 <TableCell className="whitespace-nowrap px-4 py-2.5 font-mono text-xs font-semibold text-slate-600">{formatCalls(item.calls)}</TableCell>
                                 <TableCell className="whitespace-nowrap px-4 py-2.5 font-mono text-xs text-slate-500">{item.version}</TableCell>
                                 <TableCell className="whitespace-nowrap px-4 py-2.5 text-right">
@@ -784,7 +807,7 @@ export function Market({
 
             {/* Pagination controls bar */}
             <DataTableFooter
-              totalItems={sortedAndFilteredItems.length}
+              totalItems={totalItems}
               currentPage={currentPage}
               totalPages={totalPages}
               pageSize={pageSize}
@@ -897,7 +920,7 @@ function CapabilitySheet({
           <div className="space-y-3 p-4">
             <Card className="rounded-lg border-slate-100 bg-white shadow-none">
               <CardContent className="grid grid-cols-2 gap-3 p-4 text-xs">
-                <InfoCell label="开发者" value={display.author} />
+                <InfoCell label="开发者姓名" value={display.author} />
                 <InfoCell label="归属部门" value={display.department} />
                 <InfoCell label="版本" value={item.version} />
                 <InfoCell label="更新时间" value={item.updateTime} />

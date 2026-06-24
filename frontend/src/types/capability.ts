@@ -47,6 +47,7 @@ export interface CapabilityItem {
   department: string;
   tags?: string[];
   isFavorite?: boolean;
+  icon?: string | null;
   lastUsedTime?: string;
 
   // Type specific fields - Skill

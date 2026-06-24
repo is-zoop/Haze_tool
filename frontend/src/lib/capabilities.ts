@@ -255,3 +255,49 @@ export async function loadCapabilityIcon(path: string): Promise<string> {
   const blob = await apiBlobRequest(path);
   return URL.createObjectURL(blob);
 }
+
+export interface MarketCapabilityItem {
+  id: string;
+  name: string;
+  type: string;
+  description: string | null;
+  version: string;
+  author: string;
+  department: string | null;
+  category: string | null;
+  tags: string[];
+  calls: number;
+  is_favorite: boolean;
+  icon: string | null;
+  updated_at: string;
+}
+
+export async function listMarketCapabilities(params: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  type?: "skill" | "mcp";
+  category?: string;
+  favoriteOnly?: boolean;
+}): Promise<{ items: MarketCapabilityItem[]; total: number }> {
+  const query = new URLSearchParams({ page: String(params.page ?? 1), page_size: String(params.pageSize ?? 100) });
+  if (params.search) query.set("search", params.search);
+  if (params.type) query.set("type", params.type);
+  if (params.category) query.set("category", params.category);
+  if (params.favoriteOnly) query.set("favorite_only", "true");
+  const data = (await apiRequest<{ items: MarketCapabilityItem[]; page: number; page_size: number; total: number }>(`/api/marketplace/capabilities?${query}`)).data;
+  const items = await Promise.all(data.items.map(async (item) => {
+    if (!item.icon) return item;
+    try {
+      return { ...item, icon: URL.createObjectURL(await apiBlobRequest(item.icon)) };
+    } catch {
+      return { ...item, icon: null };
+    }
+  }));
+  return { items, total: data.total };
+}
+
+export async function toggleMarketFavorite(id: string): Promise<boolean> {
+  const data = (await apiRequest<{ is_favorite: boolean }>(`/api/marketplace/capabilities/${id}/favorite`, { method: "POST" })).data;
+  return data.is_favorite;
+}
