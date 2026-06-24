@@ -415,14 +415,67 @@ def create_version(
         raise
 
 
-def publish_capability(db: Session, capability_id: int, actor: User) -> CapabilityData:
+def _transport(capability: Capability) -> str:
+    return (_extension(capability).get("config") or {}).get("transport", "HTTP")
+
+
+def submit_review(db: Session, capability_id: int, actor: User) -> CapabilityData:
     capability = _get_capability(db, capability_id, actor)
+    if capability.status not in {"draft", "rejected"}:
+        raise AppException(code=4097, message="Only draft or rejected capabilities can be submitted for review", status_code=409)
     capability.status = "reviewing"
     capability.updated_by = actor.id
     extension = _extension(capability)
     extension["submitted_at"] = datetime.utcnow().isoformat()
     extension["submitted_by"] = actor.id
     capability.extension_json = extension
+    db.commit()
+    db.refresh(capability)
+    return _serialize(db, capability)
+
+
+def deploy_capability(db: Session, capability_id: int, actor: User) -> CapabilityData:
+    capability = _get_capability(db, capability_id, actor)
+    if capability.type != "mcp" or _transport(capability) != "HTTP":
+        raise AppException(code=4098, message="Only HTTP MCP capabilities require deployment", status_code=409)
+    if capability.status not in {"approved", "deploy_failed"}:
+        raise AppException(code=4099, message="Capability must be approved before deployment", status_code=409)
+    # 部署功能暂未开发，默认置为部署完成
+    capability.status = "deployed"
+    capability.updated_by = actor.id
+    db.commit()
+    db.refresh(capability)
+    return _serialize(db, capability)
+
+
+def mark_debug_passed(db: Session, capability_id: int, actor: User) -> CapabilityData:
+    capability = _get_capability(db, capability_id, actor)
+    if capability.type != "mcp":
+        raise AppException(code=4004, message="Only MCP capabilities require debugging", status_code=400)
+    if _transport(capability) == "HTTP":
+        allowed = {"deployed", "debug_failed"}
+    else:
+        allowed = {"approved", "debug_failed"}
+    if capability.status not in allowed:
+        raise AppException(code=40910, message="Capability is not ready for debugging", status_code=409)
+    # 调试功能暂未开发，默认置为调试通过，并同步测试状态
+    capability.status = "debug_passed"
+    extension = _extension(capability)
+    extension["recent_test_status"] = "pass"
+    capability.extension_json = extension
+    capability.updated_by = actor.id
+    db.commit()
+    db.refresh(capability)
+    return _serialize(db, capability)
+
+
+def publish_capability(db: Session, capability_id: int, actor: User) -> CapabilityData:
+    capability = _get_capability(db, capability_id, actor)
+    required = {"approved", "offline"} if capability.type == "skill" else {"debug_passed", "offline"}
+    if capability.status not in required:
+        raise AppException(code=40911, message="Capability is not ready to be published", status_code=409)
+    capability.status = "published"
+    capability.updated_by = actor.id
     db.commit()
     db.refresh(capability)
     return _serialize(db, capability)

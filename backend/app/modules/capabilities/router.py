@@ -40,7 +40,19 @@ def list_capabilities(
     page_size: int = Query(default=10, ge=1, le=100),
     search: str = "",
     capability_type: Literal["skill", "mcp"] | None = Query(default=None, alias="type"),
-    status: Literal["draft", "reviewing", "published", "offline"] | None = None,
+    status: Literal[
+        "draft",
+        "reviewing",
+        "approved",
+        "rejected",
+        "deployed",
+        "deploy_failed",
+        "debug_passed",
+        "debug_failed",
+        "published",
+        "offline",
+    ]
+    | None = None,
 ) -> ApiResponse[CapabilityListData]:
     data = service.list_capabilities(
         db,
@@ -149,6 +161,36 @@ def create_version(
     actor: Annotated[User, Depends(require_capabilities("capabilities.version"))],
 ) -> ApiResponse[CapabilityData]:
     return success_response(request, service.create_version(db, capability_id, actor, payload))
+
+
+@router.post("/capabilities/{capability_id}/submit-review", response_model=ApiResponse[CapabilityData])
+def submit_review(
+    capability_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    actor: Annotated[User, Depends(require_capabilities("capabilities.publish"))],
+) -> ApiResponse[CapabilityData]:
+    return success_response(request, service.submit_review(db, capability_id, actor))
+
+
+@router.post("/capabilities/{capability_id}/deploy", response_model=ApiResponse[CapabilityData])
+def deploy_capability(
+    capability_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    actor: Annotated[User, Depends(require_capabilities("capabilities.publish"))],
+) -> ApiResponse[CapabilityData]:
+    return success_response(request, service.deploy_capability(db, capability_id, actor))
+
+
+@router.post("/capabilities/{capability_id}/debug", response_model=ApiResponse[CapabilityData])
+def debug_capability(
+    capability_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    actor: Annotated[User, Depends(require_capabilities("capabilities.publish"))],
+) -> ApiResponse[CapabilityData]:
+    return success_response(request, service.mark_debug_passed(db, capability_id, actor))
 
 
 @router.post("/capabilities/{capability_id}/publish", response_model=ApiResponse[CapabilityData])

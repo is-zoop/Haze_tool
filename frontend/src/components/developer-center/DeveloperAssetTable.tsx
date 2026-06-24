@@ -1,17 +1,21 @@
 import {
   ArrowUpCircle,
+  ChevronDown,
   Code,
   Copy,
   Cpu,
   Database,
   Edit3,
+  FileCheck,
   Folder,
   MinusCircle,
   MoreHorizontal,
   Play,
+  Rocket,
   Send,
   Shield,
   Sparkles,
+  TerminalSquare,
   Trash2,
   X,
   CheckCircle,
@@ -33,13 +37,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DeveloperAsset, TestStatus } from "../../types/developer-center";
+import { DeveloperAsset } from "../../types/developer-center";
 import { StatusBadge } from "../common/StatusBadge";
 import { getI18n } from "../../i18n";
 
-function renderTestStatusBadge(status: TestStatus, lang: string = "ZH", type?: string) {
+function renderTestStatusBadge(asset: DeveloperAsset, lang: string = "ZH") {
   const t = getI18n(lang);
-  if (type === "Skill" && (status === "none" || !status)) {
+  // Skill 无需测试
+  if (asset.type === "Skill") {
     return (
       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
         <span className="h-2 w-2 rounded-full bg-slate-200 shrink-0" />
@@ -47,6 +52,24 @@ function renderTestStatusBadge(status: TestStatus, lang: string = "ZH", type?: s
       </div>
     );
   }
+  // 从生命周期状态推导测试结果（MCP 到达 published/offline 必然经过 debug_passed）
+  if (["debug_passed", "published", "offline"].includes(asset.status)) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+        <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
+        <span>{lang === "ZH" ? "测试通过" : lang === "JA" ? "テスト合格" : lang === "ES" ? "Prueba aprobada" : "Test Passed"}</span>
+      </div>
+    );
+  }
+  if (asset.status === "debug_failed") {
+    return (
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+        <X className="h-4 w-4 bg-rose-500 text-white rounded-full p-0.5 shrink-0" />
+        <span>{lang === "ZH" ? "测试失败" : lang === "JA" ? "テスト失敗" : lang === "ES" ? "Prueba fallida" : "Test Failed"}</span>
+      </div>
+    );
+  }
+  const status = asset.recentTestStatus;
   if (status === "pass") {
     return (
       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
@@ -54,49 +77,114 @@ function renderTestStatusBadge(status: TestStatus, lang: string = "ZH", type?: s
         <span>{t.statusPass}</span>
       </div>
     );
-  } else if (status === "fail") {
+  }
+  if (status === "fail") {
     return (
       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
         <X className="h-4 w-4 bg-rose-500 text-white rounded-full p-0.5 shrink-0" />
         <span>{t.statusFail}</span>
       </div>
     );
-  } else if (status === "testing") {
+  }
+  if (status === "testing") {
     return (
       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
         <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
         <span>{t.statusTesting}</span>
       </div>
     );
-  } else {
+  }
+  return (
+    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+      <span className="h-2 w-2 rounded-full bg-slate-300 shrink-0" />
+      <span>{t.statusNotTested}</span>
+    </div>
+  );
+}
+
+// 将内部生命周期状态折叠为"状态列"显示状态
+// deployed/deploy_failed/debug_passed/debug_failed 均属于审核通过后的中间环节，对用户显示为"审核通过"
+function getDisplayStatus(asset: DeveloperAsset): DeveloperAsset["status"] {
+  const intermediate = ["deployed", "deploy_failed", "debug_passed", "debug_failed"] as const;
+  if ((intermediate as readonly string[]).includes(asset.status)) return "approved";
+  return asset.status;
+}
+
+function renderDeployStatusBadge(asset: DeveloperAsset, lang: string = "ZH") {
+  const isMcp = asset.type !== "Skill";
+  const isHttp = isMcp && asset.transport !== "STDIO";
+  // Skill 与 STDIO MCP 无需部署
+  if (!isHttp) {
     return (
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-        <span className="h-2 w-2 rounded-full bg-slate-300 shrink-0" />
-        <span>{t.statusNotTested}</span>
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
+        <span className="h-2 w-2 rounded-full bg-slate-200 shrink-0" />
+        <span>{lang === "ZH" ? "无需部署" : lang === "JA" ? "デプロイ不要" : lang === "ES" ? "Sin despliegue" : "No Deploy"}</span>
       </div>
     );
   }
+  const s = asset.status;
+  if (s === "deploy_failed") {
+    return (
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+        <X className="h-4 w-4 bg-rose-500 text-white rounded-full p-0.5 shrink-0" />
+        <span>{lang === "ZH" ? "部署失败" : lang === "JA" ? "デプロイ失敗" : lang === "ES" ? "Despliegue fallido" : "Deploy Failed"}</span>
+      </div>
+    );
+  }
+  if (["deployed", "debug_passed", "debug_failed", "published", "offline"].includes(s)) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+        <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
+        <span>{lang === "ZH" ? "部署完成" : lang === "JA" ? "デプロイ完了" : lang === "ES" ? "Desplegado" : "Deployed"}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+      <span className="h-2 w-2 rounded-full bg-slate-300 shrink-0" />
+      <span>{lang === "ZH" ? "未部署" : lang === "JA" ? "未デプロイ" : lang === "ES" ? "Sin desplegar" : "Not Deployed"}</span>
+    </div>
+  );
 }
 
 interface DeveloperAssetTableProps {
   paginatedAssets: DeveloperAsset[];
   langCode: string;
-  onOpenDebug: (asset: DeveloperAsset) => void;
   onOpenEditAsset: (asset: DeveloperAsset) => void;
   onIncrementVersion: (asset: DeveloperAsset) => void;
   onCopyAssetCode: (asset: DeveloperAsset) => void;
+  onSubmitReview: (asset: DeveloperAsset) => void;
+  onDeployAsset: (asset: DeveloperAsset) => void;
+  onDebugComplete: (asset: DeveloperAsset) => void;
   onPublishAsset: (asset: DeveloperAsset) => void;
   onOfflineAsset: (asset: DeveloperAsset) => void;
   onSetDeleteTarget: (asset: DeveloperAsset) => void;
 }
 
+// 依据 (status, type, transport) 推导出当前能力允许的流程动作，集中体现状态机
+function getFlowActions(asset: DeveloperAsset) {
+  const isMcp = asset.type !== "Skill";
+  const isHttp = isMcp && asset.transport !== "STDIO"; // transport 缺省按 HTTP
+  const s = asset.status;
+  return {
+    canSubmitReview: s === "draft" || s === "rejected",
+    showDeploy: isHttp,
+    canDeploy: isHttp && (s === "approved" || s === "deploy_failed"),
+    canDebug: isMcp && (isHttp ? s === "deployed" || s === "debug_failed" : s === "approved" || s === "debug_failed"),
+    canPublish: isMcp ? (s === "debug_passed" || s === "offline") : (s === "approved" || s === "offline"),
+    isPublished: s === "published",
+  };
+}
+
 export function DeveloperAssetTable({
   paginatedAssets,
   langCode,
-  onOpenDebug,
   onOpenEditAsset,
   onIncrementVersion,
   onCopyAssetCode,
+  onSubmitReview,
+  onDeployAsset,
+  onDebugComplete,
   onPublishAsset,
   onOfflineAsset,
   onSetDeleteTarget,
@@ -106,7 +194,12 @@ export function DeveloperAssetTable({
     published: t.statusPublished,
     draft: t.statusDraft,
     reviewing: t.statusReviewing,
+    approved: t.statusReviewApproved,
     rejected: t.statusRejected,
+    deployed: t.statusDeployed,
+    deploy_failed: t.statusDeployFailed,
+    debug_passed: t.statusDebugPassed,
+    debug_failed: t.statusDebugFailed,
     offline: t.statusOffline,
   };
 
@@ -187,7 +280,8 @@ export function DeveloperAssetTable({
                 <TableHead className="w-[100px] px-4 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-10 text-left">{langCode === "ZH" ? "类型" : langCode === "JA" ? "种类" : langCode === "ES" ? "Tipo" : "Type"}</TableHead>
                 <TableHead className="w-[100px] px-4 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-10 text-left">{langCode === "ZH" ? "版本" : langCode === "JA" ? "バージョン" : langCode === "ES" ? "Versión" : "Version"}</TableHead>
                 <TableHead className="w-[130px] px-4 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-10 text-left">{langCode === "ZH" ? "状态" : langCode === "JA" ? "ステータス" : langCode === "ES" ? "Estado" : "Status"}</TableHead>
-                <TableHead className="w-[150px] px-4 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-10 text-left">{langCode === "ZH" ? "测试" : langCode === "JA" ? "テスト" : langCode === "ES" ? "Pruebas" : "Test"}</TableHead>
+                <TableHead className="w-[130px] px-4 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-10 text-left">{langCode === "ZH" ? "部署状态" : langCode === "JA" ? "デプロイ状態" : langCode === "ES" ? "Despliegue" : "Deploy"}</TableHead>
+                <TableHead className="w-[150px] px-4 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-10 text-left">{langCode === "ZH" ? "测试状态" : langCode === "JA" ? "テスト状態" : langCode === "ES" ? "Estado de prueba" : "Test Status"}</TableHead>
                 <TableHead className="w-[110px] px-4 text-xs font-bold text-muted-foreground text-right pr-6 bg-slate-50 sticky top-0 z-10">{langCode === "ZH" ? "调用" : langCode === "JA" ? "呼び出し" : langCode === "ES" ? "Llamadas" : "Calls"}</TableHead>
                 <TableHead className="w-[200px] px-4 text-right text-xs font-bold text-muted-foreground pr-6 bg-slate-50 sticky top-0 z-10">{langCode === "ZH" ? "操作" : langCode === "JA" ? "操作" : langCode === "ES" ? "Acciones" : "Actions"}</TableHead>
               </TableRow>
@@ -195,6 +289,7 @@ export function DeveloperAssetTable({
             <TableBody className="divide-y divide-border text-sm text-left">
               {paginatedAssets.map((asset) => {
                 const cleanProject = asset.project.split(" (")[0];
+                const flow = getFlowActions(asset);
                 return (
                   <TableRow key={asset.id} className="h-[72px] text-foreground transition-colors hover:bg-slate-50/35 text-left">
                     <TableCell className="px-4 py-3 text-left">
@@ -223,26 +318,57 @@ export function DeveloperAssetTable({
                       )}
                     </TableCell>
                     <TableCell className="px-4 py-3 font-mono text-xs text-muted-foreground text-left">{asset.version || "v1.0.0"}</TableCell>
-                    <TableCell className="px-4 py-3 text-left"><StatusBadge status={asset.status} labels={assetStatusLabels} /></TableCell>
-                    <TableCell className="px-4 py-3 text-left">{renderTestStatusBadge(asset.recentTestStatus, langCode, asset.type)}</TableCell>
+                    <TableCell className="px-4 py-3 text-left"><StatusBadge status={getDisplayStatus(asset)} labels={assetStatusLabels} /></TableCell>
+                    <TableCell className="px-4 py-3 text-left">{renderDeployStatusBadge(asset, langCode)}</TableCell>
+                    <TableCell className="px-4 py-3 text-left">{renderTestStatusBadge(asset, langCode)}</TableCell>
                     <TableCell className="px-4 py-3 font-mono font-bold text-right text-foreground tabular-nums pr-6">
                       {formatCalls(asset.calls)}
                     </TableCell>
                     <TableCell className="px-4 py-3 text-right pr-6">
                       <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          size="sm"
-                          onClick={() => onOpenDebug(asset)}
-                          disabled={asset.type === "Skill"}
-                          className={`h-8 px-2.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer ${
-                            asset.type === "Skill"
-                              ? "bg-slate-100 text-slate-400 border-none cursor-not-allowed opacity-50"
-                              : "bg-slate-900 hover:bg-slate-800 text-white border-transparent"
-                          }`}
-                        >
-                          <Play size={12} className={asset.type === "Skill" ? "fill-slate-400 text-slate-400" : "fill-white text-white"} />
-                          <span>{langCode === "ZH" ? "调试" : langCode === "JA" ? "デバッグ" : langCode === "ES" ? "Depurar" : "Debug"}</span>
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="sm"
+                              disabled={asset.type === "Skill"}
+                              className={`h-8 px-2.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer ${
+                                asset.type === "Skill"
+                                  ? "bg-slate-100 text-slate-400 border-none cursor-not-allowed opacity-50"
+                                  : "bg-slate-900 hover:bg-slate-800 text-white border-transparent"
+                              }`}
+                            >
+                              <Play size={12} className={asset.type === "Skill" ? "text-slate-400" : "text-white"} />
+                              <span>{langCode === "ZH" ? "部署测试" : langCode === "JA" ? "デプロイ/テスト" : langCode === "ES" ? "Desplegar/Probar" : "Deploy/Test"}</span>
+                              <ChevronDown size={12} className={asset.type === "Skill" ? "text-slate-400" : "text-white"} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            collisionPadding={12}
+                            className="z-50 w-auto min-w-40 rounded-xl border border-slate-100 bg-white p-1 text-xs text-slate-700 shadow-md"
+                          >
+                            {flow.showDeploy && (
+                              <DropdownMenuItem
+                                disabled={!flow.canDeploy}
+                                onClick={() => onDeployAsset(asset)}
+                                className="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg p-2 font-bold hover:bg-slate-50 focus:bg-slate-50"
+                              >
+                                <Rocket size={12} className="text-slate-400" />
+                                <span>{langCode === "ZH" ? "服务部署" : langCode === "JA" ? "サービスデプロイ" : langCode === "ES" ? "Desplegar servicio" : "Deploy Service"}</span>
+                              </DropdownMenuItem>
+                            )}
+                            {asset.type !== "Skill" && (
+                              <DropdownMenuItem
+                                disabled={!flow.canDebug}
+                                onClick={() => onDebugComplete(asset)}
+                                className="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg p-2 font-bold hover:bg-slate-50 focus:bg-slate-50"
+                              >
+                                <TerminalSquare size={12} className="text-slate-400" />
+                                <span>{langCode === "ZH" ? "连接测试" : langCode === "JA" ? "接続テスト" : langCode === "ES" ? "Prueba de conexión" : "Connection Test"}</span>
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         
                         <Button
                           variant="outline"
@@ -286,7 +412,17 @@ export function DeveloperAssetTable({
 
                             <DropdownMenuSeparator />
 
-                            {asset.status === "published" ? (
+                            {flow.canSubmitReview && (
+                              <DropdownMenuItem
+                                onClick={() => onSubmitReview(asset)}
+                                className="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg p-2 font-bold hover:bg-slate-50 focus:bg-slate-50"
+                              >
+                                <FileCheck size={12} className="text-slate-400" />
+                                <span>{t.developerSubmitReview}</span>
+                              </DropdownMenuItem>
+                            )}
+
+                            {flow.isPublished ? (
                               <DropdownMenuItem
                                 onClick={() => onOfflineAsset(asset)}
                                 className="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg p-2 font-bold text-rose-600 hover:bg-rose-50 hover:text-rose-700 focus:bg-rose-50"
@@ -296,7 +432,7 @@ export function DeveloperAssetTable({
                               </DropdownMenuItem>
                             ) : (
                               <DropdownMenuItem
-                                disabled={asset.status === "reviewing"}
+                                disabled={!flow.canPublish}
                                 onClick={() => onPublishAsset(asset)}
                                 className="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg p-2 font-bold hover:bg-slate-50 focus:bg-slate-50"
                               >
@@ -320,7 +456,7 @@ export function DeveloperAssetTable({
               })}
               {paginatedAssets.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-40 text-center font-normal text-muted-foreground bg-white text-left">
+                  <TableCell colSpan={9} className="h-40 text-center font-normal text-muted-foreground bg-white text-left">
                     {langCode === "ZH" ? "暂无匹配的能力注册项" 
                      : langCode === "JA" ? "該当する機能登録が見得つかりません" 
                      : langCode === "ES" ? "No se encontraron capacidades registradas coincidentes" 

@@ -3,12 +3,15 @@ import { ApiError } from "../../lib/api";
 import {
   createCapability,
   createCapabilityVersion,
+  debugCapability,
   deleteCapability,
+  deployCapability,
   formatFileSize,
   listCapabilities,
   loadCapabilityIcon,
   offlineCapability,
   publishCapability,
+  submitReviewCapability,
   updateCapability,
   uploadCapabilityFile,
   uploadCapabilityIcon,
@@ -83,7 +86,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
           pageSize,
           search: searchQuery.trim(),
           type,
-          status: statusFilter === "draft" || statusFilter === "reviewing" || statusFilter === "published" || statusFilter === "offline" ? statusFilter : undefined,
+          status: statusFilter === "all" ? undefined : statusFilter,
         });
         const hydrated = await Promise.all(result.items.map(async (asset) => {
           if (!asset.icon) return asset;
@@ -218,6 +221,36 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
       const message = errorMessage(error);
       if (error instanceof ApiError && error.status === 409) setFormErrors((previous) => ({ ...previous, code: message }));
       triggerFlashAlert(message);
+    }
+  };
+
+  const handleSubmitReview = async (asset: DeveloperAsset) => {
+    try {
+      await submitReviewCapability(asset.id);
+      triggerFlashAlert(`能力 [${asset.name}] 已提交审核`);
+      refresh();
+    } catch (error) {
+      triggerFlashAlert(errorMessage(error));
+    }
+  };
+
+  const handleDeployAsset = async (asset: DeveloperAsset) => {
+    try {
+      await deployCapability(asset.id);
+      triggerFlashAlert(`能力 [${asset.name}] 部署完成`);
+      refresh();
+    } catch (error) {
+      triggerFlashAlert(errorMessage(error));
+    }
+  };
+
+  const handleDebugComplete = async (asset: DeveloperAsset) => {
+    try {
+      await debugCapability(asset.id);
+      triggerFlashAlert(`能力 [${asset.name}] 调试通过`);
+      refresh();
+    } catch (error) {
+      triggerFlashAlert(errorMessage(error));
     }
   };
 
@@ -421,6 +454,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     newVersionDesc, setNewVersionDesc, newVersionZipName, setNewVersionZipName,
     newVersionZipSize, setNewVersionZipSize, newVersionZipFiles, setNewVersionZipFiles, setNewVersionPackageToken,
     newVersionErrors, handleIncrementVersion, handleNewVersionZipUploaded, handleSaveNewVersion,
+    handleSubmitReview, handleDeployAsset, handleDebugComplete,
     handlePublishAsset, handleOfflineAsset, handleDeleteAsset, deleteTarget, setDeleteTarget,
     handleCopyAssetCode, handleOpenDebug, showDebugModal, setShowDebugModal, debugAsset,
     debugStatus, currentStepIndex, terminalLogs, setTerminalLogs, stepDurations, stepStatuses,

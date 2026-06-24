@@ -2,7 +2,17 @@ import { apiBlobRequest, apiRequest } from "./api";
 import { DeveloperAsset } from "../types/developer-center";
 
 export type CapabilityApiType = "skill" | "mcp";
-export type CapabilityApiStatus = "draft" | "reviewing" | "published" | "offline";
+export type CapabilityApiStatus =
+  | "draft"
+  | "reviewing"
+  | "approved"
+  | "rejected"
+  | "deployed"
+  | "deploy_failed"
+  | "debug_passed"
+  | "debug_failed"
+  | "published"
+  | "offline";
 
 interface ApiPackageFile {
   name: string;
@@ -91,7 +101,7 @@ function mapCapability(item: ApiCapability): DeveloperAsset {
     skillMd: typeof config.skillMd === "string" ? config.skillMd : undefined,
     dependentTools: Array.isArray(config.dependentTools) ? config.dependentTools as string[] : undefined,
     testCases: Array.isArray(config.testCases) ? config.testCases as DeveloperAsset["testCases"] : undefined,
-    transport: config.transport === "STDIO" ? "STDIO" : "HTTP",
+    transport: String(config.transport ?? "").toUpperCase() === "STDIO" ? "STDIO" : "HTTP",
     serverUrl: typeof config.serverUrl === "string" ? config.serverUrl : undefined,
     startCommand: typeof config.startCommand === "string" ? config.startCommand : undefined,
     startArgs: typeof config.startArgs === "string" ? config.startArgs : undefined,
@@ -237,6 +247,18 @@ export async function createCapabilityVersion(
     },
   })).data;
   return mapCapability(data);
+}
+
+export async function submitReviewCapability(id: string): Promise<void> {
+  await apiRequest(`/api/developer/capabilities/${id}/submit-review`, { method: "POST" });
+}
+
+export async function deployCapability(id: string): Promise<void> {
+  await apiRequest(`/api/developer/capabilities/${id}/deploy`, { method: "POST" });
+}
+
+export async function debugCapability(id: string): Promise<void> {
+  await apiRequest(`/api/developer/capabilities/${id}/debug`, { method: "POST" });
 }
 
 export async function publishCapability(id: string): Promise<void> {

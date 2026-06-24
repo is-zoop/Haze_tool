@@ -108,11 +108,15 @@ def list_audit_capabilities(
 ) -> ApiResponse[AuditListData]:
     filters = [Capability.deleted_at.is_(None)]
 
+    # 审核通过后能力会继续走 部署 → 调试 → 发布，这些都属于"已过审"状态
+    approved_states = ["approved", "deployed", "deploy_failed", "debug_passed", "debug_failed", "published"]
     if status and status != "all":
-        cap_status = "published" if status == "approved" else status
-        filters.append(Capability.status == cap_status)
+        if status == "approved":
+            filters.append(Capability.status.in_(approved_states))
+        else:
+            filters.append(Capability.status == status)
     else:
-        filters.append(Capability.status.in_(["reviewing", "published", "rejected"]))
+        filters.append(Capability.status.in_(["reviewing", "rejected", *approved_states]))
 
     if capability_type:
         filters.append(Capability.type == capability_type)
@@ -299,7 +303,7 @@ def review_capability(
 
     submitted_by: int | None = ext.get("submitted_by")
 
-    new_status = "published" if payload.action == "approved" else "rejected"
+    new_status = "approved" if payload.action == "approved" else "rejected"
     capability.status = new_status
     capability.updated_by = actor.id
 

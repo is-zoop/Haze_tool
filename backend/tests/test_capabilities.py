@@ -164,9 +164,9 @@ def test_skill_lifecycle_versions_and_code_reuse(capability_client) -> None:
         json={"name": "Finance Skill Updated", "tags": ["finance", "report"]},
     )
     assert edited.status_code == 200, edited.text
-    published = client.post(f"/api/developer/capabilities/{asset['id']}/publish", headers=headers["dev1"])
-    assert published.status_code == 200
-    assert published.json()["data"]["status"] == "reviewing"
+    submitted = client.post(f"/api/developer/capabilities/{asset['id']}/submit-review", headers=headers["dev1"])
+    assert submitted.status_code == 200
+    assert submitted.json()["data"]["status"] == "reviewing"
     with session_factory() as session:
         capability = session.get(Capability, asset["id"])
         assert capability is not None
@@ -210,9 +210,9 @@ def test_mcp_publish_reviewing_test_result_and_filters(capability_client) -> Non
     )
     assert passed.status_code == 200, passed.text
     assert passed.json()["data"]["recent_test_status"] == "pass"
-    published = client.post(f"/api/developer/capabilities/{capability_id}/publish", headers=headers["dev1"])
-    assert published.status_code == 200
-    assert published.json()["data"]["status"] == "reviewing"
+    submitted = client.post(f"/api/developer/capabilities/{capability_id}/submit-review", headers=headers["dev1"])
+    assert submitted.status_code == 200
+    assert submitted.json()["data"]["status"] == "reviewing"
     listing = client.get(
         "/api/developer/capabilities?type=mcp&status=reviewing&search=database",
         headers=headers["dev1"],
@@ -223,6 +223,71 @@ def test_mcp_publish_reviewing_test_result_and_filters(capability_client) -> Non
     assert data["items"][0]["code"] == "database_mcp"
     assert data["counts"]["reviewing"] == 1
     assert data["counts"]["mcp"] == 1
+
+
+def _create_stdio_mcp(client: TestClient, headers: dict[str, str], *, code: str) -> dict:
+    upload = _upload_package(client, headers, "mcp", {"package.json": '{"name":"mcp-server"}'})
+    response = client.post(
+        "/api/developer/capabilities",
+        headers=headers,
+        json={
+            "code": code,
+            "name": f"Capability {code}",
+            "type": "mcp",
+            "description": "Capability description",
+            "category": "Engineering",
+            "version": "1.0.0",
+            "tags": ["automation"],
+            "config": {"transport": "STDIO", "startCommand": "node index.js"},
+            "package_upload_token": upload["upload_token"],
+        },
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["data"]
+
+
+def test_capability_status_flow_by_type(capability_client) -> None:
+    client, headers, _session_factory = capability_client
+
+    def status_of(cap_id: int) -> str:
+        return client.get(f"/api/developer/capabilities/{cap_id}", headers=headers["dev1"]).json()["data"]["status"]
+
+    def approve(cap_id: int) -> None:
+        review = client.post(
+            f"/api/audit/capabilities/{cap_id}/review",
+            headers=headers["admin"],
+            json={"action": "approved"},
+        )
+        assert review.status_code == 200, review.text
+        assert review.json()["data"]["new_status"] == "approved"
+
+    # Skill: draft -> reviewing -> approved -> published (跳过部署/调试)
+    skill_id = _create_capability(client, headers["dev1"], code="flow_skill", capability_type="skill")["id"]
+    assert client.post(f"/api/developer/capabilities/{skill_id}/publish", headers=headers["dev1"]).status_code == 409
+    assert client.post(f"/api/developer/capabilities/{skill_id}/submit-review", headers=headers["dev1"]).json()["data"]["status"] == "reviewing"
+    approve(skill_id)
+    assert status_of(skill_id) == "approved"
+    assert client.post(f"/api/developer/capabilities/{skill_id}/deploy", headers=headers["dev1"]).status_code == 409
+    assert client.post(f"/api/developer/capabilities/{skill_id}/debug", headers=headers["dev1"]).status_code == 400
+    assert client.post(f"/api/developer/capabilities/{skill_id}/publish", headers=headers["dev1"]).json()["data"]["status"] == "published"
+
+    # HTTP MCP: draft -> reviewing -> approved -> deployed -> debug_passed -> published
+    http_id = _create_capability(client, headers["dev1"], code="flow_http_mcp", capability_type="mcp")["id"]
+    client.post(f"/api/developer/capabilities/{http_id}/submit-review", headers=headers["dev1"])
+    approve(http_id)
+    assert client.post(f"/api/developer/capabilities/{http_id}/publish", headers=headers["dev1"]).status_code == 409
+    assert client.post(f"/api/developer/capabilities/{http_id}/debug", headers=headers["dev1"]).status_code == 409
+    assert client.post(f"/api/developer/capabilities/{http_id}/deploy", headers=headers["dev1"]).json()["data"]["status"] == "deployed"
+    assert client.post(f"/api/developer/capabilities/{http_id}/debug", headers=headers["dev1"]).json()["data"]["status"] == "debug_passed"
+    assert client.post(f"/api/developer/capabilities/{http_id}/publish", headers=headers["dev1"]).json()["data"]["status"] == "published"
+
+    # STDIO MCP: draft -> reviewing -> approved -> debug_passed -> published (跳过部署)
+    stdio_id = _create_stdio_mcp(client, headers["dev1"], code="flow_stdio_mcp")["id"]
+    client.post(f"/api/developer/capabilities/{stdio_id}/submit-review", headers=headers["dev1"])
+    approve(stdio_id)
+    assert client.post(f"/api/developer/capabilities/{stdio_id}/deploy", headers=headers["dev1"]).status_code == 409
+    assert client.post(f"/api/developer/capabilities/{stdio_id}/debug", headers=headers["dev1"]).json()["data"]["status"] == "debug_passed"
+    assert client.post(f"/api/developer/capabilities/{stdio_id}/publish", headers=headers["dev1"]).json()["data"]["status"] == "published"
 
 
 def test_upload_validation_and_token_ownership(capability_client) -> None:

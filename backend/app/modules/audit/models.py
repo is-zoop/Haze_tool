@@ -7,12 +7,14 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
+BIGINT_PK = BigInteger().with_variant(Integer, "sqlite")
+
 
 class CapabilityAuditRecord(Base):
     __tablename__ = "capability_audit_records"
     __table_args__ = (UniqueConstraint("capability_id", name="uq_audit_capability_id"),)
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BIGINT_PK, primary_key=True, autoincrement=True)
     capability_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("capabilities.id", ondelete="CASCADE"), nullable=False)
     submitted_by: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

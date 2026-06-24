@@ -40,7 +40,6 @@ import { getI18n } from "../../i18n";
 import { DeveloperAssetTable } from "../../components/developer-center/DeveloperAssetTable";
 import { DeveloperAssetFormDialog } from "../../components/developer-center/DeveloperAssetFormDialog";
 import { NewVersionDialog } from "../../components/developer-center/NewVersionDialog";
-import { McpConnectionTestDialog } from "../../components/developer-center/McpConnectionTestDialog";
 import { AssetTypeFilter, useDeveloperCapabilities } from "../../components/developer-center/useDeveloperCapabilities";
 
 interface PageProps {
@@ -64,11 +63,10 @@ export function DeveloperCenter({
     newVersionDesc, setNewVersionDesc, newVersionZipName, setNewVersionZipName,
     newVersionZipSize, setNewVersionZipSize, newVersionZipFiles, setNewVersionZipFiles, setNewVersionPackageToken,
     newVersionErrors, handleIncrementVersion, handleNewVersionZipUploaded, handleSaveNewVersion,
+    handleSubmitReview, handleDeployAsset, handleDebugComplete,
     handlePublishAsset, handleOfflineAsset, handleDeleteAsset, deleteTarget, setDeleteTarget,
-    handleCopyAssetCode, handleOpenDebug, showDebugModal, setShowDebugModal, debugAsset,
-    debugStatus, currentStepIndex, terminalLogs, setTerminalLogs, stepDurations, stepStatuses,
-    testStarted, setTestStarted, runRealTest,
-    flashMessage, triggerFlashAlert,
+    handleCopyAssetCode,
+    flashMessage,
   } = useDeveloperCapabilities(_langCode);
 
   const developerCenterTabs: TabItem[] = [
@@ -219,10 +217,12 @@ export function DeveloperCenter({
           <DeveloperAssetTable
             paginatedAssets={assets}
             langCode={_langCode}
-            onOpenDebug={handleOpenDebug}
             onOpenEditAsset={handleOpenEditAsset}
             onIncrementVersion={handleIncrementVersion}
             onCopyAssetCode={handleCopyAssetCode}
+            onSubmitReview={handleSubmitReview}
+            onDeployAsset={handleDeployAsset}
+            onDebugComplete={handleDebugComplete}
             onPublishAsset={handlePublishAsset}
             onOfflineAsset={handleOfflineAsset}
             onSetDeleteTarget={setDeleteTarget}
@@ -308,25 +308,6 @@ export function DeveloperCenter({
         onSave={handleSaveNewVersion}
       />
 
-      {/* Modularized Sandboxed MCP debugging terminal simulator */}
-      <McpConnectionTestDialog
-        open={showDebugModal}
-        onClose={() => setShowDebugModal(false)}
-        debugAsset={debugAsset}
-        langCode={_langCode}
-        debugStatus={debugStatus}
-        currentStepIndex={currentStepIndex}
-        terminalLogs={terminalLogs}
-        testStarted={testStarted}
-        stepDurations={stepDurations}
-        stepStatuses={stepStatuses}
-        onStartTest={() => {
-          if (!testStarted) setTestStarted(true);
-          runRealTest(debugAsset || undefined);
-        }}
-        onClearLogs={() => setTerminalLogs([])}
-        onTriggerAlert={triggerFlashAlert}
-      />
     </div>
   );
 }

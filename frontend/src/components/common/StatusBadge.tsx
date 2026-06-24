@@ -9,6 +9,10 @@ export type StatusType =
   | "offline"
   | "pending"
   | "approved"
+  | "deployed"
+  | "deploy_failed"
+  | "debug_passed"
+  | "debug_failed"
   | "processing"
   | "withdrawn"
   | "pass"
@@ -29,6 +33,10 @@ const statusClassNames: Record<string, string> = {
   approved: "border-none bg-emerald-50 text-emerald-700 hover:bg-emerald-50 shadow-3xs",
   draft: "border-none bg-amber-50 text-amber-600 hover:bg-amber-50 shadow-3xs",
   reviewing: "border-none bg-blue-50 text-blue-650 hover:bg-blue-50 shadow-3xs",
+  deployed: "border-none bg-teal-50 text-teal-600 hover:bg-teal-50 shadow-3xs",
+  deploy_failed: "border-none bg-rose-50 text-rose-700 hover:bg-rose-50 shadow-3xs",
+  debug_passed: "border-none bg-emerald-50 text-emerald-600 hover:bg-emerald-50 shadow-3xs",
+  debug_failed: "border-none bg-rose-50 text-rose-700 hover:bg-rose-50 shadow-3xs",
   pending: "border-none bg-amber-50 text-amber-700 hover:bg-amber-50 shadow-3xs",
   processing: "border-none bg-amber-50 text-amber-700 hover:bg-amber-50 shadow-3xs",
   rejected: "border-none bg-rose-50 text-rose-700 hover:bg-rose-50 shadow-3xs",

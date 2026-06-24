@@ -1,11 +1,16 @@
 export type AssetType = "Skill" | "MCP Server" | "Tool";
 
 export type AssetStatus =
-  | "draft"       // 草稿
-  | "reviewing"   // 待审核
-  | "published"   // 已发布
-  | "rejected"    // 已拒绝
-  | "offline";    // 已下线
+  | "draft"          // 草稿
+  | "reviewing"      // 待审核
+  | "approved"       // 审核通过
+  | "rejected"       // 审核驳回
+  | "deployed"       // 部署完成
+  | "deploy_failed"  // 部署失败
+  | "debug_passed"   // 调试通过
+  | "debug_failed"   // 调试失败
+  | "published"      // 已发布
+  | "offline";       // 已下线
 
 export type TestStatus = "none" | "testing" | "pass" | "fail";
 

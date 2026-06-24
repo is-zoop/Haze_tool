@@ -114,3 +114,27 @@
 - 是否影响已有功能：不影响开发者中心、认证、成员管理等已有接口；marketplace router 独立挂载。
 - 验证方式：后端 pytest 18 项全部通过；前端 TypeScript 检查无报错。
 - 更新时间：2026-06-24
+
+### Capability lifecycle status flow (submit-review / deploy / debug / publish)
+
+- 所属模块：capabilities / developer center / audit
+- 功能状态：修改
+- 涉及接口：新增 `POST /api/developer/capabilities/{id}/submit-review`、`/deploy`、`/debug`；`/publish` 改为真实发布；`GET /api/developer/capabilities` status 过滤扩展全状态；`POST /api/audit/capabilities/{id}/review` 通过落点由 `published` 改为 `approved`
+- 涉及数据表：`capabilities`（status 取值扩展，无 DDL 变更）、`capability_audit_records`
+- 涉及主要文件：`backend/app/modules/capabilities/{service,router,schemas}.py`、`backend/app/modules/audit/{router,models}.py`、`frontend/src/types/developer-center.ts`、`frontend/src/components/common/StatusBadge.tsx`、`frontend/src/i18n/*`、`frontend/src/lib/capabilities.ts`、`frontend/src/components/developer-center/{useDeveloperCapabilities.ts,DeveloperAssetTable.tsx}`、`frontend/src/Dashboard/pages/DeveloperCenter.tsx`
+- 功能说明：补全能力状态机 `草稿 → 待审核 → 审核通过/驳回 → 部署完成/失败 → 调试通过/失败 → 已发布`。按类型分流：Skill 走 1-2-3-6；STDIO MCP 走 1-2-3-5-6（跳过部署）；HTTP MCP 走完整 1-2-3-4-5-6。各转换按 type/transport 校验起始状态，越级返回 409，保证严格按顺序执行。开发者中心下拉菜单在「复制 Prompt」下方新增「部署服务」、在「发布」上方新增「提交审核」，行内「调试」按钮按状态可用；审核仍走管理员审核页（落点 approved）。
+- 本次改动说明：部署/调试功能尚未开发，对应接口当前默认置为通过（部署完成 / 调试通过）；修复 `capability_audit_records.id` 在 SQLite 下未自增的潜在缺陷（改用 BIGINT_PK 变体）；`reviewing` 中文标签由「审核中」改为「待审核」。
+- 是否影响已有功能：`/publish` 语义由「提交审核」改为「真实发布」，提交审核迁移到 `/submit-review`；能力市场仍只展示 `published`，不受影响；既有测试已同步更新。
+- 验证方式：后端 pytest 19 项全部通过（含新增三类能力顺序流转与越级拦截用例）；前端 `tsc --noEmit` 无报错。
+- 更新时间：2026-06-24
+
+### Developer center table: deploy/test status columns and 部署/测试 action
+
+- 所属模块：frontend developer center
+- 功能状态：修改
+- 涉及主要文件：`frontend/src/components/developer-center/DeveloperAssetTable.tsx`、`frontend/src/Dashboard/pages/DeveloperCenter.tsx`、`backend/app/modules/capabilities/service.py`
+- 功能说明：开发者中心列表在「测试」列前新增「部署状态」列（Skill 与 STDIO MCP 显示「无需部署」，HTTP MCP 显示 未部署/部署完成/部署失败）；「测试」列改名为「测试状态」（Skill 显示「无需测试」）。行内「调试」按钮改为「部署/测试」下拉按钮，整合「服务部署」（onDeployAsset）与「连接测试」（onDebugComplete，点击即测试通过）两项，按状态置灰；原「…」更多菜单中的部署/连接测试项移除。
+- 本次改动说明：连接测试改为点击即通过，移除 DeveloperCenter 中的 McpConnectionTestDialog 挂载（弹窗组件文件保留未引用）；后端 `mark_debug_passed` 同步将 `recent_test_status` 置为 `pass`，使「测试状态」列反映调试结果。
+- 是否影响已有功能：仅调整开发者中心表格列与操作入口；状态机与接口不变。
+- 验证方式：前端 `tsc --noEmit` 无报错；后端 pytest 19 项全部通过。
+- 更新时间：2026-06-24
