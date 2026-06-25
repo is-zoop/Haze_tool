@@ -197,10 +197,6 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     if (!currentAsset.description?.trim()) errors.description = "能力描述不能为空";
     else if (currentAsset.description.length > 300) errors.description = "能力描述不能超过 300 个字符";
     if (!isEditing && !currentAsset.packageUploadToken) errors.zipName = "能力 ZIP 文件必填";
-    if (currentAsset.type === "MCP Server") {
-      if (currentAsset.transport !== "STDIO" && !currentAsset.serverUrl?.trim()) errors.serverUrl = "HTTP 模式下 Server URL 不能为空";
-      if (currentAsset.transport === "STDIO" && !currentAsset.startCommand?.trim()) errors.startCommand = "STDIO 模式下启动命令不能为空";
-    }
     return errors;
   };
 
@@ -245,6 +241,12 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
   };
 
   const handleDebugComplete = async (asset: DeveloperAsset) => {
+    if (asset.transport === "STDIO") {
+      // STDIO MCP：打开真实调试弹窗
+      handleOpenDebug(asset);
+      return;
+    }
+    // 非 STDIO（HTTP MCP）：点击即通过
     try {
       await debugCapability(asset.id);
       triggerFlashAlert(`能力 [${asset.name}] 调试通过`);

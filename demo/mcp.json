@@ -1,0 +1,5 @@
+{
+  "transport": "STDIO",
+  "command": "python",
+  "args": "mcp_demo_server.py"
+}

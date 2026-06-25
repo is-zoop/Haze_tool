@@ -24,6 +24,7 @@ interface McpConnectionTestDialogProps {
   onStartTest: () => void;
   onClearLogs: () => void;
   onTriggerAlert: (msg: string) => void;
+  steps?: { name: string; desc: string }[];
 }
 
 export function McpConnectionTestDialog({
@@ -40,6 +41,7 @@ export function McpConnectionTestDialog({
   onStartTest,
   onClearLogs,
   onTriggerAlert,
+  steps,
 }: McpConnectionTestDialogProps) {
   if (!debugAsset) return null;
 
@@ -62,7 +64,7 @@ export function McpConnectionTestDialog({
         </DialogHeader>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 py-4 lg:grid-cols-[250px_1fr]">
-          <McpTestTimeline currentStepIndex={currentStepIndex} langCode={langCode} stepDurations={stepDurations} stepStatuses={stepStatuses} />
+          <McpTestTimeline currentStepIndex={currentStepIndex} langCode={langCode} stepDurations={stepDurations} stepStatuses={stepStatuses} steps={steps} />
           <McpTerminalLog
             terminalLogs={terminalLogs}
             langCode={langCode}

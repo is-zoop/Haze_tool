@@ -40,6 +40,8 @@ import { getI18n } from "../../i18n";
 import { DeveloperAssetTable } from "../../components/developer-center/DeveloperAssetTable";
 import { DeveloperAssetFormDialog } from "../../components/developer-center/DeveloperAssetFormDialog";
 import { NewVersionDialog } from "../../components/developer-center/NewVersionDialog";
+import { McpConnectionTestDialog } from "../../components/developer-center/McpConnectionTestDialog";
+import { STDIO_TEST_STEPS } from "../../components/developer-center/config";
 import { AssetTypeFilter, useDeveloperCapabilities } from "../../components/developer-center/useDeveloperCapabilities";
 
 interface PageProps {
@@ -66,7 +68,10 @@ export function DeveloperCenter({
     handleSubmitReview, handleDeployAsset, handleDebugComplete,
     handlePublishAsset, handleOfflineAsset, handleDeleteAsset, deleteTarget, setDeleteTarget,
     handleCopyAssetCode,
-    flashMessage,
+    showDebugModal, setShowDebugModal, debugAsset,
+    debugStatus, currentStepIndex, terminalLogs, setTerminalLogs, stepDurations, stepStatuses,
+    testStarted, setTestStarted, runRealTest,
+    flashMessage, triggerFlashAlert,
   } = useDeveloperCapabilities(_langCode);
 
   const developerCenterTabs: TabItem[] = [
@@ -306,6 +311,23 @@ export function DeveloperCenter({
         }}
         newVersionErrors={newVersionErrors}
         onSave={handleSaveNewVersion}
+      />
+
+      <McpConnectionTestDialog
+        open={showDebugModal}
+        onClose={() => { setShowDebugModal(false); setTestStarted(false); }}
+        debugAsset={debugAsset}
+        langCode={_langCode}
+        debugStatus={debugStatus}
+        currentStepIndex={currentStepIndex}
+        terminalLogs={terminalLogs}
+        stepDurations={stepDurations}
+        stepStatuses={stepStatuses}
+        testStarted={testStarted}
+        onStartTest={() => { setTestStarted(true); runRealTest(); }}
+        onClearLogs={() => setTerminalLogs([])}
+        onTriggerAlert={triggerFlashAlert}
+        steps={STDIO_TEST_STEPS}
       />
 
     </div>

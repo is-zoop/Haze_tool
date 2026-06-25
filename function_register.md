@@ -138,3 +138,16 @@
 - 是否影响已有功能：仅调整开发者中心表格列与操作入口；状态机与接口不变。
 - 验证方式：前端 `tsc --noEmit` 无报错；后端 pytest 19 项全部通过。
 - 更新时间：2026-06-24
+
+### STDIO MCP Docker 隔离调试
+
+- 所属模块：capabilities / test_runner
+- 功能状态：修改
+- 涉及接口：`GET /api/developer/capabilities/{id}/test-run`（SSE，已有路由，行为变更）
+- 涉及数据表：无
+- 涉及主要文件：`backend/app/modules/capabilities/test_runner.py`、`backend/app/modules/capabilities/router.py`
+- 功能说明：将 STDIO MCP 调试从宿主机直接 subprocess 改为 Docker 容器隔离执行，分 9 步：0-识别运行时（package.json→Node / requirements.txt→Python）、1-拉起容器（docker run -d --network none）、2-安装依赖（npm install / pip install）、3-进程存活检测、4-stdout 格式检测（首条 JSON-RPC 校验）、5-stderr 检测（有 ERROR 警告不阻断）、6-initialize、7-tools/list、8-tools/call（仅当 ZIP 内含 mcp-test.json 时）。调试完成后销毁容器并清理临时目录。
+- 本次改动说明：`run_stdio_mcp_test` 新增 `zip_path` 参数；router 从 `capability.extension_json["package"]["path"]` 取 ZIP 相对路径，拼 `local_storage_dir` 绝对路径传入。HTTP MCP 测试逻辑不变。
+- 是否影响已有功能：HTTP MCP 测试路径完全不变；STDIO 调试结果写回 `recent_test_status` 逻辑不变；前端 SSE 事件格式不变。需要服务器上安装 Docker。
+- 验证方式：Python import 检查通过；backend pytest 4 项全部通过。
+- 更新时间：2026-06-24

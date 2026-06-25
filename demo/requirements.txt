@@ -1,0 +1,2 @@
+# HazeToolPlat Demo MCP Server - Python dependencies
+# 仅使用标准库，无第三方依赖

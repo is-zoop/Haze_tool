@@ -1,0 +1,16 @@
+{
+  "testCases": [
+    {
+      "tool": "list_departments",
+      "arguments": {}
+    },
+    {
+      "tool": "list_employees",
+      "arguments": { "department": "工程部", "limit": 3 }
+    },
+    {
+      "tool": "get_employee",
+      "arguments": { "employee_id": "EMP-001" }
+    }
+  ]
+}

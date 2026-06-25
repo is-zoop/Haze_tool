@@ -6,11 +6,12 @@ interface McpTestTimelineProps {
   langCode: string;
   stepDurations?: Record<number, string>;
   stepStatuses?: Record<number, "pass" | "fail">;
+  steps?: { name: string; desc: string }[];
 }
 
-export function McpTestTimeline({ currentStepIndex, langCode, stepDurations = {}, stepStatuses = {} }: McpTestTimelineProps) {
+export function McpTestTimeline({ currentStepIndex, langCode, stepDurations = {}, stepStatuses = {}, steps = MCP_TEST_STEPS }: McpTestTimelineProps) {
   return (
-    <div className="min-h-0 flex flex-col rounded-xl border border-slate-100 bg-slate-50/50 p-4 shrink-0 justify-between select-none">
+    <div className="min-h-0 flex flex-col rounded-xl border border-slate-100 bg-slate-50/50 p-4 shrink-0 justify-between select-none overflow-y-auto">
       <div>
         <div className="mb-4 flex items-center gap-1.5">
           <span className="text-xs font-extrabold text-slate-800 tracking-wide uppercase">
@@ -20,7 +21,7 @@ export function McpTestTimeline({ currentStepIndex, langCode, stepDurations = {}
         </div>
 
         <div className="space-y-3.5 relative">
-          {MCP_TEST_STEPS.map((step, idx) => {
+          {steps.map((step, idx) => {
             const isActive = idx === currentStepIndex;
             const isCompleted = idx < currentStepIndex || stepStatuses[idx] !== undefined;
             const isFailed = stepStatuses[idx] === "fail";
@@ -37,7 +38,7 @@ export function McpTestTimeline({ currentStepIndex, langCode, stepDurations = {}
                     : "border-transparent"
                 }`}
               >
-                {idx < 5 && (
+                {idx < steps.length - 1 && (
                   <div
                     className={`absolute left-[17px] top-6.5 bottom-[-16px] w-0.5 transition-colors duration-300 ${
                       isFailed ? "bg-red-300" : idx < currentStepIndex ? "bg-emerald-400" : "bg-slate-250 border-l border-dashed"

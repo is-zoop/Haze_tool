@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from app.core.response import ApiResponse, success_response
+from app.core.config import get_settings
 from app.core.security import require_capabilities
 from app.db.session import get_db
 from app.modules.capabilities import service
@@ -247,7 +248,10 @@ async def run_capability_test(
         final_status = "fail"
         try:
             if transport == "STDIO":
-                gen = run_stdio_mcp_test(start_command, start_args)
+                pkg = (capability.extension_json or {}).get("package", {})
+                zip_rel = pkg.get("path", "")
+                zip_abs = str(get_settings().local_storage_dir.resolve() / zip_rel) if zip_rel else ""
+                gen = run_stdio_mcp_test(start_command, start_args, zip_abs)
             else:
                 if not server_url:
                     yield f"data: {json.dumps({'type': 'error', 'step': 0, 'message': 'serverUrl 未配置'})}\n\n"

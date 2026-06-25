@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import logging
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -8,6 +11,32 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.responses import Response
 
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
+
+
+async def _prepull_docker_images(images: list[str]) -> None:
+    for image in images:
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "docker", "pull", image,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await proc.wait()
+            logger.info("Docker image ready: %s", image)
+        except Exception as exc:
+            logger.warning("Failed to pull Docker image %s: %s", image, exc)
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):  # noqa: ARG001
+    settings = get_settings()
+    if settings.mcp_docker_prepull:
+        asyncio.get_event_loop().create_task(
+            _prepull_docker_images(settings.mcp_docker_images)
+        )
+    yield
 from app.core.exceptions import register_exception_handlers
 from app.core.response import ApiResponse, success_response
 from app.modules.auth.router import router as auth_router
@@ -48,6 +77,7 @@ def create_app() -> FastAPI:
         debug=settings.debug,
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=_lifespan,
     )
     application.add_middleware(
         CORSMiddleware,

@@ -37,6 +37,10 @@ class Settings(BaseSettings):
         ]
     )
     local_storage_dir: Path = Path("./storage")
+    mcp_docker_prepull: bool = False
+    mcp_docker_images: list[str] = Field(
+        default_factory=lambda: ["node:20-slim", "python:3.12-slim"]
+    )
 
 
 @lru_cache
