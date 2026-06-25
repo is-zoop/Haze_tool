@@ -32,6 +32,8 @@ PERMISSION_DEFINITIONS = {
     "capabilities.offline": ("Offline capabilities", "Take capabilities offline"),
     "capabilities.delete": ("Delete capabilities", "Soft-delete capabilities"),
     "capabilities.test_result": ("Write capability test results", "Write MCP test status"),
+    "mcp_runtime.read": ("Read MCP runtime", "View MCP deployment progress and runtime logs"),
+    "mcp_runtime.operate": ("Operate MCP runtime", "Start, stop, and restart MCP deployments"),
 }
 
 ROLE_PERMISSION_CODES = {
@@ -48,6 +50,7 @@ ROLE_PERMISSION_CODES = {
         "capabilities.publish",
         "capabilities.offline",
         "capabilities.delete",
+        "mcp_runtime.read",
     },
     USER: {"page.home", "page.marketplace", "page.guide"},
 }

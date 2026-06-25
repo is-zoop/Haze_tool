@@ -203,3 +203,16 @@
   1. `python -c "from worker.main import run_worker; print('OK')"` 成功
   2. deploy 任务成功后：mcp_gateway_routes 有 enabled=True 记录；dep.gateway_route 和 dep.public_url 已写入
   3. stop 任务后 enabled=False → Gateway 返回 503；start 任务后 enabled=True → Gateway 恢复转发
+
+---
+
+## [009] MCP Runtime 权限注册修复
+
+- **状态**：fixed
+- **模块**：`app/core/rbac`
+- **APIs**：`GET /api/mcp-runtime/deployments`, `GET /api/mcp-runtime/deployments/{id}/tasks`, `GET /api/mcp-runtime/deployments/{id}/logs`
+- **表**：`permissions`, `role_permissions`（通过 bootstrap 同步）
+- **主要文件**：`backend/app/core/rbac.py`, `backend/function_register.md`
+- **变更摘要**：补充 `mcp_runtime.read` / `mcp_runtime.operate` 权限定义，并为 `DEVELOPER` 角色加入 `mcp_runtime.read`，使开发者触发部署后可查看自己的部署进度、任务和日志。
+- **对现有功能的影响**：不改变部署执行流程；`ADMIN` / `SYSTEM_ADMIN` 在 bootstrap 后获得 MCP Runtime 读写权限，`DEVELOPER` 获得只读进度查询权限。
+- **验证方式**：`python -m py_compile app/core/rbac.py` 成功；前端部署进度弹窗不再因缺少 `mcp_runtime.read` 权限失败（需运行 bootstrap 同步权限）。

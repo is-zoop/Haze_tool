@@ -6,6 +6,11 @@ import {
   debugCapability,
   deleteCapability,
   deployCapability,
+  getMcpDeploymentLogs,
+  listMcpDeployments,
+  listMcpDeployTasks,
+  type McpDeployTask,
+  type McpDeployment,
   formatFileSize,
   listCapabilities,
   loadCapabilityIcon,
@@ -28,6 +33,41 @@ function errorMessage(error: unknown): string {
   return error instanceof ApiError ? error.message : error instanceof Error ? error.message : "请求失败，请稍后重试";
 }
 
+function formatDeployLogTime() {
+  return new Date().toLocaleTimeString("zh-CN", { hour12: false });
+}
+
+function deploymentStepIndex(deployment: McpDeployment | null, task: McpDeployTask | null, logs: string): number {
+  if (task?.task_status === "success" || deployment?.deploy_status === "running") return 5;
+  if (task?.task_status === "failed" || deployment?.deploy_status === "failed") return 5;
+  if (!deployment || deployment.deploy_status === "pending") return 0;
+  if (deployment.deploy_status === "building") return 1;
+  if (logs.includes("Pod Ready")) return 4;
+  if (logs.includes("K8s Service") || logs.includes("K8s Deployment")) return 3;
+  if (deployment.deploy_status === "deploying") return 2;
+  return 0;
+}
+
+function deploymentStepStatuses(deployment: McpDeployment | null, task: McpDeployTask | null, currentStep: number): Record<number, "pass" | "fail"> {
+  if (task?.task_status === "success" || deployment?.deploy_status === "running") return { 0: "pass", 1: "pass", 2: "pass", 3: "pass", 4: "pass", 5: "pass" };
+  if (task?.task_status === "failed" || deployment?.deploy_status === "failed") {
+    return Object.fromEntries(Array.from({ length: Math.max(currentStep, 0) }, (_, index) => [index, "pass"]).concat([[currentStep, "fail"]])) as Record<number, "pass" | "fail">;
+  }
+  return Object.fromEntries(Array.from({ length: Math.max(currentStep, 0) }, (_, index) => [index, "pass"])) as Record<number, "pass" | "fail">;
+}
+
+function deploymentLogsToTerminal(logs: string, task: McpDeployTask | null): Array<{ time: string; type: string; text: string }> {
+  const lines = logs.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const time = formatDeployLogTime();
+  const terminal = lines.map((line) => ({
+    time,
+    type: line.includes("镜像") ? "BUILD" : line.includes("K8s") ? "K8S" : line.includes("Pod") ? "READY" : line.includes("Gateway") ? "ROUTE" : line.includes("成功") ? "SUCCESS" : "DEPLOY",
+    text: line,
+  }));
+  if (task?.error_message) terminal.push({ time, type: "ERROR", text: task.error_message });
+  if (!terminal.length) terminal.push({ time, type: "DEPLOY", text: "等待部署任务写入日志..." });
+  return terminal;
+}
 export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
   const t = getI18n(langCode);
   const [assets, setAssets] = useState<DeveloperAsset[]>([]);
@@ -65,6 +105,16 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
   const [stepStatuses, setStepStatuses] = useState<Record<number, "pass" | "fail">>({});
   const [testStarted, setTestStarted] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+
+  const [showDeployModal, setShowDeployModal] = useState(false);
+  const [deployAsset, setDeployAsset] = useState<DeveloperAsset | null>(null);
+  const [deployStatus, setDeployStatus] = useState<"idle" | "creating" | "running" | "success" | "fail">("idle");
+  const [deployDeploymentId, setDeployDeploymentId] = useState<number | null>(null);
+  const [deployCurrentStepIndex, setDeployCurrentStepIndex] = useState(0);
+  const [deployTerminalLogs, setDeployTerminalLogs] = useState<Array<{ time: string; type: string; text: string }>>([]);
+  const [deployStepStatuses, setDeployStepStatuses] = useState<Record<number, "pass" | "fail">>({});
+  const [deployErrorMessage, setDeployErrorMessage] = useState<string | null>(null);
+  const deploySessionRef = useRef(0);
 
   const [deleteTarget, setDeleteTarget] = useState<DeveloperAsset | null>(null);
   const [flashMessage, setFlashMessage] = useState<string | null>(null);
@@ -121,6 +171,71 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     abortRef.current?.abort();
   }, []);
 
+  useEffect(() => {
+    if (!showDeployModal || deployDeploymentId === null || deployStatus === "success" || deployStatus === "fail") return;
+    let cancelled = false;
+
+    const pollDeployment = async () => {
+      try {
+        const [deployments, tasks, logs] = await Promise.all([
+          listMcpDeployments(),
+          listMcpDeployTasks(deployDeploymentId),
+          getMcpDeploymentLogs(deployDeploymentId),
+        ]);
+        if (cancelled) return;
+        const deployment = deployments.find((item) => item.id === deployDeploymentId) ?? null;
+        const latestTask = tasks[0] ?? null;
+        const currentStep = deploymentStepIndex(deployment, latestTask, logs);
+        const nextStatus = latestTask?.task_status === "failed" || deployment?.deploy_status === "failed"
+          ? "fail"
+          : latestTask?.task_status === "success" || deployment?.deploy_status === "running"
+          ? "success"
+          : "running";
+        setDeployCurrentStepIndex(currentStep);
+        setDeployStepStatuses(deploymentStepStatuses(deployment, latestTask, currentStep));
+        setDeployTerminalLogs(deploymentLogsToTerminal(logs, latestTask));
+        setDeployErrorMessage(latestTask?.error_message ?? deployment?.last_error ?? null);
+        setDeployStatus(nextStatus);
+        if (nextStatus === "success") refresh();
+      } catch (error) {
+        if (!cancelled) {
+          setDeployStatus("fail");
+          setDeployErrorMessage(errorMessage(error));
+          setDeployTerminalLogs((previous) => previous.length ? previous : [{ time: formatDeployLogTime(), type: "ERROR", text: errorMessage(error) }]);
+        }
+      }
+    };
+
+    pollDeployment();
+    const timer = window.setInterval(pollDeployment, 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [deployDeploymentId, deployStatus, showDeployModal]);
+  useEffect(() => {
+    if (!showDeployModal || !deployAsset || deployDeploymentId !== null || deployStatus !== "running") return;
+    let cancelled = false;
+    const findDeployment = async () => {
+      try {
+        const deployments = await listMcpDeployments();
+        if (cancelled) return;
+        const deployment = deployments.find((item) => String(item.capability_id) === String(deployAsset.id));
+        if (deployment) setDeployDeploymentId(deployment.id);
+      } catch (error) {
+        if (!cancelled) {
+          setDeployStatus("fail");
+          setDeployErrorMessage(errorMessage(error));
+        }
+      }
+    };
+    findDeployment();
+    const timer = window.setInterval(findDeployment, 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [deployAsset, deployDeploymentId, deployStatus, showDeployModal]);
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   useEffect(() => {
@@ -192,7 +307,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     if (!currentAsset.name?.trim()) errors.name = "能力名称不能为空";
     else if (currentAsset.name.length > 100) errors.name = "能力名称不能超过 100 个字符";
     if (!currentAsset.code?.trim()) errors.code = "Slug 不能为空";
-    else if (!/^[a-z0-9_-]{3,50}$/.test(currentAsset.code)) errors.code = "Slug 只允许小写字母、数字、下划线和中划线，3-50 个字符";
+    else if (!/^[a-z0-9-]{3,50}$/.test(currentAsset.code)) errors.code = "Slug 只允许小写字母、数字和中划线，3-50 个字符";
     if (!currentAsset.project?.trim()) errors.project = "请选择业务分类";
     if (!currentAsset.description?.trim()) errors.description = "能力描述不能为空";
     else if (currentAsset.description.length > 300) errors.description = "能力描述不能超过 300 个字符";
@@ -231,15 +346,42 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
   };
 
   const handleDeployAsset = async (asset: DeveloperAsset) => {
+    const sessionId = deploySessionRef.current + 1;
+    deploySessionRef.current = sessionId;
+    setDeployAsset(asset);
+    setShowDeployModal(true);
+    setDeployStatus("creating");
+    setDeployDeploymentId(null);
+    setDeployCurrentStepIndex(0);
+    setDeployStepStatuses({});
+    setDeployErrorMessage(null);
+    setDeployTerminalLogs([{ time: formatDeployLogTime(), type: "START", text: `创建 ${asset.name} 的服务部署任务...` }]);
+
     try {
       await deployCapability(asset.id);
-      triggerFlashAlert(`能力 [${asset.name}] 部署完成`);
+      if (deploySessionRef.current !== sessionId) return;
+      setDeployStatus("running");
+      setDeployTerminalLogs((previous) => previous.concat({ time: formatDeployLogTime(), type: "DEPLOY", text: "部署任务已创建，等待 Worker 消费..." }));
       refresh();
+
+      const deployments = await listMcpDeployments();
+      if (deploySessionRef.current !== sessionId) return;
+      const deployment = deployments.find((item) => String(item.capability_id) === String(asset.id));
+      if (deployment) {
+        setDeployDeploymentId(deployment.id);
+      } else {
+        setDeployTerminalLogs((previous) => previous.concat({ time: formatDeployLogTime(), type: "DEPLOY", text: "等待部署记录生成..." }));
+      }
     } catch (error) {
-      triggerFlashAlert(errorMessage(error));
+      if (deploySessionRef.current !== sessionId) return;
+      const message = errorMessage(error);
+      setDeployStatus("fail");
+      setDeployErrorMessage(message);
+      setDeployStepStatuses({ 0: "fail" });
+      setDeployTerminalLogs((previous) => previous.concat({ time: formatDeployLogTime(), type: "ERROR", text: message }));
+      triggerFlashAlert(message);
     }
   };
-
   const handleDebugComplete = async (asset: DeveloperAsset) => {
     if (asset.transport === "STDIO") {
       // STDIO MCP：打开真实调试弹窗
@@ -461,6 +603,8 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     handleCopyAssetCode, handleOpenDebug, showDebugModal, setShowDebugModal, debugAsset,
     debugStatus, currentStepIndex, terminalLogs, setTerminalLogs, stepDurations, stepStatuses,
     testStarted, setTestStarted, runRealTest,
+    showDeployModal, setShowDeployModal, deployAsset, deployStatus, deployCurrentStepIndex,
+    deployTerminalLogs, setDeployTerminalLogs, deployStepStatuses, deployErrorMessage,
     flashMessage, triggerFlashAlert,
   };
 }

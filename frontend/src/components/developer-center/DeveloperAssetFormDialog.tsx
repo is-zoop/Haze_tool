@@ -120,7 +120,7 @@ export function DeveloperAssetFormDialog({
                     setFormErrors(prev => ({ ...prev, code: "" }));
                   }
                 }}
-                placeholder="支持小写字母、数字、下划线和中划线，3-50 个字符"
+                placeholder="支持小写字母、数字和中划线，3-50 个字符"
                 className={`h-9 text-xs font-mono placeholder:text-slate-350 bg-white rounded-lg ${formErrors.code ? "border-destructive focus-visible:ring-destructive" : "border-slate-200"}`}
               />
             </FormField>

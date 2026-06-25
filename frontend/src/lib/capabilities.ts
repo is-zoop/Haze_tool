@@ -14,6 +14,43 @@ export type CapabilityApiStatus =
   | "published"
   | "offline";
 
+export interface McpDeployment {
+  id: number;
+  capability_id: number;
+  capability_name: string | null;
+  capability_code: string | null;
+  deploy_status: string;
+  desired_status: string;
+  actual_status: string;
+  image_url: string | null;
+  internal_service_name: string | null;
+  internal_url: string | null;
+  public_url: string | null;
+  gateway_route: string | null;
+  ready_replicas: number;
+  health_status: string;
+  last_error: string | null;
+  updated_at: string;
+}
+
+export interface McpDeployTask {
+  id: number;
+  capability_id: number;
+  version_id: number | null;
+  task_type: string;
+  task_status: string;
+  runtime_provider: string;
+  logs: string | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+}
+
+interface McpDeploymentListData { items: McpDeployment[]; total: number; }
+interface McpDeployTaskListData { items: McpDeployTask[]; total: number; }
+
 interface ApiPackageFile {
   name: string;
   size: number;
@@ -255,6 +292,25 @@ export async function submitReviewCapability(id: string): Promise<void> {
 
 export async function deployCapability(id: string): Promise<void> {
   await apiRequest(`/api/developer/capabilities/${id}/deploy`, { method: "POST" });
+}
+
+export async function listMcpDeployments(): Promise<McpDeployment[]> {
+  const data = (await apiRequest<McpDeploymentListData>("/api/mcp-runtime/deployments?page=1&page_size=100")).data;
+  return data.items;
+}
+
+export async function listMcpDeployTasks(deploymentId: number): Promise<McpDeployTask[]> {
+  const data = (await apiRequest<McpDeployTaskListData>(`/api/mcp-runtime/deployments/${deploymentId}/tasks?page=1&page_size=20`)).data;
+  return data.items;
+}
+
+export async function getMcpDeploymentLogs(deploymentId: number): Promise<string> {
+  const accessToken = localStorage.getItem("haze_access_token");
+  const headers = new Headers();
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+  const response = await fetch(`/api/mcp-runtime/deployments/${deploymentId}/logs`, { headers });
+  if (!response.ok) throw new Error(response.statusText || "Failed to load deployment logs");
+  return response.text();
 }
 
 export async function debugCapability(id: string): Promise<void> {

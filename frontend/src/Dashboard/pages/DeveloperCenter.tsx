@@ -41,6 +41,7 @@ import { DeveloperAssetTable } from "../../components/developer-center/Developer
 import { DeveloperAssetFormDialog } from "../../components/developer-center/DeveloperAssetFormDialog";
 import { NewVersionDialog } from "../../components/developer-center/NewVersionDialog";
 import { McpConnectionTestDialog } from "../../components/developer-center/McpConnectionTestDialog";
+import { McpDeploymentProgressDialog } from "../../components/developer-center/McpDeploymentProgressDialog";
 import { STDIO_TEST_STEPS } from "../../components/developer-center/config";
 import { AssetTypeFilter, useDeveloperCapabilities } from "../../components/developer-center/useDeveloperCapabilities";
 
@@ -71,6 +72,8 @@ export function DeveloperCenter({
     showDebugModal, setShowDebugModal, debugAsset,
     debugStatus, currentStepIndex, terminalLogs, setTerminalLogs, stepDurations, stepStatuses,
     testStarted, setTestStarted, runRealTest,
+    showDeployModal, setShowDeployModal, deployAsset, deployStatus, deployCurrentStepIndex,
+    deployTerminalLogs, setDeployTerminalLogs, deployStepStatuses, deployErrorMessage,
     flashMessage, triggerFlashAlert,
   } = useDeveloperCapabilities(_langCode);
 
@@ -313,6 +316,19 @@ export function DeveloperCenter({
         onSave={handleSaveNewVersion}
       />
 
+      <McpDeploymentProgressDialog
+        open={showDeployModal}
+        onClose={() => setShowDeployModal(false)}
+        asset={deployAsset}
+        langCode={_langCode}
+        deployStatus={deployStatus}
+        currentStepIndex={deployCurrentStepIndex}
+        terminalLogs={deployTerminalLogs}
+        stepStatuses={deployStepStatuses}
+        errorMessage={deployErrorMessage}
+        onClearLogs={() => setDeployTerminalLogs([])}
+        onTriggerAlert={triggerFlashAlert}
+      />
       <McpConnectionTestDialog
         open={showDebugModal}
         onClose={() => { setShowDebugModal(false); setTestStarted(false); }}
