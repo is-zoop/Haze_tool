@@ -67,26 +67,47 @@ def _get_mcp_config(db: Session, capability_id: int) -> tuple[int, str]:
 # ── handlers ──────────────────────────────────────────────────────────────────
 
 def _handle_deploy(db: Session, task: McpDeployTask) -> None:
-    """创建 K8s 资源，等待 Pod Ready，成功后推进 capability 状态到 debug_passed。"""
+    """构建镜像 → 创建 K8s 资源 → 等待 Pod Ready → 推进 capability 到 debug_passed。"""
     dep = db.scalar(
         select(McpDeployment).where(McpDeployment.capability_id == task.capability_id)
     )
     if dep is None:
         raise ValueError(f"未找到 capability_id={task.capability_id} 对应的 deployment 记录")
 
-    provider = KubernetesRuntimeProvider(get_worker_settings())
+    settings = get_worker_settings()
+    provider = KubernetesRuntimeProvider(settings)
     port, endpoint = _get_mcp_config(db, task.capability_id)
 
-    # 中间状态：正在部署，前端可感知进度
+    # ── 阶段 1：构建镜像 ────────────────────────────────────────────────────────
+    dep.deploy_status = enums.DEPLOY_STATUS_BUILDING
+    db.commit()
+
+    image_url = dep.image_url
+    if not image_url or image_url.endswith(":mock"):
+        # 从版本快照中读取 ZIP 路径
+        version = db.get(CapabilityVersion, task.version_id) if task.version_id else None
+        if version is None:
+            raise McpBuildError("部署任务未关联版本记录，无法获取 ZIP 包路径")
+        snap_ext = (version.snapshot_json or {}).get("extension_json", {})
+        zip_rel = (snap_ext.get("package") or {}).get("path")
+        if not zip_rel:
+            raise McpBuildError("版本快照中未找到 ZIP 包路径，请重新提交版本")
+        zip_abs = resolve_stored_file(zip_rel)
+        image_url = (
+            f"{settings.registry_url}/{settings.registry_project}/"
+            f"{dep.deployment_name}:{version.version}"
+        )
+        build_image(zip_abs, image_url, settings)
+        dep.image_url = image_url
+
+    # ── 阶段 2：K8s 部署 ────────────────────────────────────────────────────────
     dep.deploy_status = enums.DEPLOY_STATUS_DEPLOYING
     db.commit()
 
-    image_url, svc_name, internal_url = provider.deploy(dep, port, endpoint)
-    dep.image_url = image_url
+    _, svc_name, internal_url = provider.deploy(dep, port, endpoint)
     dep.internal_service_name = svc_name
     dep.internal_url = internal_url
 
-    settings = get_worker_settings()
     ready = provider.wait_for_ready(dep, settings.pod_ready_timeout_seconds)
     if not ready:
         raise RuntimeError(
@@ -105,6 +126,7 @@ def _handle_deploy(db: Session, task: McpDeployTask) -> None:
         cap.status = "debug_passed"
 
     task.logs = (
+        f"镜像已构建并推送：{image_url}\n"
         f"K8s Deployment/{svc_name} 已创建\n"
         f"K8s Service/{svc_name} 已创建\n"
         f"K8s NetworkPolicy/{svc_name}-netpol 已创建\n"

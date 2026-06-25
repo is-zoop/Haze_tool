@@ -128,3 +128,29 @@
   2. K8s 集群可达时：deploy 任务后 `haze-runtime` Namespace 出现 Deployment/Service/NetworkPolicy，securityContext 符合规范
   3. stop 任务后 Deployment replicas 变为 0；start 后变为 1；restart 后 Pod annotation 更新
   4. K8s 不可达时 Worker 任务 fail 并记录 error_message，进程不崩溃
+
+---
+
+## [006] Phase 6：镜像构建与 mcp.yaml 校验
+
+- **状态**：added
+- **模块**：`worker`
+- **新增文件**：
+  - `backend/worker/image_builder.py` — `McpBuildError` + `load_mcp_config` + `validate_mcp_config` + `generate_dockerfile` + `build_and_push` + `build_image`
+- **修改文件**：
+  - `backend/worker/config.py` — 追加 `registry_url`, `registry_project`, `docker_build_timeout_seconds`
+  - `backend/worker/main.py` — `_handle_deploy` 接入镜像构建流程，新增 `CapabilityVersion`/`resolve_stored_file`/`build_image` import
+- **变更摘要**：
+  - deploy 阶段 1（building）：从 `CapabilityVersion.snapshot_json.extension_json.package.path` 获取 ZIP 绝对路径，解压 → 读取 mcp.yaml（fallback mcp.json）→ 校验必填字段 + 安全限制 → 动态生成 Dockerfile → docker build + push → 写入 `dep.image_url`
+  - deploy 阶段 2（deploying）：沿用 Phase 5 的 KubernetesRuntimeProvider，此时 `dep.image_url` 已是真实镜像
+  - 临时目录由 `tempfile.TemporaryDirectory` 自动清理
+  - 重试时若 `dep.image_url` 已有非 mock 值，跳过构建直接进入 K8s 部署
+- **安全校验**：禁止 ZIP 包含自定义 Dockerfile；禁止 `secret: true`；只允许 runtime: python / node
+- **APIs**：无
+- **对现有功能的影响**：无，仅修改 worker/ 模块
+- **验证方式**：
+  1. `python -c "from worker.image_builder import build_image; print('OK')"` 成功
+  2. 缺 mcp.yaml 的 ZIP → task.error_message 含 "缺少 mcp.yaml"
+  3. mcp.yaml 含 `secret: true` → error_message 含 "禁止使用 secret"
+  4. ZIP 含 Dockerfile → error_message 含 "不允许包含自定义 Dockerfile"
+  5. 合法 ZIP → docker build + push 成功 → dep.image_url 写入 → Pod Running → capability.status=debug_passed
