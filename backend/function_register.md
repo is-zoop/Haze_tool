@@ -154,3 +154,52 @@
   3. mcp.yaml 含 `secret: true` → error_message 含 "禁止使用 secret"
   4. ZIP 含 Dockerfile → error_message 含 "不允许包含自定义 Dockerfile"
   5. 合法 ZIP → docker build + push 成功 → dep.image_url 写入 → Pod Running → capability.status=debug_passed
+
+---
+
+## [007] Phase 7：MCP Gateway 服务
+
+- **状态**：added
+- **模块**：`gateway`（独立于 `app/` 和 `worker/`，共享同一数据库）
+- **新增文件**：
+  - `backend/gateway/__init__.py` — 空包标记
+  - `backend/gateway/main.py` — GatewaySettings + FastAPI app + 代理路由 + 调用日志
+- **启动方式**：在 `backend/` 目录下执行 `python -m gateway.main`（默认端口 8001）
+- **APIs**：
+  - `POST /assets/{asset_code}/mcp` — 校验路由/部署/发布状态，代理到 K8s 内部服务，写入 mcp_call_logs
+  - `GET  /assets/{asset_code}/mcp` — 405（保留给未来 SSE）
+- **变更摘要**：
+  - 路由查询：mcp_gateway_routes WHERE asset_code = ?（enabled / running / published 三重校验）
+  - 代理：httpx.AsyncClient 异步转发，透传 Content-Type / X-Mcp-* / Authorization
+  - 日志：每次请求（含校验失败）写入 mcp_call_logs，user_id 第一版为 null
+  - DB 操作为 sync SQLAlchemy，Phase 7 可接受；Phase 9 高流量后可改 AsyncSession
+- **对现有功能的影响**：无，不修改任何 Backend app/ 路由或 worker/
+- **验证方式**：
+  1. `python -c "from gateway.main import app; print('OK')"` 成功（在 backend/ 目录）
+  2. `python -m gateway.main` → 监听 8001 端口，无报错
+  3. 手动插入 mcp_gateway_routes 路由记录后：
+     - `curl -X POST http://localhost:8001/assets/{code}/mcp -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'` → 代理成功，mcp_call_logs 入库
+     - GET 请求返回 405
+     - enabled=False → 503；deploy_status != running → 503；capability.status != published → 403
+
+---
+
+## [008] Phase 8：Deploy Worker 与 Gateway 路由联动
+
+- **状态**：added
+- **模块**：`worker`
+- **修改文件**：
+  - `backend/worker/main.py` — 新增 `_sync_gateway_route` 辅助函数，在 deploy/stop/start 三个 handler 中调用
+- **变更摘要**：
+  - `_sync_gateway_route(db, dep, enabled)` — 按 `deployment_id` 查询 mcp_gateway_routes，不存在则创建，已存在则就地更新 `target_url` 和 `enabled`
+  - deploy 成功（Pod Ready + debug_passed）→ 创建路由 `enabled=True`，同步写 `dep.gateway_route` 和 `dep.public_url`
+  - stop 成功 → `enabled=False`（Gateway 立刻返回 503）
+  - start 成功 → `enabled=True`（Gateway 恢复转发）
+  - restart handler 不变（Pod 重启期间 K8s Service 仍可路由）
+- **Gateway 路由格式**：`/assets/{asset_code}/mcp`，asset_code = `dep.deployment_name.removeprefix("mcp-")`
+- **APIs**：无
+- **对现有功能的影响**：无，仅在 worker/ 内部添加，不修改 Backend app/ 路由
+- **验证方式**：
+  1. `python -c "from worker.main import run_worker; print('OK')"` 成功
+  2. deploy 任务成功后：mcp_gateway_routes 有 enabled=True 记录；dep.gateway_route 和 dep.public_url 已写入
+  3. stop 任务后 enabled=False → Gateway 返回 503；start 任务后 enabled=True → Gateway 恢复转发

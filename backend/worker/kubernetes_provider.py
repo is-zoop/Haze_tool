@@ -5,9 +5,14 @@
   - 容器 securityContext: allowPrivilegeEscalation=false, readOnlyRootFilesystem=true, drop ALL
   - NetworkPolicy ingress: 只允许 haze-system Namespace（Gateway 所在）
   - NetworkPolicy egress: 允许 DNS + 外部 HTTPS，禁止访问内部集群网络
+
+Mock 模式：本地开发环境无 kubeconfig 时自动启用，所有 K8s 操作变为 no-op，
+Worker 仍可完整运行（镜像构建、Gateway 路由写入、DB 状态推进）。
+生产环境须确保 kubeconfig 或 in-cluster ServiceAccount 可用。
 """
 from __future__ import annotations
 
+import logging
 import time
 from datetime import datetime, timezone
 
@@ -15,24 +20,39 @@ import kubernetes
 import kubernetes.client
 import kubernetes.client.exceptions
 import kubernetes.config
+from kubernetes.config.config_exception import ConfigException
 
 from app.modules.mcp_runtime.models import McpDeployment
 from worker.config import WorkerSettings
+
+logger = logging.getLogger(__name__)
 
 
 class KubernetesRuntimeProvider:
     """调用 kubernetes Python SDK 操作 haze-runtime Namespace 下的 MCP Server 资源。"""
 
     def __init__(self, settings: WorkerSettings) -> None:
-        # 优先尝试 in-cluster，失败时 fallback 到 kubeconfig
-        if settings.k8s_in_cluster:
-            kubernetes.config.load_incluster_config()
-        else:
-            kubernetes.config.load_kube_config(config_file=settings.k8s_config_path)
-        self._apps = kubernetes.client.AppsV1Api()
-        self._core = kubernetes.client.CoreV1Api()
-        self._net = kubernetes.client.NetworkingV1Api()
         self._settings = settings
+        self._mock = False  # 无 kubeconfig 时降级为 mock 模式
+
+        try:
+            if settings.k8s_in_cluster:
+                kubernetes.config.load_incluster_config()
+            else:
+                kubernetes.config.load_kube_config(config_file=settings.k8s_config_path)
+            self._apps = kubernetes.client.AppsV1Api()
+            self._core = kubernetes.client.CoreV1Api()
+            self._net = kubernetes.client.NetworkingV1Api()
+        except ConfigException as exc:
+            # 本地开发环境无 kubeconfig 时自动降级，生产环境应确保配置正确
+            logger.warning(
+                "未找到有效的 kubeconfig，KubernetesRuntimeProvider 进入 Mock 模式"
+                "（K8s 操作将被跳过）。原因：%s", exc
+            )
+            self._mock = True
+            self._apps = None
+            self._core = None
+            self._net = None
 
     # ── 内部工具 ──────────────────────────────────────────────────────────────
 
@@ -78,11 +98,18 @@ class KubernetesRuntimeProvider:
         """创建（或更新）Deployment / Service / NetworkPolicy。
 
         返回 (image_url, internal_service_name, internal_url)。
+        Mock 模式下跳过 K8s 操作，直接返回占位值供 DB 字段记录。
         """
-        s = self._settings
         name = dep.deployment_name
         ns = dep.namespace
-        image = dep.image_url or s.mcp_placeholder_image
+        image = dep.image_url or self._settings.mcp_placeholder_image
+        internal_url = f"http://{name}.{ns}.svc.cluster.local:{port}{endpoint}"
+
+        if self._mock:
+            logger.info("[Mock] deploy 跳过 K8s 资源创建，deployment=%s", name)
+            return image, name, internal_url
+
+        s = self._settings
         asset_code = name.removeprefix("mcp-")  # mcp-{code} → {code}
         labels = self._labels(name, asset_code)
 
@@ -223,11 +250,14 @@ class KubernetesRuntimeProvider:
         )
         self._create_or_patch("networkpolicy", netpol_name, ns, netpol)
 
-        internal_url = f"http://{name}.{ns}.svc.cluster.local:{port}{endpoint}"
         return image, name, internal_url
 
     def wait_for_ready(self, dep: McpDeployment, timeout_seconds: int) -> bool:
-        """轮询 Deployment.status.ready_replicas 直到 >= 1 或超时。"""
+        """轮询 Deployment.status.ready_replicas 直到 >= 1 或超时。Mock 模式立即返回 True。"""
+        if self._mock:
+            logger.info("[Mock] wait_for_ready 立即返回 True，deployment=%s", dep.deployment_name)
+            return True
+
         deadline = time.monotonic() + timeout_seconds
         while time.monotonic() < deadline:
             d = self._apps.read_namespaced_deployment(dep.deployment_name, dep.namespace)
@@ -238,6 +268,9 @@ class KubernetesRuntimeProvider:
 
     def start(self, dep: McpDeployment) -> None:
         """将 replicas 设为 1，恢复已停止的服务。"""
+        if self._mock:
+            logger.info("[Mock] start 跳过 K8s patch，deployment=%s", dep.deployment_name)
+            return
         self._apps.patch_namespaced_deployment(
             dep.deployment_name,
             dep.namespace,
@@ -246,6 +279,9 @@ class KubernetesRuntimeProvider:
 
     def stop(self, dep: McpDeployment) -> None:
         """将 replicas 设为 0，停止服务（保留 K8s 资源）。"""
+        if self._mock:
+            logger.info("[Mock] stop 跳过 K8s patch，deployment=%s", dep.deployment_name)
+            return
         self._apps.patch_namespaced_deployment(
             dep.deployment_name,
             dep.namespace,
@@ -254,6 +290,9 @@ class KubernetesRuntimeProvider:
 
     def restart(self, dep: McpDeployment) -> None:
         """更新 Pod annotation 触发滚动重启，不停机。"""
+        if self._mock:
+            logger.info("[Mock] restart 跳过 K8s patch，deployment=%s", dep.deployment_name)
+            return
         ts = datetime.now(timezone.utc).isoformat()
         self._apps.patch_namespaced_deployment(
             dep.deployment_name,
@@ -273,6 +312,9 @@ class KubernetesRuntimeProvider:
 
     def get_pod_logs(self, dep: McpDeployment, tail_lines: int = 100) -> str:
         """返回最新 Pod 日志，无 Pod 时返回空字符串。"""
+        if self._mock:
+            return "[Mock 模式：无 K8s 集群，Pod 日志不可用]"
+
         pods = self._core.list_namespaced_pod(
             dep.namespace,
             label_selector=f"app={dep.deployment_name}",

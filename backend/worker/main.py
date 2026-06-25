@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.modules.capabilities.models import Capability, CapabilityVersion
 from app.modules.capabilities.storage import resolve_stored_file
 from app.modules.mcp_runtime import enums
-from app.modules.mcp_runtime.models import McpDeployment, McpDeployTask
+from app.modules.mcp_runtime.models import McpDeployment, McpDeployTask, McpGatewayRoute
 from worker.config import get_worker_settings
 from worker.image_builder import McpBuildError, build_image
 from worker.kubernetes_provider import KubernetesRuntimeProvider
@@ -62,6 +62,34 @@ def _get_mcp_config(db: Session, capability_id: int) -> tuple[int, str]:
         return 8000, "/mcp"
     cfg = ((cap.extension_json or {}).get("config") or {})
     return int(cfg.get("port", 8000)), str(cfg.get("mcpEndpoint", "/mcp"))
+
+
+# ── 辅助：Gateway 路由同步 ─────────────────────────────────────────────────────
+
+def _sync_gateway_route(db: Session, dep: McpDeployment, enabled: bool) -> None:
+    """创建或更新 mcp_gateway_routes 中对应 deployment 的路由记录。
+
+    deploy 成功时 enabled=True（创建路由）；stop 时 enabled=False；start 时 enabled=True。
+    重试场景下记录可能已存在，对 target_url 和 enabled 做就地更新。
+    """
+    asset_code = dep.deployment_name.removeprefix("mcp-")
+
+    route = db.scalar(
+        select(McpGatewayRoute).where(McpGatewayRoute.deployment_id == dep.id)
+    )
+    if route is None:
+        db.add(McpGatewayRoute(
+            capability_id=dep.capability_id,
+            deployment_id=dep.id,
+            asset_code=asset_code,
+            route_path=f"/assets/{asset_code}/mcp",
+            target_url=dep.internal_url or "",
+            enabled=enabled,
+        ))
+    else:
+        # 重试/重部署时 internal_url 可能更新，保持路由指向最新 Service 地址
+        route.target_url = dep.internal_url or route.target_url
+        route.enabled = enabled
 
 
 # ── handlers ──────────────────────────────────────────────────────────────────
@@ -125,13 +153,21 @@ def _handle_deploy(db: Session, task: McpDeployTask) -> None:
     if cap:
         cap.status = "debug_passed"
 
+    # 同步 Gateway 路由，internal_url 已由 provider.deploy 写入 dep
+    asset_code = dep.deployment_name.removeprefix("mcp-")
+    dep.gateway_route = f"/assets/{asset_code}/mcp"
+    dep.public_url = f"https://gateway.haze.io/assets/{asset_code}/mcp"
+    _sync_gateway_route(db, dep, enabled=True)
+
     task.logs = (
         f"镜像已构建并推送：{image_url}\n"
         f"K8s Deployment/{svc_name} 已创建\n"
         f"K8s Service/{svc_name} 已创建\n"
         f"K8s NetworkPolicy/{svc_name}-netpol 已创建\n"
         f"Pod Ready\n"
-        f"部署成功，internal_url={internal_url}"
+        f"部署成功，internal_url={internal_url}\n"
+        f"Gateway 路由已创建：/assets/{asset_code}/mcp → {internal_url}\n"
+        f"公开访问地址：{dep.public_url}"
     )
 
 
@@ -151,6 +187,8 @@ def _handle_start(db: Session, task: McpDeployTask) -> None:
     dep.replicas = 1
     dep.ready_replicas = 1
     dep.started_at = _now()
+    # 启动成功后恢复 Gateway 路由，调用方恢复正常转发
+    _sync_gateway_route(db, dep, enabled=True)
     task.logs = f"K8s Deployment/{dep.deployment_name} replicas 已设为 1"
 
 
@@ -170,6 +208,8 @@ def _handle_stop(db: Session, task: McpDeployTask) -> None:
     dep.replicas = 0
     dep.ready_replicas = 0
     dep.stopped_at = _now()
+    # 停止服务后关闭 Gateway 路由，调用方立刻收到 503
+    _sync_gateway_route(db, dep, enabled=False)
     task.logs = f"K8s Deployment/{dep.deployment_name} replicas 已设为 0"
 
 
