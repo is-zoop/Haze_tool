@@ -92,7 +92,7 @@ async def _forward_request(
 ) -> tuple[int, bool, bytes, str, str | None]:
     """httpx 异步代理，返回 (status_code, success, content, content_type, error_msg)。"""
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
+        async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
             resp = await client.post(target_url, content=body, headers=headers)
         return (
             resp.status_code,
@@ -172,7 +172,9 @@ async def mcp_post(asset_code: str, request: Request):
     # ── 路由校验（sync SQLAlchemy；Phase 7 DB 读操作耗时极短，可接受阻塞 event loop）
     with _SessionFactory() as db:
         route = db.scalar(
-            select(McpGatewayRoute).where(McpGatewayRoute.asset_code == asset_code)
+            select(McpGatewayRoute)
+            .where(McpGatewayRoute.asset_code == asset_code)
+            .order_by(McpGatewayRoute.id.desc())
         )
         if route is None:
             return JSONResponse({"error": "route not found"}, status_code=404)

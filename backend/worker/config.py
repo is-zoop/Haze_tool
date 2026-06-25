@@ -22,6 +22,7 @@ class WorkerSettings(BaseSettings):
     # K8s 连接
     k8s_in_cluster: bool = False          # True 时使用 Pod 内 ServiceAccount（生产）
     k8s_config_path: str | None = None   # kubeconfig 路径，None = 默认 ~/.kube/config
+    k8s_verify_ssl: bool = True           # False 时跳过 TLS 证书校验（本地开发自签名证书场景）
 
     # K8s 资源
     k8s_namespace: str = "haze-runtime"  # MCP Server 运行的 Namespace
@@ -41,6 +42,7 @@ class WorkerSettings(BaseSettings):
 
     # 镜像构建
     docker_build_timeout_seconds: int = 300   # docker build + push 单次超时（秒）
+    registry_push_enabled: bool = True        # False 时跳过 docker push（本地开发用，Mock K8s 不需要真实镜像）
 
 
 @lru_cache

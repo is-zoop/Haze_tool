@@ -1,0 +1,7 @@
+runtime: python
+start_command: python server.py
+port: 8000
+mcp_endpoint: /mcp
+health_check:
+  path: /health
+  timeout_seconds: 5

@@ -114,8 +114,12 @@ def build_and_push(
     image_url: str,
     dockerfile_content: str,
     timeout_seconds: int,
+    skip_push: bool = False,
 ) -> None:
-    """将生成的 Dockerfile 写入临时目录，执行 docker build 和 docker push。"""
+    """将生成的 Dockerfile 写入临时目录，执行 docker build（及可选的 docker push）。
+
+    skip_push=True 时跳过推送，仅在本地构建镜像（Mock K8s 模式下无需推送到仓库）。
+    """
     dockerfile_path = extract_dir / "Dockerfile"
     dockerfile_path.write_text(dockerfile_content, encoding="utf-8")
 
@@ -131,6 +135,13 @@ def build_and_push(
             f"docker build 失败（exit={build_result.returncode}）：\n"
             f"{build_result.stderr[-2000:]}"
         )
+
+    if skip_push:
+        import logging
+        logging.getLogger(__name__).info(
+            "registry_push_enabled=false，跳过 docker push，镜像仅在本地可用：%s", image_url
+        )
+        return
 
     push_result = subprocess.run(
         ["docker", "push", image_url],
@@ -172,6 +183,7 @@ def build_image(
             image_url,
             dockerfile,
             settings.docker_build_timeout_seconds,
+            skip_push=not settings.registry_push_enabled,
         )
 
     return {"mcp_config": config}

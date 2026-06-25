@@ -38,11 +38,23 @@ class KubernetesRuntimeProvider:
         try:
             if settings.k8s_in_cluster:
                 kubernetes.config.load_incluster_config()
+                api_client = kubernetes.client.ApiClient()
             else:
-                kubernetes.config.load_kube_config(config_file=settings.k8s_config_path)
-            self._apps = kubernetes.client.AppsV1Api()
-            self._core = kubernetes.client.CoreV1Api()
-            self._net = kubernetes.client.NetworkingV1Api()
+                cfg = kubernetes.client.Configuration()
+                kubernetes.config.load_kube_config(
+                    config_file=settings.k8s_config_path,
+                    client_configuration=cfg,
+                )
+                if not settings.k8s_verify_ssl:
+                    # 本地开发：Docker Desktop 自签名证书导致 SSLEOFError，跳过校验
+                    cfg.verify_ssl = False
+                    import urllib3  # noqa: PLC0415
+                    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                    logger.warning("K8S_VERIFY_SSL=false：已禁用 TLS 证书验证，仅限本地开发使用")
+                api_client = kubernetes.client.ApiClient(cfg)
+            self._apps = kubernetes.client.AppsV1Api(api_client)
+            self._core = kubernetes.client.CoreV1Api(api_client)
+            self._net = kubernetes.client.NetworkingV1Api(api_client)
         except ConfigException as exc:
             # 本地开发环境无 kubeconfig 时自动降级，生产环境应确保配置正确
             logger.warning(
@@ -103,11 +115,12 @@ class KubernetesRuntimeProvider:
         name = dep.deployment_name
         ns = dep.namespace
         image = dep.image_url or self._settings.mcp_placeholder_image
-        internal_url = f"http://{name}.{ns}.svc.cluster.local:{port}{endpoint}"
 
         if self._mock:
-            logger.info("[Mock] deploy 跳过 K8s 资源创建，deployment=%s", name)
-            return image, name, internal_url
+            # Mock 模式：target_url 指向本机端口，便于手动运行 server.py 做本地测试
+            mock_url = f"http://localhost:{port}{endpoint}"
+            logger.info("[Mock] deploy 跳过 K8s 资源创建，deployment=%s，mock target_url=%s", name, mock_url)
+            return image, name, mock_url
 
         s = self._settings
         asset_code = name.removeprefix("mcp-")  # mcp-{code} → {code}
@@ -139,6 +152,10 @@ class KubernetesRuntimeProvider:
                             kubernetes.client.V1Container(
                                 name="mcp-server",
                                 image=image,
+                                # IfNotPresent：本地有镜像时直接使用，不再拉取
+                                # Docker Desktop K8s 共享宿主机镜像存储，build 后无需 push 即可用
+                                # 生产环境（in-cluster）同样适用，镜像由 Worker push 后首次拉取会缓存
+                                image_pull_policy="IfNotPresent",
                                 ports=[kubernetes.client.V1ContainerPort(container_port=port)],
                                 resources=kubernetes.client.V1ResourceRequirements(
                                     requests={
@@ -177,7 +194,10 @@ class KubernetesRuntimeProvider:
         )
         self._create_or_patch("deployment", name, ns, deployment)
 
-        # ── Service ───────────────────────────────────────────────────────────
+        # ── Service
+        # in-cluster（生产）用 ClusterIP，Gateway Pod 通过集群 DNS 访问；
+        # 本地开发用 NodePort，Worker/Gateway 跑在宿主机，需要 localhost:NodePort 访问
+        service_type = "ClusterIP" if s.k8s_in_cluster else "NodePort"
         service = kubernetes.client.V1Service(
             metadata=kubernetes.client.V1ObjectMeta(
                 name=name,
@@ -192,7 +212,7 @@ class KubernetesRuntimeProvider:
                         target_port=port,
                     )
                 ],
-                type="ClusterIP",
+                type=service_type,
             ),
         )
         self._create_or_patch("service", name, ns, service)
@@ -249,6 +269,16 @@ class KubernetesRuntimeProvider:
             ),
         )
         self._create_or_patch("networkpolicy", netpol_name, ns, netpol)
+
+        # 根据 Service 类型确定 Gateway 使用的 target_url
+        if s.k8s_in_cluster:
+            # 生产：Gateway Pod 与 MCP Pod 同在集群内，直接用集群 DNS
+            internal_url = f"http://{name}.{ns}.svc.cluster.local:{port}{endpoint}"
+        else:
+            # 本地：读取 K8s 分配的 NodePort，Docker Desktop 将其映射到宿主机 localhost
+            svc = self._core.read_namespaced_service(name, ns)
+            node_port = svc.spec.ports[0].node_port
+            internal_url = f"http://localhost:{node_port}{endpoint}"
 
         return image, name, internal_url
 
