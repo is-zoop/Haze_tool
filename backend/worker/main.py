@@ -156,7 +156,7 @@ def _handle_deploy(db: Session, task: McpDeployTask) -> None:
     # 同步 Gateway 路由，internal_url 已由 provider.deploy 写入 dep
     asset_code = dep.deployment_name.removeprefix("mcp-")
     dep.gateway_route = f"/assets/{asset_code}/mcp"
-    dep.public_url = f"https://gateway.haze.io/assets/{asset_code}/mcp"
+    dep.public_url = f"{settings.gateway_public_base_url.rstrip('/')}/assets/{asset_code}/mcp"
     _sync_gateway_route(db, dep, enabled=True)
 
     task.logs = (

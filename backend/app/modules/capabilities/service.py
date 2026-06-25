@@ -10,6 +10,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.exceptions import AppException
 from app.core.rbac import ADMIN, SYSTEM_ADMIN
 from app.modules.capabilities.models import Capability, CapabilityVersion
@@ -462,7 +463,7 @@ def deploy_capability(db: Session, capability_id: int, actor: User) -> Capabilit
     )
     deployment_name = f"mcp-{capability.code}"
     gateway_route = f"/assets/{capability.code}/mcp"
-    public_url = f"https://gateway.haze.io/assets/{capability.code}/mcp"
+    public_url = f"{get_settings().gateway_public_base_url.rstrip('/')}/assets/{capability.code}/mcp"
 
     if deployment:
         # 重试部署：重置状态并清除上次错误

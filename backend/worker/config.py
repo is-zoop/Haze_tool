@@ -25,7 +25,8 @@ class WorkerSettings(BaseSettings):
     k8s_verify_ssl: bool = True           # False 时跳过 TLS 证书校验（本地开发自签名证书场景）
 
     # K8s 资源
-    k8s_namespace: str = "haze-runtime"  # MCP Server 运行的 Namespace
+    k8s_namespace: str = "haze-runtime"  # MCP Server namespace
+    gateway_public_base_url: str = "http://127.0.0.1:8001"  # Public base URL for /assets/{code}/mcp
     mcp_placeholder_image: str = "node:20-slim"  # image_url 为空时的占位镜像（Phase 6 前使用）
     pod_ready_timeout_seconds: int = 120  # 等待 Pod Ready 的最大秒数
     pod_ready_poll_seconds: int = 5       # 轮询间隔（秒）

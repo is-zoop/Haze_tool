@@ -216,3 +216,16 @@
 - **变更摘要**：补充 `mcp_runtime.read` / `mcp_runtime.operate` 权限定义，并为 `DEVELOPER` 角色加入 `mcp_runtime.read`，使开发者触发部署后可查看自己的部署进度、任务和日志。
 - **对现有功能的影响**：不改变部署执行流程；`ADMIN` / `SYSTEM_ADMIN` 在 bootstrap 后获得 MCP Runtime 读写权限，`DEVELOPER` 获得只读进度查询权限。
 - **验证方式**：`python -m py_compile app/core/rbac.py` 成功；前端部署进度弹窗不再因缺少 `mcp_runtime.read` 权限失败（需运行 bootstrap 同步权限）。
+
+---
+
+## [010] MCP Gateway 公开地址配置化
+
+- **状态**：changed
+- **模块**：`app/modules/capabilities`, `worker`
+- **APIs**：`POST /api/developer/capabilities/{id}/deploy`（生成 public_url）, `POST /assets/{asset_code}/mcp`（路由路径保持不变）
+- **表**：`mcp_deployments.public_url`（重新部署时写入新配置地址）
+- **主要文件**：`backend/app/core/config.py`, `backend/app/modules/capabilities/service.py`, `backend/worker/config.py`, `backend/worker/main.py`, `backend/.env.example`
+- **变更摘要**：新增 `GATEWAY_PUBLIC_BASE_URL` 配置，替代硬编码 `https://gateway.haze.io`，统一生成 `{GATEWAY_PUBLIC_BASE_URL}/assets/{code}/mcp`。
+- **对现有功能的影响**：Gateway 实际代理路径仍为 `/assets/{code}/mcp`；已有数据库 public_url 不自动迁移，重新部署后刷新。
+- **验证方式**：`python -m py_compile app/core/config.py app/modules/capabilities/service.py worker/config.py worker/main.py` 成功。
