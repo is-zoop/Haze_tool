@@ -213,6 +213,27 @@ def _handle_stop(db: Session, task: McpDeployTask) -> None:
     task.logs = f"K8s Deployment/{dep.deployment_name} replicas 已设为 0"
 
 
+def _handle_delete(db: Session, task: McpDeployTask) -> None:
+    """Delete K8s resources for a deployment and disable its Gateway route."""
+    dep = db.scalar(
+        select(McpDeployment).where(McpDeployment.capability_id == task.capability_id)
+    )
+    if dep is None:
+        task.logs = f"No deployment found for capability_id={task.capability_id}; nothing to delete"
+        return
+
+    provider = KubernetesRuntimeProvider(get_worker_settings())
+    provider.delete(dep)
+    dep.deploy_status = enums.DEPLOY_STATUS_STOPPED
+    dep.actual_status = enums.ACTUAL_STATUS_STOPPED
+    dep.desired_status = enums.DESIRED_STATUS_STOPPED
+    dep.replicas = 0
+    dep.ready_replicas = 0
+    dep.stopped_at = _now()
+    _sync_gateway_route(db, dep, enabled=False)
+    task.logs = f"K8s resources for Deployment/{dep.deployment_name} deleted"
+
+
 def _handle_restart(db: Session, task: McpDeployTask) -> None:
     """更新 Pod annotation 触发 K8s 滚动重启。"""
     dep = db.scalar(
@@ -232,6 +253,7 @@ _HANDLERS = {
     enums.TASK_TYPE_REDEPLOY: _handle_deploy,
     enums.TASK_TYPE_START:    _handle_start,
     enums.TASK_TYPE_STOP:     _handle_stop,
+    enums.TASK_TYPE_DELETE:   _handle_delete,
     enums.TASK_TYPE_RESTART:  _handle_restart,
 }
 

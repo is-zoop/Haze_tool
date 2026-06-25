@@ -101,6 +101,18 @@ class KubernetesRuntimeProvider:
 
     # ── 核心操作 ──────────────────────────────────────────────────────────────
 
+    def _delete_if_exists(self, resource_type: str, name: str, namespace: str) -> None:
+        try:
+            if resource_type == "deployment":
+                self._apps.delete_namespaced_deployment(name, namespace)
+            elif resource_type == "service":
+                self._core.delete_namespaced_service(name, namespace)
+            elif resource_type == "networkpolicy":
+                self._net.delete_namespaced_network_policy(name, namespace)
+        except kubernetes.client.exceptions.ApiException as exc:
+            if exc.status != 404:
+                raise
+
     def deploy(
         self,
         dep: McpDeployment,
@@ -339,6 +351,17 @@ class KubernetesRuntimeProvider:
                 }
             },
         )
+
+    def delete(self, dep: McpDeployment) -> None:
+        """Delete Deployment / Service / NetworkPolicy resources."""
+        if self._mock:
+            logger.info("[Mock] delete skip K8s resources, deployment=%s", dep.deployment_name)
+            return
+        name = dep.deployment_name
+        ns = dep.namespace
+        self._delete_if_exists("deployment", name, ns)
+        self._delete_if_exists("service", name, ns)
+        self._delete_if_exists("networkpolicy", f"{name}-netpol", ns)
 
     def get_pod_logs(self, dep: McpDeployment, tail_lines: int = 100) -> str:
         """返回最新 Pod 日志，无 Pod 时返回空字符串。"""

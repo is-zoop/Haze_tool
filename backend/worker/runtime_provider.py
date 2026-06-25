@@ -34,6 +34,10 @@ class RuntimeProvider(Protocol):
         """更新 Pod 注解触发滚动重启，不停机。"""
         ...
 
+    def delete(self, dep: McpDeployment) -> None:
+        """Delete Deployment / Service / NetworkPolicy resources."""
+        ...
+
     def wait_for_ready(self, dep: McpDeployment, timeout_seconds: int) -> bool:
         """轮询等待至少 1 个 Pod Ready，超时返回 False。"""
         ...

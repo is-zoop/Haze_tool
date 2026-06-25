@@ -229,3 +229,16 @@
 - **变更摘要**：新增 `GATEWAY_PUBLIC_BASE_URL` 配置，替代硬编码 `https://gateway.haze.io`，统一生成 `{GATEWAY_PUBLIC_BASE_URL}/assets/{code}/mcp`。
 - **对现有功能的影响**：Gateway 实际代理路径仍为 `/assets/{code}/mcp`；已有数据库 public_url 不自动迁移，重新部署后刷新。
 - **验证方式**：`python -m py_compile app/core/config.py app/modules/capabilities/service.py worker/config.py worker/main.py` 成功。
+
+---
+
+## [011] MCP Server 下线/删除运行时清理
+
+- **状态**：fixed
+- **模块**：`app/modules/capabilities`, `worker`
+- **APIs**：`POST /api/developer/capabilities/{id}/offline`, `DELETE /api/developer/capabilities/{id}`
+- **表**：`mcp_deployments`, `mcp_deploy_tasks`, `mcp_gateway_routes`
+- **主要文件**：`backend/app/modules/capabilities/service.py`, `backend/app/modules/mcp_runtime/enums.py`, `backend/worker/main.py`, `backend/worker/kubernetes_provider.py`, `backend/worker/runtime_provider.py`
+- **变更摘要**：HTTP MCP 能力下线时创建 `stop` runtime task，由 Worker 将 K8s Deployment replicas 置 0 并关闭 Gateway route；删除能力时创建 `delete` runtime task，由 Worker 删除 K8s Deployment / Service / NetworkPolicy 并关闭 Gateway route。
+- **对现有功能的影响**：保留现有异步 Worker 部署模型，不在业务接口内直接调用 K8s；非 HTTP MCP 和 Skill 能力不受影响。
+- **验证方式**：`python -m py_compile app/modules/capabilities/service.py app/modules/mcp_runtime/enums.py worker/runtime_provider.py worker/kubernetes_provider.py worker/main.py` 成功。

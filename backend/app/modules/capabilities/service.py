@@ -435,6 +435,46 @@ def submit_review(db: Session, capability_id: int, actor: User) -> CapabilityDat
     return _serialize(db, capability)
 
 
+def _enqueue_mcp_runtime_task(db: Session, capability: Capability, actor: User, task_type: str) -> None:
+    if capability.type != "mcp" or _transport(capability) != "HTTP":
+        return
+
+    from app.modules.mcp_runtime import enums as mcp_enums
+    from app.modules.mcp_runtime.models import McpDeployment, McpDeployTask
+
+    deployment = db.scalar(
+        select(McpDeployment).where(McpDeployment.capability_id == capability.id)
+    )
+    if deployment is None:
+        return
+    if task_type == mcp_enums.TASK_TYPE_STOP and deployment.deploy_status == mcp_enums.DEPLOY_STATUS_STOPPED:
+        return
+
+    existing = db.scalar(
+        select(McpDeployTask)
+        .where(
+            McpDeployTask.capability_id == capability.id,
+            McpDeployTask.task_type == task_type,
+            McpDeployTask.task_status.in_([mcp_enums.TASK_STATUS_PENDING, mcp_enums.TASK_STATUS_RUNNING]),
+        )
+        .order_by(McpDeployTask.created_at.desc())
+        .limit(1)
+    )
+    if existing is not None:
+        return
+
+    deployment.desired_status = mcp_enums.DESIRED_STATUS_STOPPED
+    task = McpDeployTask(
+        capability_id=capability.id,
+        version_id=deployment.version_id,
+        task_type=task_type,
+        task_status=mcp_enums.TASK_STATUS_PENDING,
+        runtime_provider=mcp_enums.RUNTIME_PROVIDER_K8S,
+        created_by=actor.id,
+    )
+    db.add(task)
+
+
 def deploy_capability(db: Session, capability_id: int, actor: User) -> CapabilityData:
     from app.modules.mcp_runtime import enums as mcp_enums
     from app.modules.mcp_runtime.models import McpDeployment, McpDeployTask
@@ -538,11 +578,14 @@ def publish_capability(db: Session, capability_id: int, actor: User) -> Capabili
 
 
 def offline_capability(db: Session, capability_id: int, actor: User) -> CapabilityData:
+    from app.modules.mcp_runtime import enums as mcp_enums
+
     capability = _get_capability(db, capability_id, actor)
     if capability.status == "draft":
         raise AppException(code=4096, message="Draft capability cannot be taken offline", status_code=409)
     capability.status = "offline"
     capability.updated_by = actor.id
+    _enqueue_mcp_runtime_task(db, capability, actor, mcp_enums.TASK_TYPE_STOP)
     db.commit()
     db.refresh(capability)
     return _serialize(db, capability)
@@ -567,6 +610,8 @@ def update_test_status(
 
 
 def delete_capability(db: Session, capability_id: int, actor: User) -> None:
+    from app.modules.mcp_runtime import enums as mcp_enums
+
     capability = _get_capability(db, capability_id, actor)
     paths: set[str] = set()
     extension = _extension(capability)
@@ -588,6 +633,7 @@ def delete_capability(db: Session, capability_id: int, actor: User) -> None:
     deleted_at = datetime.utcnow()
     extension["original_code"] = original_code
     extension["deleted_by"] = actor.id
+    _enqueue_mcp_runtime_task(db, capability, actor, mcp_enums.TASK_TYPE_DELETE)
     capability.extension_json = extension
     capability.code = f"{original_code[:45]}__deleted_{capability.id}_{int(deleted_at.timestamp())}"[:100]
     capability.deleted_at = deleted_at

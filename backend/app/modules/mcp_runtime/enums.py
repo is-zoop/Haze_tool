@@ -7,6 +7,7 @@ TASK_TYPE_STOP     = "stop"      # 停止（replicas 改为 0）
 TASK_TYPE_RESTART  = "restart"   # 重启 Pod
 TASK_TYPE_REDEPLOY = "redeploy"  # 重新部署（更新镜像）
 TASK_TYPE_ROLLBACK = "rollback"  # 回滚到上一个版本
+TASK_TYPE_DELETE   = "delete"    # delete K8s resources
 
 # ── 部署任务状态 ────────────────────────────────────────────────────────────
 TASK_STATUS_PENDING = "pending"  # 等待 Worker 消费
