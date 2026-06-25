@@ -435,16 +435,71 @@ def submit_review(db: Session, capability_id: int, actor: User) -> CapabilityDat
 
 
 def deploy_capability(db: Session, capability_id: int, actor: User) -> CapabilityData:
+    from app.modules.mcp_runtime import enums as mcp_enums
+    from app.modules.mcp_runtime.models import McpDeployment, McpDeployTask
+
     capability = _get_capability(db, capability_id, actor)
+
+    # 只有 HTTP MCP 走托管部署流程
     if capability.type != "mcp" or _transport(capability) != "HTTP":
         raise AppException(code=4098, message="Only HTTP MCP capabilities require deployment", status_code=409)
-    if capability.status not in {"approved", "deploy_failed"}:
+
+    # capability.status 在部署失败时仍保持 approved，故此处只校验 approved
+    if capability.status != "approved":
         raise AppException(code=4099, message="Capability must be approved before deployment", status_code=409)
-    # 部署功能暂未开发，默认置为部署完成
-    capability.status = "deployed"
-    capability.updated_by = actor.id
+
+    # 读取最新版本，Worker 从该版本的 snapshot 中找到 ZIP 包路径
+    latest_version = db.scalar(
+        select(CapabilityVersion)
+        .where(CapabilityVersion.capability_id == capability_id)
+        .order_by(CapabilityVersion.created_at.desc())
+        .limit(1)
+    )
+
+    # 创建或重置 mcp_deployments（capability_id 唯一约束，可重复部署）
+    deployment = db.scalar(
+        select(McpDeployment).where(McpDeployment.capability_id == capability_id)
+    )
+    deployment_name = f"mcp-{capability.code}"
+    gateway_route = f"/assets/{capability.code}/mcp"
+    public_url = f"https://gateway.haze.io/assets/{capability.code}/mcp"
+
+    if deployment:
+        # 重试部署：重置状态并清除上次错误
+        deployment.deploy_status = mcp_enums.DEPLOY_STATUS_PENDING
+        deployment.actual_status = mcp_enums.ACTUAL_STATUS_PENDING
+        deployment.version_id = latest_version.id if latest_version else None
+        deployment.last_error = None
+    else:
+        deployment = McpDeployment(
+            capability_id=capability_id,
+            version_id=latest_version.id if latest_version else None,
+            deployment_name=deployment_name,
+            namespace="haze-runtime",
+            runtime_provider=mcp_enums.RUNTIME_PROVIDER_K8S,
+            deploy_status=mcp_enums.DEPLOY_STATUS_PENDING,
+            desired_status=mcp_enums.DESIRED_STATUS_RUNNING,
+            actual_status=mcp_enums.ACTUAL_STATUS_PENDING,
+            gateway_route=gateway_route,
+            public_url=public_url,
+        )
+        db.add(deployment)
+
+    db.flush()  # 确保 deployment.id 已生成，避免外键约束问题
+
+    # 创建部署任务，Deploy Worker 轮询消费后执行真实 K8s 部署
+    task = McpDeployTask(
+        capability_id=capability_id,
+        version_id=latest_version.id if latest_version else None,
+        task_type=mcp_enums.TASK_TYPE_DEPLOY,
+        task_status=mcp_enums.TASK_STATUS_PENDING,
+        runtime_provider=mcp_enums.RUNTIME_PROVIDER_K8S,
+        created_by=actor.id,
+    )
+    db.add(task)
     db.commit()
     db.refresh(capability)
+    # capability.status 保持 approved，由 Worker 在部署成功后推进到 debug_passed
     return _serialize(db, capability)
 
 

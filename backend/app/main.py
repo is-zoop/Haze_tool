@@ -44,6 +44,7 @@ from app.modules.capabilities.router import router as capabilities_router
 from app.modules.audit.router import router as audit_router
 from app.modules.marketplace.router import router as marketplace_router
 from app.modules.users.router import router as users_router
+from app.modules.mcp_runtime.router import router as mcp_runtime_router
 
 REQUEST_ID_HEADER = "X-Request-ID"
 MAX_REQUEST_ID_LENGTH = 128
@@ -94,6 +95,7 @@ def create_app() -> FastAPI:
     application.include_router(audit_router)
     application.include_router(marketplace_router)
     application.include_router(users_router)
+    application.include_router(mcp_runtime_router)
 
     @application.get(
         "/api/health",
