@@ -23,6 +23,7 @@ class WorkerSettings(BaseSettings):
     k8s_in_cluster: bool = False          # True 时使用 Pod 内 ServiceAccount（生产）
     k8s_config_path: str | None = None   # kubeconfig 路径，None = 默认 ~/.kube/config
     k8s_verify_ssl: bool = True           # False 时跳过 TLS 证书校验（本地开发自签名证书场景）
+    k8s_proxy_base_url: str = ""          # 非空时用 kubectl proxy 格式构造 internal_url（Windows kind 开发环境）
 
     # K8s 资源
     k8s_namespace: str = "haze-runtime"  # MCP Server namespace

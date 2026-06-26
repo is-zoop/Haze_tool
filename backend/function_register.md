@@ -266,3 +266,58 @@
   3. 错误 key → 401
   4. 正确 key + 有效路由 → 200，`mcp_call_logs.user_id` 写入对应用户 ID
   5. 正确 key + 路由 disabled → 503，`user_id` 仍写入
+
+---
+
+## [013] MCP 连接测试步骤补齐（HTTP + STDIO）
+
+- **状态**：changed
+- **模块**：`capabilities`
+- **修改文件**：
+  - `backend/app/modules/capabilities/test_runner.py` — 核心逻辑改动
+  - `backend/app/modules/capabilities/router.py` — HTTP 分支传 zip_abs
+  - `frontend/src/components/developer-center/config.ts` — 步骤标签同步
+- **变更摘要**：
+  - 新增 `_jsonrpc_notify(method, params)` — 生成无 id 的 MCP notification 消息
+  - `run_http_mcp_test` 新增 `zip_path` 参数；6 步全部改为真实操作：
+    - Step 0: POST initialize → HTTP 连通性（原为 GET，错误）
+    - Step 1: 解析响应 body，验证 jsonrpc 字段 + protocolVersion（原为 sleep 占位符）
+    - Step 2: POST notifications/initialized 握手通知（新增，原无此步）
+    - Step 3: tools/list（不变）
+    - Step 4: tools/call，有 mcp-test.json 才执行，无则跳过（原为启发式选工具）
+    - Step 5: done（不变）
+  - `_run_mcp_protocol_sync` Step 6（STDIO）: 从空占位符改为真实发送 notifications/initialized，失败不阻断
+  - `router.py` HTTP 分支照抄 STDIO 的 zip_abs 推导逻辑并传给 HTTP test runner
+- **APIs**：`GET /capabilities/{id}/debug-stream`（原有路由，行为变化）
+- **表**：无
+- **对现有功能的影响**：
+  - HTTP MCP 测试步骤顺序和名称变更，前端 config.ts 同步更新标签
+  - STDIO 步骤 6 由无操作变为发送握手通知，失败不阻断，不影响测试通过率
+- **验证方式**：
+  1. `python -m py_compile app/modules/capabilities/test_runner.py` 通过
+  2. HTTP 测试 Step 0 日志出现"连接成功 (200)"，无 GET 字样
+  3. HTTP 测试 Step 1 出现协议版本号
+  4. HTTP 测试 Step 2 出现"协议握手完成"
+  5. STDIO 测试 Step 6 出现"协议握手完成"，不再是空
+
+---
+
+## [014] Worker kubectl proxy 模式支持（Windows kind 开发环境）
+
+- **状态**：added
+- **模块**：`worker`
+- **修改文件**：
+  - `backend/worker/config.py` — 新增 `k8s_proxy_base_url` 配置项
+  - `backend/worker/kubernetes_provider.py` — `else` 分支加 proxy URL 逻辑
+- **变更摘要**：
+  - `WorkerSettings` 新增 `k8s_proxy_base_url: str = ""`
+  - 当 `k8s_proxy_base_url` 非空时，`internal_url` 使用 kubectl proxy 格式：`{proxy_base}/api/v1/namespaces/{ns}/services/{name}:{port}/proxy{endpoint}`
+  - 当为空时保持原 NodePort 逻辑（Linux 直接访问）
+  - `k8s_in_cluster=True`（生产）时完全不受影响，仍使用集群 DNS
+- **APIs**：无
+- **表**：`mcp_deployments.internal_url`（值格式变化，已有存量需重新部署才能更新）
+- **对现有功能的影响**：Linux 生产不设此变量，行为完全不变；Windows 开发需在 `.env` 加 `K8S_PROXY_BASE_URL=http://localhost:8090` 并运行 `kubectl proxy --port=8090`
+- **验证方式**：
+  1. `python -m py_compile worker/config.py worker/kubernetes_provider.py` 通过
+  2. Windows：设 `K8S_PROXY_BASE_URL=http://localhost:8090`，重新部署一个 MCP → `internal_url` 变为 proxy 格式
+  3. Linux：不设变量，`internal_url` 仍为 `localhost:NodePort` 格式

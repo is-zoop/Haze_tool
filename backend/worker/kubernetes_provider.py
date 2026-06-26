@@ -287,10 +287,15 @@ class KubernetesRuntimeProvider:
             # 生产：Gateway Pod 与 MCP Pod 同在集群内，直接用集群 DNS
             internal_url = f"http://{name}.{ns}.svc.cluster.local:{port}{endpoint}"
         else:
-            # 本地：读取 K8s 分配的 NodePort，Docker Desktop 将其映射到宿主机 localhost
-            svc = self._core.read_namespaced_service(name, ns)
-            node_port = svc.spec.ports[0].node_port
-            internal_url = f"http://localhost:{node_port}{endpoint}"
+            proxy_base = s.k8s_proxy_base_url.rstrip("/")
+            if proxy_base:
+                # kubectl proxy 模式（Windows kind 开发环境，需先运行 kubectl proxy --port=8090）
+                internal_url = f"{proxy_base}/api/v1/namespaces/{ns}/services/{name}:{port}/proxy{endpoint}"
+            else:
+                # NodePort 模式（Linux 宿主机开发，localhost:NodePort 直接可达）
+                svc = self._core.read_namespaced_service(name, ns)
+                node_port = svc.spec.ports[0].node_port
+                internal_url = f"http://localhost:{node_port}{endpoint}"
 
         return image, name, internal_url
 

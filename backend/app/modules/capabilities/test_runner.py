@@ -53,73 +53,118 @@ def _jsonrpc(method: str, params: dict | None = None) -> dict:
     }
 
 
+def _jsonrpc_notify(method: str, params: dict | None = None) -> dict:
+    """Notifications 无 id 字段（MCP 规范）。"""
+    return {"jsonrpc": "2.0", "method": method, "params": params or {}}
+
+
+async def _read_sse_or_json(resp: httpx.Response) -> dict:
+    """从 httpx 流式响应中提取首条 JSON-RPC 消息（兼容 JSON 和 SSE 两种格式）。"""
+    ct = resp.headers.get("content-type", "")
+    if "text/event-stream" in ct:
+        async for line in resp.aiter_lines():
+            stripped = line.strip()
+            if stripped.startswith("data:"):
+                data = stripped[5:].strip()
+                if data:
+                    return json.loads(data)
+        raise ValueError("SSE 响应中未找到 data 事件")
+    content = await resp.aread()
+    return json.loads(content)
+
+
 async def _http_post(client: httpx.AsyncClient, url: str, body: dict) -> dict:
-    resp = await client.post(url, json=body, timeout=8.0)
-    resp.raise_for_status()
-    return resp.json()
+    """POST + 自动解析 JSON 或 SSE 格式响应（兼容 MCP Streamable HTTP）。"""
+    async with client.stream("POST", url, json=body, timeout=8.0) as resp:
+        resp.raise_for_status()
+        return await _read_sse_or_json(resp)
 
 
 async def run_http_mcp_test(
     server_url: str,
     capability_code: str,
+    zip_path: str = "",
 ) -> AsyncGenerator[dict, None]:
     """HTTP MCP 测试：6步流程，通过 async generator yield 事件。"""
-    tools_discovered: list[dict] = []
     protocol_version = "unknown"
+    mcp_url = server_url.rstrip("/")
+    init_body = _jsonrpc("initialize", {
+        "protocolVersion": "2024-11-05",
+        "capabilities": {},
+        "clientInfo": {"name": "HazeTestRunner", "version": "1.0"},
+    })
 
-    # Step 0: 服务连接测试
+    # Step 0: 服务连通性（POST initialize，流式读取，避免 SSE body 阻塞）
     yield McpTestEvent.step_start(0)
-    yield McpTestEvent.log("HTTP", f"连接服务器: {server_url}")
+    yield McpTestEvent.log("HTTP", f"POST {mcp_url}")
     t0 = time.monotonic()
+    init_parsed: dict = {}
+    _connected = False
+    t1 = t0
+
     try:
-        async with httpx.AsyncClient(verify=False) as client:
-            resp = await client.get(server_url, timeout=5.0)
-            dur = int((time.monotonic() - t0) * 1000)
-            yield McpTestEvent.log("HTTP", f"服务连接成功 ({resp.status_code} OK) - {dur}ms")
-            yield McpTestEvent.step_done(0, dur)
+        async with httpx.AsyncClient(verify=False, trust_env=False) as client:
+            async with client.stream("POST", mcp_url, json=init_body, timeout=5.0) as resp:
+                dur0 = int((time.monotonic() - t0) * 1000)
+                yield McpTestEvent.log("HTTP", f"连接成功 ({resp.status_code}) - {dur0}ms")
+                yield McpTestEvent.step_done(0, dur0)
+                _connected = True
+
+                # Step 1 在同一 stream context 内读取 body
+                yield McpTestEvent.step_start(1)
+                t1 = time.monotonic()
+                init_parsed = await _read_sse_or_json(resp)
     except Exception as exc:
-        yield McpTestEvent.log("HTTP", f"连接失败: {exc}")
-        yield McpTestEvent.error(0, str(exc))
+        if not _connected:
+            yield McpTestEvent.log("HTTP", f"连接失败: {exc}")
+            yield McpTestEvent.error(0, str(exc))
+        else:
+            yield McpTestEvent.log("MCP", f"响应读取失败: {exc}")
+            yield McpTestEvent.error(1, str(exc))
         yield McpTestEvent.done("fail")
         return
 
-    # Step 1: 认证测试（内部服务，验证 200 即通过）
-    yield McpTestEvent.step_start(1)
-    yield McpTestEvent.log("AUTH", "验证服务端点可访问性...")
-    t1 = time.monotonic()
-    await asyncio.sleep(0.05)
-    dur1 = int((time.monotonic() - t1) * 1000) + 40
-    yield McpTestEvent.log("AUTH", f"端点验证通过 - {dur1}ms")
-    yield McpTestEvent.step_done(1, dur1)
-
-    # Step 2: 协议初始化
-    yield McpTestEvent.step_start(2)
-    yield McpTestEvent.log("MCP", "发送 initialize 请求...")
-    t2 = time.monotonic()
-    mcp_url = server_url.rstrip("/")
+    # Step 1: JSON-RPC 结构验证
     try:
-        async with httpx.AsyncClient(verify=False) as client:
-            result = await _http_post(client, mcp_url, _jsonrpc("initialize", {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {},
-                "clientInfo": {"name": "HazeTestRunner", "version": "1.0"},
-            }))
-        dur2 = int((time.monotonic() - t2) * 1000)
-        protocol_version = result.get("result", {}).get("protocolVersion", "2024-11-05")
-        yield McpTestEvent.log("MCP", f"初始化成功 - 协议版本: {protocol_version} - {dur2}ms")
+        if "jsonrpc" not in init_parsed:
+            raise ValueError("响应缺少 jsonrpc 字段（非 JSON-RPC 格式）")
+        if "error" in init_parsed:
+            raise ValueError(f"initialize 返回错误: {init_parsed['error']}")
+        protocol_version = init_parsed.get("result", {}).get("protocolVersion", "unknown")
+        dur1 = int((time.monotonic() - t1) * 1000)
+        yield McpTestEvent.log("MCP", f"响应为合法 JSON-RPC，协议版本: {protocol_version} - {dur1}ms")
+        yield McpTestEvent.step_done(1, dur1)
+    except Exception as exc:
+        yield McpTestEvent.log("MCP", f"响应格式验证失败: {exc}")
+        yield McpTestEvent.error(1, str(exc))
+        yield McpTestEvent.done("fail")
+        return
+
+    # Step 2: 协议握手完成（notifications/initialized，用 stream 拿到状态码即退出，不读 body）
+    yield McpTestEvent.step_start(2)
+    t2 = time.monotonic()
+    try:
+        async with httpx.AsyncClient(verify=False, trust_env=False) as client:
+            async with client.stream(
+                "POST", mcp_url,
+                json=_jsonrpc_notify("notifications/initialized"),
+                timeout=5.0,
+            ) as notify_resp:
+                dur2 = int((time.monotonic() - t2) * 1000)
+                yield McpTestEvent.log("MCP", f"协议握手完成 ({notify_resp.status_code}) - {dur2}ms")
         yield McpTestEvent.step_done(2, dur2)
     except Exception as exc:
-        yield McpTestEvent.log("MCP", f"初始化失败: {exc}")
-        yield McpTestEvent.error(2, str(exc))
-        yield McpTestEvent.done("fail")
-        return
+        dur2 = int((time.monotonic() - t2) * 1000)
+        yield McpTestEvent.log("MCP", f"握手通知发送失败（非阻断）: {exc}")
+        yield McpTestEvent.step_done(2, dur2)
 
     # Step 3: 工具列表获取
     yield McpTestEvent.step_start(3)
     yield McpTestEvent.log("TOOLS", "发送 tools/list 请求...")
     t3 = time.monotonic()
+    tools_discovered: list[dict] = []
     try:
-        async with httpx.AsyncClient(verify=False) as client:
+        async with httpx.AsyncClient(verify=False, trust_env=False) as client:
             result = await _http_post(client, mcp_url, _jsonrpc("tools/list"))
         dur3 = int((time.monotonic() - t3) * 1000)
         tools_discovered = result.get("result", {}).get("tools", [])
@@ -131,30 +176,53 @@ async def run_http_mcp_test(
         yield McpTestEvent.done("fail")
         return
 
-    # Step 4: 工具调用测试
+    # Step 4: 工具调用测试（仅当 mcp-test.json 存在时）
     yield McpTestEvent.step_start(4)
-    readonly_tool = _pick_readonly_tool(tools_discovered)
-    if readonly_tool:
-        tool_name = readonly_tool.get("name", "")
-        yield McpTestEvent.log("CALL", f"测试工具调用: {tool_name}")
-        t4 = time.monotonic()
+    test_cases: list[dict] = []
+    if zip_path:
         try:
-            async with httpx.AsyncClient(verify=False) as client:
-                result = await _http_post(client, mcp_url, _jsonrpc("tools/call", {
-                    "name": tool_name,
-                    "arguments": _build_minimal_args(readonly_tool),
-                }))
+            tmp_dir = Path(tempfile.mkdtemp(prefix="haze_mcp_http_"))
+            try:
+                with ZipFile(zip_path) as zf:
+                    zf.extractall(tmp_dir)
+                test_cases = _load_test_cases(tmp_dir)
+            finally:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+        except Exception:
+            pass
+
+    if test_cases:
+        t4 = time.monotonic()
+        passed = 0
+        try:
+            async with httpx.AsyncClient(verify=False, trust_env=False) as client:
+                for case in test_cases:
+                    tool_name = case.get("tool", "")
+                    arguments = case.get("arguments", {})
+                    try:
+                        res = await _http_post(client, mcp_url, _jsonrpc("tools/call", {
+                            "name": tool_name,
+                            "arguments": arguments,
+                        }))
+                        content = res.get("result", {}).get("content", [])
+                        yield McpTestEvent.log("CALL", f"✓ {tool_name} → {len(content)} 条内容")
+                        passed += 1
+                    except Exception as exc:
+                        yield McpTestEvent.log("CALL", f"✗ {tool_name} 调用失败: {exc}")
             dur4 = int((time.monotonic() - t4) * 1000)
-            content = result.get("result", {}).get("content", [])
-            yield McpTestEvent.log("CALL", f"工具调用成功 - 返回 {len(content)} 条数据 - {dur4}ms")
+            if passed == 0:
+                yield McpTestEvent.error(4, "所有测试用例均失败")
+                yield McpTestEvent.done("fail")
+                return
+            yield McpTestEvent.log("CALL", f"tools/call 完成 {passed}/{len(test_cases)} 通过 - {dur4}ms")
             yield McpTestEvent.step_done(4, dur4)
         except Exception as exc:
-            yield McpTestEvent.log("CALL", f"工具调用失败: {exc}")
+            yield McpTestEvent.log("CALL", f"工具调用异常: {exc}")
             yield McpTestEvent.error(4, str(exc))
             yield McpTestEvent.done("fail")
             return
     else:
-        yield McpTestEvent.log("CALL", "未找到只读工具，跳过调用测试")
+        yield McpTestEvent.log("CALL", "未找到 mcp-test.json，跳过工具调用测试")
         yield McpTestEvent.step_done(4, 0)
 
     # Step 5: 完成
@@ -421,10 +489,20 @@ def _run_mcp_protocol_sync(
     except Exception:
         ev(McpTestEvent.step_done(5, 0))
 
-    # Step 6: initialize 确认（已在 step 4 完成）
+    # Step 6: 协议握手完成（notifications/initialized，失败不阻断）
     ev(McpTestEvent.step_start(6))
-    ev(McpTestEvent.log("MCP", "initialize 已完成（见步骤4）"))
-    ev(McpTestEvent.step_done(6, 0))
+    t6 = time.monotonic()
+    try:
+        notify_msg = json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}) + "\n"
+        assert proc.stdin
+        proc.stdin.write(notify_msg.encode())
+        proc.stdin.flush()
+        dur6 = int((time.monotonic() - t6) * 1000)
+        ev(McpTestEvent.log("MCP", f"协议握手完成 - {dur6}ms"))
+        ev(McpTestEvent.step_done(6, dur6))
+    except Exception as exc:
+        ev(McpTestEvent.log("MCP", f"握手通知发送失败（非阻断）: {exc}"))
+        ev(McpTestEvent.step_done(6, 0))
 
     # Step 7: tools/list
     ev(McpTestEvent.step_start(7))
@@ -472,7 +550,9 @@ def _run_mcp_protocol_sync(
     summary = "所有测试步骤已完成，STDIO MCP 服务运行正常。"
     if stderr_warning:
         summary += "（stderr 有警告日志，请关注）"
+    ev(McpTestEvent.step_start(9))
     ev(McpTestEvent.log("SUCCESS", summary))
+    ev(McpTestEvent.step_done(9, 0))
     ev(McpTestEvent.done("pass"))
     return events
 

@@ -268,7 +268,10 @@ async def run_capability_test(
                     yield f"data: {json.dumps({'type': 'error', 'step': 0, 'message': 'serverUrl 未配置，且尚未完成 K8s 部署'})}\n\n"
                     yield f"data: {json.dumps({'type': 'done', 'status': 'fail'})}\n\n"
                     return
-                gen = run_http_mcp_test(server_url, capability.code)
+                pkg = (capability.extension_json or {}).get("package", {})
+                zip_rel = pkg.get("path", "")
+                zip_abs = str(get_settings().local_storage_dir.resolve() / zip_rel) if zip_rel else ""
+                gen = run_http_mcp_test(server_url, capability.code, zip_abs)
 
             async for event in gen:
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
