@@ -151,3 +151,15 @@
 - 是否影响已有功能：HTTP MCP 测试路径完全不变；STDIO 调试结果写回 `recent_test_status` 逻辑不变；前端 SSE 事件格式不变。需要服务器上安装 Docker。
 - 验证方式：Python import 检查通过；backend pytest 4 项全部通过。
 - 更新时间：2026-06-24
+
+### Personal center profile and MCP credential
+
+- Module: auth / users / mcp credential
+- Status: changed
+- APIs: `PATCH /api/auth/me/profile`, `POST /api/auth/me/reset-password`, `GET /api/auth/me/mcp-credential`, `POST /api/auth/me/mcp-credential/reset`
+- Tables: `users.avatar_url`, `user_mcp_credentials`
+- Main files: `backend/app/modules/auth/`, `backend/app/modules/users/models.py`, `backend/alembic/versions/20260626_0006_personal_profile_mcp_credential.py`, `frontend/src/Dashboard/pages/PersonalCenter.tsx`, `frontend/src/lib/profile.ts`
+- Summary: Adds self-service personal center support. Users can view read-only identity fields, upload a validated/cropped avatar image, reset their own password after current-password verification, and manage a per-user MCP API Key whose plaintext is only returned on reset.
+- Impact: Does not change member management permissions or existing MCP runtime APIs. Password reset increments `token_version`, invalidating the current session. `GET /api/auth/me/mcp-credential` now creates and returns a masked default credential when missing.
+- Verification: Python compile, Alembic upgrade check, and frontend build.
+- Updated: 2026-06-26

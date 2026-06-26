@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import time
@@ -22,6 +23,7 @@ from sqlalchemy.orm import sessionmaker
 from app.modules.capabilities.models import Capability
 from app.modules.mcp_runtime import enums
 from app.modules.mcp_runtime.models import McpCallLog, McpDeployment, McpGatewayRoute
+from app.modules.users.models import UserMcpCredential
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +63,20 @@ app = FastAPI(title="Haze MCP Gateway", docs_url=None, redoc_url=None)
 
 # ── 辅助函数 ───────────────────────────────────────────────────────────────────
 
+def _hash_mcp_key(key: str) -> str:
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()
+
+
+def _verify_mcp_key(db, raw_key: str) -> UserMcpCredential | None:
+    """用 key_prefix 索引快速定位，再用 key_hash 精确验证。"""
+    candidate = db.scalar(
+        select(UserMcpCredential).where(UserMcpCredential.key_prefix == raw_key[:18])
+    )
+    if candidate and candidate.key_hash == _hash_mcp_key(raw_key):
+        return candidate
+    return None
+
+
 def _parse_mcp_body(body: bytes) -> tuple[str | None, str | None]:
     """从 JSON-RPC body 解析 method 和 tool_name，解析失败返回 (None, None)。"""
     try:
@@ -78,6 +94,8 @@ def _build_forward_headers(headers, request_id: str) -> dict:
     result = {}
     for k, v in headers.items():
         lk = k.lower()
+        if lk == "authorization" and v.lower().startswith("bearer haze_mcp_"):
+            continue  # 网关专用 Key，不透传给上游 K8s 服务
         if lk in ("content-type", "accept", "authorization") or lk.startswith("x-mcp-"):
             result[k] = v
     result["X-Request-ID"] = request_id
@@ -128,6 +146,7 @@ def _write_call_log(
     success: bool,
     elapsed_ms: int,
     error_msg: str | None,
+    user_id: int | None = None,
 ) -> None:
     """写入 mcp_call_logs，失败时只记录日志不抛出（不能因为日志写失败影响主流程）。"""
     try:
@@ -136,7 +155,7 @@ def _write_call_log(
             deployment_id=route.deployment_id,
             asset_code=route.asset_code,
             request_id=request_id,
-            user_id=None,
+            user_id=user_id,
             client_ip=client_ip,
             method=method,
             tool_name=tool_name,
@@ -169,6 +188,17 @@ async def mcp_post(asset_code: str, request: Request):
 
     mcp_method, tool_name = _parse_mcp_body(body)
 
+    # ── API Key 鉴权
+    auth_header = request.headers.get("Authorization", "")
+    raw_key = auth_header[7:].strip() if auth_header.lower().startswith("bearer ") else ""
+    if not raw_key.startswith("haze_mcp_"):
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    with _SessionFactory() as db:
+        credential = _verify_mcp_key(db, raw_key)
+        if credential is None:
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+        caller_user_id: int = credential.user_id
+
     # ── 路由校验（sync SQLAlchemy；Phase 7 DB 读操作耗时极短，可接受阻塞 event loop）
     with _SessionFactory() as db:
         route = db.scalar(
@@ -180,17 +210,17 @@ async def mcp_post(asset_code: str, request: Request):
             return JSONResponse({"error": "route not found"}, status_code=404)
 
         if not route.enabled:
-            _write_call_log(db, route, request_id, client_ip, mcp_method, tool_name, 503, False, 0, "服务已停止")
+            _write_call_log(db, route, request_id, client_ip, mcp_method, tool_name, 503, False, 0, "服务已停止", caller_user_id)
             return JSONResponse({"error": "service stopped"}, status_code=503)
 
         dep = db.get(McpDeployment, route.deployment_id)
         if dep is None or dep.deploy_status != enums.DEPLOY_STATUS_RUNNING:
-            _write_call_log(db, route, request_id, client_ip, mcp_method, tool_name, 503, False, 0, "部署未运行")
+            _write_call_log(db, route, request_id, client_ip, mcp_method, tool_name, 503, False, 0, "部署未运行", caller_user_id)
             return JSONResponse({"error": "deployment not running"}, status_code=503)
 
         cap = db.get(Capability, route.capability_id)
         if cap is None or cap.status != "published":
-            _write_call_log(db, route, request_id, client_ip, mcp_method, tool_name, 403, False, 0, "能力未发布")
+            _write_call_log(db, route, request_id, client_ip, mcp_method, tool_name, 403, False, 0, "能力未发布", caller_user_id)
             return JSONResponse({"error": "capability not published"}, status_code=403)
 
         # 提前取出标量，db 关闭后属性访问会触发 DetachedInstanceError
@@ -214,7 +244,7 @@ async def mcp_post(asset_code: str, request: Request):
             deployment_id=deployment_id,
             asset_code=asset_code,
             request_id=request_id,
-            user_id=None,
+            user_id=caller_user_id,
             client_ip=client_ip,
             method=mcp_method,
             tool_name=tool_name,

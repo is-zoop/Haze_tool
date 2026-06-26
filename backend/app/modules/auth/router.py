@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+import hashlib
+import secrets
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -8,12 +10,65 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.exceptions import AppException
 from app.core.response import ApiResponse, success_response
-from app.core.security import create_access_token, get_current_user, get_user_permission_codes, verify_password
+from app.core.security import create_access_token, get_current_user, get_user_permission_codes, hash_password, verify_password
 from app.db.session import get_db
-from app.modules.auth.schemas import AuthUser, LoginData, LoginRequest
-from app.modules.users.models import User
+from app.modules.auth.schemas import (
+    AuthUser,
+    LoginData,
+    LoginRequest,
+    McpCredentialData,
+    McpCredentialSecretData,
+    PasswordResetData,
+    PasswordResetRequest,
+    ProfileUpdate,
+)
+from app.modules.users.models import User, UserMcpCredential
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+MCP_KEY_PREFIX = "haze_mcp_"
+
+
+def _hash_mcp_key(key: str) -> str:
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()
+
+
+def _generate_mcp_key() -> str:
+    return f"{MCP_KEY_PREFIX}{secrets.token_urlsafe(32)}"
+
+
+def _mask_mcp_key(key_prefix: str, key_suffix: str) -> str:
+    return f"{key_prefix}{'•' * 8}{key_suffix}"
+
+
+def _serialize_mcp_credential(credential: UserMcpCredential) -> McpCredentialSecretData:
+    return McpCredentialSecretData(
+        id=credential.id,
+        name=credential.name,
+        key_prefix=credential.key_prefix,
+        masked_key=_mask_mcp_key(credential.key_prefix, credential.key_suffix or ""),
+        key=credential.key_raw or "",
+        created_at=credential.created_at,
+        updated_at=credential.updated_at,
+    )
+
+
+def _get_or_create_mcp_credential(db: Session, user: User) -> UserMcpCredential:
+    credential = db.scalar(select(UserMcpCredential).where(UserMcpCredential.user_id == user.id))
+    if credential is not None:
+        return credential
+    key = _generate_mcp_key()
+    credential = UserMcpCredential(
+        user_id=user.id,
+        name="Personal MCP API Key",
+        key_prefix=key[:18],
+        key_suffix=key[-4:],
+        key_hash=_hash_mcp_key(key),
+        key_raw=key,
+    )
+    db.add(credential)
+    db.commit()
+    db.refresh(credential)
+    return credential
 
 
 def serialize_auth_user(user: User) -> AuthUser:
@@ -23,6 +78,7 @@ def serialize_auth_user(user: User) -> AuthUser:
         name=user.name,
         phone=user.phone,
         email=user.email,
+        avatar_url=user.avatar_url,
         department=user.department.name,
         role_code=role.code,
         role_name=role.name,
@@ -65,3 +121,58 @@ def logout(request: Request, user: Annotated[User, Depends(get_current_user)], d
 @router.get("/me", response_model=ApiResponse[AuthUser])
 def me(request: Request, user: Annotated[User, Depends(get_current_user)]) -> ApiResponse[AuthUser]:
     return success_response(request, serialize_auth_user(user))
+
+
+@router.patch("/me/profile", response_model=ApiResponse[AuthUser])
+def update_profile(
+    payload: ProfileUpdate,
+    request: Request,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> ApiResponse[AuthUser]:
+    user.avatar_url = payload.avatar_url.strip() if payload.avatar_url and payload.avatar_url.strip() else None
+    db.commit()
+    db.refresh(user)
+    return success_response(request, serialize_auth_user(user))
+
+
+@router.post("/me/reset-password", response_model=ApiResponse[PasswordResetData])
+def reset_own_password(
+    payload: PasswordResetRequest,
+    request: Request,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> ApiResponse[PasswordResetData]:
+    if not verify_password(payload.current_password, user.password_hash):
+        raise AppException(code=4012, message="Current password is incorrect", status_code=401)
+    user.password_hash = hash_password(payload.new_password)
+    user.token_version += 1
+    db.commit()
+    return success_response(request, PasswordResetData(reset=True))
+
+
+@router.get("/me/mcp-credential", response_model=ApiResponse[McpCredentialSecretData])
+def get_mcp_credential(
+    request: Request,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> ApiResponse[McpCredentialSecretData]:
+    credential = _get_or_create_mcp_credential(db, user)
+    return success_response(request, _serialize_mcp_credential(credential))
+
+
+@router.post("/me/mcp-credential/reset", response_model=ApiResponse[McpCredentialSecretData])
+def reset_mcp_credential(
+    request: Request,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> ApiResponse[McpCredentialSecretData]:
+    key = _generate_mcp_key()
+    credential = _get_or_create_mcp_credential(db, user)
+    credential.key_prefix = key[:18]
+    credential.key_suffix = key[-4:]
+    credential.key_hash = _hash_mcp_key(key)
+    credential.key_raw = key
+    db.commit()
+    db.refresh(credential)
+    return success_response(request, _serialize_mcp_credential(credential))

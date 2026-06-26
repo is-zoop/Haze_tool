@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+﻿import React, { useState, useMemo, useEffect } from "react";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -21,6 +21,7 @@ import { Market } from "./pages/Market";
 import { DeveloperCenter } from "./pages/DeveloperCenter";
 import { AuditCenter } from "./pages/AuditCenter";
 import { Settings as SettingsPage } from "./pages/Settings";
+import { PersonalCenter } from "./pages/PersonalCenter";
 import { Guide } from "./pages/Guide";
 import { McpRuntime } from "./pages/McpRuntime";
 
@@ -40,7 +41,7 @@ import {
   DropdownMenuItem 
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { GuidelineSheet } from "@/components/GuidelineSheet";
 import { PublishCapabilityDialog } from "@/components/PublishCapabilityDialog";
@@ -68,7 +69,7 @@ interface DashboardProps {
 const i18n = {
   ZH: {
     brandName: "HAZE.",
-    brandSubtitle: "AI能力工具箱",
+    brandSubtitle: "AI 能力工具箱",
     workbench: "首页",
     market: "能力市场",
     skill: "Skill 中心",
@@ -92,7 +93,7 @@ const i18n = {
     personalCenter: "个人中心",
     devGuideDdown: "开发指南",
     logout: "退出登录",
-    hazeAiHub: "AI能力工具箱"
+    hazeAiHub: "AI 能力工具箱"
   },
   EN: {
     brandName: "HAZE.",
@@ -124,23 +125,23 @@ const i18n = {
   },
   JA: {
     brandName: "HAZE.",
-    brandSubtitle: "企業 AI 能力センター",
+    brandSubtitle: "エンタープライズ AI センター",
     workbench: "ホーム",
-    market: "能力能力マーケット",
+    market: "機能マーケット",
     skill: "Skill センター",
     mcp: "MCP センター",
     workspace: "マイワークスペース",
-    developer: "开发者センター",
+    developer: "開発者センター",
     audit: "監査センター",
     monitor: "運用監視",
     settings: "システム管理",
-    secCore: "開発・業務コア",
-    secSupport: "サービス＆サポート",
+    secCore: "コア業務",
+    secSupport: "サービスとサポート",
     devGuide: "開発者ガイド",
     sysSettings: "システム設定",
     getHelp: "ヘルプ",
     search: "検索",
-    searchPlaceholder: "Skill、MCP、Toolを検索",
+    searchPlaceholder: "Skill、MCP、Tool を検索",
     searchClear: "クリア",
     notifCenter: "通知センター",
     markAllRead: "すべて既読にする",
@@ -148,7 +149,7 @@ const i18n = {
     personalCenter: "マイページ",
     devGuideDdown: "開発ガイド",
     logout: "ログアウト",
-    hazeAiHub: "企業 AI 能力センター"
+    hazeAiHub: "エンタープライズ AI センター"
   },
   ES: {
     brandName: "HAZE.",
@@ -187,6 +188,7 @@ type MenuKey =
   | "mcpRuntime"
   | "audit"
   | "settings"
+  | "profile"
   | "guide";
 
 interface SkillItem {
@@ -203,6 +205,11 @@ interface SkillItem {
 export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
   const langCode = (currentLang?.code || "ZH") as keyof typeof i18n;
   const t = i18n[langCode] || i18n.ZH;
+  const [sessionUser, setSessionUser] = useState<AuthUser>(user);
+
+  useEffect(() => {
+    setSessionUser(user);
+  }, [user]);
 
   // Sidebar folded/expanded state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -249,7 +256,7 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
       calls: "0",
       status: "active",
       author: newCapAuthor,
-      time: "刚刚"
+      time: "鍒氬垰"
     };
 
     const updatedList = [newItem, ...skillsList];
@@ -279,29 +286,29 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
       { key: "developer" as const, label: t.developer, icon: Code },
       { key: "mcpRuntime" as const, label: langCode === "ZH" ? "MCP 运行监控" : langCode === "JA" ? "MCP 運用監視" : langCode === "ES" ? "Monitor de Ejecución MCP" : "MCP Runtime", icon: Activity },
       { key: "guide" as const, label: langCode === "ZH" ? "开发者指南" : langCode === "JA" ? "開発者ガイド" : langCode === "ES" ? "Guía de Desarrolladores" : "Developer Guide", icon: BookOpen }
-    ].filter(item => user.permissions.includes(permissionMap[item.key]!));
-  }, [t, langCode, user.permissions]);
+    ].filter(item => sessionUser.permissions.includes(permissionMap[item.key]!));
+  }, [t, langCode, sessionUser.permissions]);
 
   const menuItemsGroup2 = useMemo(() => {
     const permissionMap: Partial<Record<MenuKey, string>> = { audit: "page.audit", settings: "page.members" };
     return [
-      { key: "audit" as const, label: langCode === "ZH" ? "发布审核" : langCode === "JA" ? "リリース審査" : langCode === "ES" ? "Control de Auditoría" : "Audit Center", icon: ShieldCheck },
+      { key: "audit" as const, label: langCode === "ZH" ? "发布审核" : langCode === "JA" ? "リリース監査" : langCode === "ES" ? "Control de Auditoría" : "Audit Center", icon: ShieldCheck },
       { key: "settings" as const, label: langCode === "ZH" ? "成员管理" : langCode === "JA" ? "メンバー管理" : langCode === "ES" ? "Gestión de Miembros" : "Member Management", icon: Settings }
-    ].filter(item => user.permissions.includes(permissionMap[item.key]!));
-  }, [langCode, user.permissions]);
+    ].filter(item => sessionUser.permissions.includes(permissionMap[item.key]!));
+  }, [langCode, sessionUser.permissions]);
 
   const menuItems = useMemo(() => {
     return [...menuItemsGroup1, ...menuItemsGroup2];
   }, [menuItemsGroup1, menuItemsGroup2]);
 
   useEffect(() => {
-    if (!menuItems.some(item => item.key === activeMenu)) {
+    if (activeMenu !== "profile" && !menuItems.some(item => item.key === activeMenu)) {
       setActiveMenu("workbench");
     }
   }, [activeMenu, menuItems]);
 
-  const currentMenuLabel = menuItems.find(item => item.key === activeMenu)?.label || t.workbench;
-  const userName = user.name || "Enterprise Member";
+  const currentMenuLabel = activeMenu === "profile" ? t.personalCenter : menuItems.find(item => item.key === activeMenu)?.label || t.workbench;
+  const userName = sessionUser.name || "Enterprise Member";
 
   const handleMarkAllRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
@@ -387,7 +394,7 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
                     <div className="border-t border-black/[0.04] mx-1 my-2" />
                     {!isSidebarCollapsed && (
                       <div className="px-3 py-1 text-xs font-bold text-muted-foreground/50 tracking-wider uppercase text-left">
-                        {langCode === "ZH" ? "安全与管理" : langCode === "JA" ? "セキュリティ・管理" : langCode === "ES" ? "Seguridad y Gestión" : "Security & Admin"}
+                        {langCode === "ZH" ? "安全与管理" : langCode === "JA" ? "セキュリティと管理" : langCode === "ES" ? "Seguridad y Gestión" : "Security & Admin"}
                       </div>
                     )}
                     <div className="space-y-1">
@@ -406,6 +413,7 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
                 <button className={`w-full flex items-center justify-between py-1 px-1 rounded-xl hover:bg-sidebar-accent transition-colors duration-150 cursor-pointer text-left focus:outline-hidden ${isSidebarCollapsed ? "justify-center" : ""}`}>
                   <div className="flex items-center gap-2.5 truncate">
                     <Avatar className="h-8 w-8 border border-neutral-200/80">
+                      {sessionUser.avatar_url && <AvatarImage src={sessionUser.avatar_url} alt={userName} />}
                       <AvatarFallback className="bg-neutral-900 text-white text-xs font-bold">
                         {userName.substring(0, 1).toUpperCase()}
                       </AvatarFallback>
@@ -415,8 +423,8 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
                         <p className="text-sm font-medium text-foreground truncate" title={userName}>
                           {userName}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate" title={user.email}>
-                          {user.email}
+                        <p className="text-xs text-muted-foreground truncate" title={sessionUser.email}>
+                          {sessionUser.email}
                         </p>
                       </div>
                     )}
@@ -430,6 +438,7 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
                 {/* User Info Header Block inside the Dropdown */}
                 <div className="flex items-center gap-2.5 p-2.5 border-b border-black/[0.04] mb-1 leading-normal">
                   <Avatar className="h-8 w-8 border border-neutral-200/80">
+                    {sessionUser.avatar_url && <AvatarImage src={sessionUser.avatar_url} alt={userName} />}
                     <AvatarFallback className="bg-neutral-900 text-white text-xs font-bold">
                       {userName.substring(0, 1).toUpperCase()}
                     </AvatarFallback>
@@ -438,13 +447,13 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
                     <p className="text-sm font-medium text-foreground truncate" title={userName}>
                       {userName}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate" title={user.email}>
-                      {user.email}
+                    <p className="text-xs text-muted-foreground truncate" title={sessionUser.email}>
+                      {sessionUser.email}
                     </p>
                   </div>
                 </div>
 
-                <DropdownMenuItem onClick={() => { setActiveMenu("settings"); }} className="text-xs text-foreground flex items-center gap-2.5 cursor-pointer p-2 rounded-lg hover:bg-sidebar-accent font-medium">
+                <DropdownMenuItem onClick={() => { setActiveMenu("profile"); }} className="text-xs text-foreground flex items-center gap-2.5 cursor-pointer p-2 rounded-lg hover:bg-sidebar-accent font-medium">
                   <User size={14} className="text-muted-foreground" />
                   <span>{t.personalCenter}</span>
                 </DropdownMenuItem>
@@ -530,7 +539,7 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
                           <div className="space-y-1.5 pt-1">
                             <div className="border-t border-black/[0.04] mx-1 my-2" />
                             <div className="px-2.5 py-1 text-xs font-bold text-muted-foreground/50 tracking-wider uppercase text-left">
-                              {langCode === "ZH" ? "安全与管理" : langCode === "JA" ? "セキュリティ・管理" : langCode === "ES" ? "Seguridad y Gestión" : "Security & Admin"}
+                        {langCode === "ZH" ? "安全与管理" : langCode === "JA" ? "セキュリティと管理" : langCode === "ES" ? "Seguridad y Gestión" : "Security & Admin"}
                             </div>
                             <div className="space-y-1">
                               {menuItemsGroup2.map((item) => {
@@ -561,13 +570,14 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
                   <div className="border-t border-black/[0.04] p-3 bg-muted/20 flex items-center justify-between">
                     <div className="flex items-center gap-2 truncate">
                       <Avatar className="h-8 w-8 border border-neutral-200">
+                        {sessionUser.avatar_url && <AvatarImage src={sessionUser.avatar_url} alt={userName} />}
                         <AvatarFallback className="bg-neutral-900 text-white text-xs font-bold">
                           {userName.substring(0, 1).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="truncate leading-tight">
                         <p className="text-xs font-semibold text-foreground truncate">{userName}</p>
-                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                        <p className="text-xs text-muted-foreground truncate">{sessionUser.email}</p>
                       </div>
                     </div>
                     <SheetClose asChild>
@@ -657,6 +667,7 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
               {activeMenu === "mcpRuntime" && <McpRuntime langCode={langCode} />}
               {activeMenu === "audit" && <AuditCenter onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
               {activeMenu === "settings" && <SettingsPage onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
+              {activeMenu === "profile" && <PersonalCenter user={sessionUser} onLogout={onLogout} onUserChange={setSessionUser} />}
               {activeMenu === "guide" && <Guide onBackToHome={() => setActiveMenu("workbench")} setActiveMenu={(menu) => setActiveMenu(menu as MenuKey)} />}
             </div>
           </main>

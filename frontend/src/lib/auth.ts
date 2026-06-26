@@ -8,6 +8,7 @@ export interface AuthUser {
   name: string;
   phone: string;
   email: string;
+  avatar_url?: string | null;
   department: string;
   role_code: "SYSTEM_ADMIN" | "ADMIN" | "DEVELOPER" | "USER";
   role_name: string;

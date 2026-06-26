@@ -242,3 +242,27 @@
 - **变更摘要**：HTTP MCP 能力下线时创建 `stop` runtime task，由 Worker 将 K8s Deployment replicas 置 0 并关闭 Gateway route；删除能力时创建 `delete` runtime task，由 Worker 删除 K8s Deployment / Service / NetworkPolicy 并关闭 Gateway route。
 - **对现有功能的影响**：保留现有异步 Worker 部署模型，不在业务接口内直接调用 K8s；非 HTTP MCP 和 Skill 能力不受影响。
 - **验证方式**：`python -m py_compile app/modules/capabilities/service.py app/modules/mcp_runtime/enums.py worker/runtime_provider.py worker/kubernetes_provider.py worker/main.py` 成功。
+
+---
+
+## [012] Phase 10：Gateway API Key 鉴权
+
+- **状态**：added
+- **模块**：`gateway`
+- **修改文件**：
+  - `backend/gateway/main.py` — 新增鉴权逻辑
+- **变更摘要**：
+  - 新增 `_hash_mcp_key(key)` — SHA256 哈希（与 `app/modules/auth/router.py` 算法一致）
+  - 新增 `_verify_mcp_key(db, raw_key)` — 用 `key_prefix` 索引快速定位 `UserMcpCredential`，再比对 `key_hash`
+  - `mcp_post` 在路由校验前加鉴权：提取 `Authorization: Bearer haze_mcp_*` 头，失败立即返回 401（不写调用日志）
+  - `_build_forward_headers` 过滤掉 `haze_mcp_` Bearer Token，不透传给上游 K8s 服务
+  - `_write_call_log` 新增 `user_id` 参数；所有路由/状态校验失败日志和代理成功日志均写入 `caller_user_id`
+- **APIs**：`POST /assets/{asset_code}/mcp`（原有路由，新增鉴权层，不改路径和响应格式）
+- **表**：`mcp_call_logs.user_id`（原已 nullable 预留，现正式写入）；`user_mcp_credentials.key_prefix`（索引复用）
+- **对现有功能的影响**：所有未携带有效 `haze_mcp_*` Key 的请求返回 401；合法请求行为不变，调用日志新增 user_id 字段
+- **验证方式**：
+  1. `python -m py_compile gateway/main.py` 成功
+  2. 无 Authorization 头 → 401
+  3. 错误 key → 401
+  4. 正确 key + 有效路由 → 200，`mcp_call_logs.user_id` 写入对应用户 ID
+  5. 正确 key + 路由 disabled → 503，`user_id` 仍写入
