@@ -163,3 +163,15 @@
 - Impact: Does not change member management permissions or existing MCP runtime APIs. Password reset increments `token_version`, invalidating the current session. `GET /api/auth/me/mcp-credential` now creates and returns a masked default credential when missing.
 - Verification: Python compile, Alembic upgrade check, and frontend build.
 - Updated: 2026-06-26
+
+### Developer center MCP sandbox auto debug pass
+
+- Module: capabilities / developer center
+- Status: changed
+- APIs: `GET /api/developer/capabilities/{id}/test-run`
+- Tables: `capabilities`
+- Main files: `backend/app/modules/capabilities/router.py`, `frontend/src/components/developer-center/McpConnectionTestDialog.tsx`, `frontend/src/Dashboard/pages/DeveloperCenter.tsx`, `frontend/src/components/developer-center/useDeveloperCapabilities.ts`
+- Summary: Removes the manual Mark Passed button from the MCP sandbox test dialog. When a sandbox test finishes with pass, the backend now records `recent_test_status=pass` and automatically advances eligible MCP capabilities to `debug_passed`.
+- Impact: Keeps failed test behavior unchanged. Published/offline/debug_passed capabilities are not demoted by retesting; only eligible debugging states are advanced.
+- Verification: Frontend build; backend compile was not run because the local Python environment is unavailable.
+- Updated: 2026-06-26

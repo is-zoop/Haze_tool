@@ -284,6 +284,11 @@ async def run_capability_test(
         finally:
             ext = dict(capability.extension_json or {})
             ext["recent_test_status"] = "pass" if final_status == "pass" else "fail"
+            if final_status == "pass" and capability.type == "mcp":
+                allowed = {"deployed", "debug_failed"} if transport == "HTTP" else {"approved", "debug_failed"}
+                if capability.status in allowed:
+                    capability.status = "debug_passed"
+                    capability.updated_by = actor.id
             capability.extension_json = ext
             db.commit()
 

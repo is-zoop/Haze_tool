@@ -3,7 +3,6 @@ import { ApiError } from "../../lib/api";
 import {
   createCapability,
   createCapabilityVersion,
-  debugCapability,
   deleteCapability,
   deployCapability,
   getMcpDeploymentLogs,
@@ -386,19 +385,6 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
   const handleDebugComplete = (asset: DeveloperAsset) => {
     handleOpenDebug(asset);
   };
-
-  const handleMarkDebugPassed = async () => {
-    if (!debugAsset?.id) return;
-    try {
-      await debugCapability(debugAsset.id);
-      triggerFlashAlert(`能力 [${debugAsset.name}] 调试通过`);
-      setShowDebugModal(false);
-      refresh();
-    } catch (error) {
-      triggerFlashAlert(errorMessage(error));
-    }
-  };
-
   const handlePublishAsset = async (asset: DeveloperAsset) => {
     try {
       await publishCapability(asset.id);
@@ -599,7 +585,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     newVersionDesc, setNewVersionDesc, newVersionZipName, setNewVersionZipName,
     newVersionZipSize, setNewVersionZipSize, newVersionZipFiles, setNewVersionZipFiles, setNewVersionPackageToken,
     newVersionErrors, handleIncrementVersion, handleNewVersionZipUploaded, handleSaveNewVersion,
-    handleSubmitReview, handleDeployAsset, handleDebugComplete, handleMarkDebugPassed,
+    handleSubmitReview, handleDeployAsset, handleDebugComplete,
     handlePublishAsset, handleOfflineAsset, handleDeleteAsset, deleteTarget, setDeleteTarget,
     handleCopyAssetCode, handleOpenDebug, showDebugModal, setShowDebugModal, debugAsset,
     debugStatus, currentStepIndex, terminalLogs, setTerminalLogs, stepDurations, stepStatuses,

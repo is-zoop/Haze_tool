@@ -66,7 +66,7 @@ export function DeveloperCenter({
     newVersionDesc, setNewVersionDesc, newVersionZipName, setNewVersionZipName,
     newVersionZipSize, setNewVersionZipSize, newVersionZipFiles, setNewVersionZipFiles, setNewVersionPackageToken,
     newVersionErrors, handleIncrementVersion, handleNewVersionZipUploaded, handleSaveNewVersion,
-    handleSubmitReview, handleDeployAsset, handleDebugComplete, handleMarkDebugPassed,
+    handleSubmitReview, handleDeployAsset, handleDebugComplete,
     handlePublishAsset, handleOfflineAsset, handleDeleteAsset, deleteTarget, setDeleteTarget,
     handleCopyAssetCode,
     showDebugModal, setShowDebugModal, debugAsset,
@@ -344,7 +344,6 @@ export function DeveloperCenter({
         onStartTest={() => { setTestStarted(true); runRealTest(); }}
         onClearLogs={() => setTerminalLogs([])}
         onTriggerAlert={triggerFlashAlert}
-        onMarkPassed={handleMarkDebugPassed}
         steps={debugAsset?.transport === "HTTP" ? MCP_TEST_STEPS : STDIO_TEST_STEPS}
       />
 
