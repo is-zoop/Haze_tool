@@ -103,10 +103,24 @@ def list_deployments(
     page: int = 1,
     page_size: int = 10,
 ) -> McpDeploymentListData:
-    """查询 MCP 运行实例列表。管理员可查全部，普通用户只查自己的能力。"""
-    stmt = select(McpDeployment)
+    """查询 MCP 运行实例列表，每个能力只返回最新一条部署记录，且排除已删除的能力。"""
+    # 子查询1：每个 capability_id 取 id 最大的（最新）部署记录
+    latest_subq = (
+        select(func.max(McpDeployment.id).label("latest_id"))
+        .group_by(McpDeployment.capability_id)
+        .subquery()
+    )
+    # 子查询2：未删除的能力 id 集合（管理员和普通用户都过滤，避免展示已软删除能力的孤儿实例）
+    active_cap_subq = (
+        select(Capability.id).where(Capability.deleted_at.is_(None)).subquery()
+    )
+    stmt = (
+        select(McpDeployment)
+        .join(latest_subq, McpDeployment.id == latest_subq.c.latest_id)
+        .where(McpDeployment.capability_id.in_(active_cap_subq))
+    )
     if not _is_admin(actor):
-        # 只返回当前用户创建的能力对应的实例
+        # 普通用户还需额外过滤：只显示自己创建的能力的实例
         my_cap_ids = db.scalars(
             select(Capability.id).where(
                 Capability.created_by == actor.id,
@@ -122,7 +136,7 @@ def list_deployments(
         .limit(page_size)
     ).all()
 
-    # 批量加载关联能力
+    # 批量加载关联能力（active_cap_subq 已保证 cap 未删除）
     cap_ids = {r.capability_id for r in rows}
     cap_map: dict[int, Capability] = {}
     if cap_ids:
@@ -259,3 +273,62 @@ def create_operate_task(
         task_type=task.task_type,
         task_status=task.task_status,
     )
+
+
+def sync_k8s_status(db: Session, actor: User) -> dict:
+    """手动从 K8s 拉取副本状态并同步到 DB，返回 {"updated": <更新数量>}。
+
+    权限与列表查询对齐：管理员同步所有实例，普通用户只同步自己的能力实例。
+    Mock 模式（无 kubeconfig）下 provider.get_deployment_status 返回 None，更新数为 0。
+    """
+    from worker.config import get_worker_settings  # noqa: PLC0415
+    from worker.kubernetes_provider import KubernetesRuntimeProvider  # noqa: PLC0415
+
+    provider = KubernetesRuntimeProvider(get_worker_settings())
+
+    stmt = select(McpDeployment).where(
+        McpDeployment.deploy_status.in_([
+            enums.DEPLOY_STATUS_RUNNING,
+            enums.DEPLOY_STATUS_STOPPED,
+            enums.DEPLOY_STATUS_DEPLOYING,
+            enums.DEPLOY_STATUS_FAILED,
+        ])
+    )
+    if not _is_admin(actor):
+        my_cap_ids = db.scalars(
+            select(Capability.id).where(
+                Capability.created_by == actor.id,
+                Capability.deleted_at.is_(None),
+            )
+        ).all()
+        stmt = stmt.where(McpDeployment.capability_id.in_(my_cap_ids))
+
+    deps = db.scalars(stmt).all()
+    updated = 0
+    for dep in deps:
+        try:
+            k8s = provider.get_deployment_status(dep.deployment_name, dep.namespace)
+        except Exception:
+            continue
+        if k8s is None:
+            continue
+        ready: int = k8s["ready_replicas"]
+        desired: int = k8s["replicas"]
+        new_deploy: str = k8s["deploy_status"]
+        new_actual = enums.ACTUAL_STATUS_RUNNING if ready > 0 else enums.ACTUAL_STATUS_STOPPED
+        if (
+            dep.deploy_status != new_deploy
+            or dep.actual_status != new_actual
+            or dep.ready_replicas != ready
+            or dep.replicas != desired
+        ):
+            dep.deploy_status = new_deploy
+            dep.actual_status = new_actual
+            dep.ready_replicas = ready
+            dep.replicas = desired
+            updated += 1
+
+    if updated:
+        db.commit()
+
+    return {"updated": updated}

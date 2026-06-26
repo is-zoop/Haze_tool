@@ -311,7 +311,8 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     if (!currentAsset.project?.trim()) errors.project = "请选择业务分类";
     if (!currentAsset.description?.trim()) errors.description = "能力描述不能为空";
     else if (currentAsset.description.length > 300) errors.description = "能力描述不能超过 300 个字符";
-    if (!isEditing && !currentAsset.packageUploadToken) errors.zipName = "能力 ZIP 文件必填";
+    const zipLocked = isEditing && ["deployed", "debug_passed", "debug_failed", "published", "offline"].includes(currentAsset.status ?? "");
+    if (!zipLocked && !currentAsset.packageUploadToken) errors.zipName = "能力 ZIP 文件必填";
     return errors;
   };
 
@@ -382,16 +383,16 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
       triggerFlashAlert(message);
     }
   };
-  const handleDebugComplete = async (asset: DeveloperAsset) => {
-    if (asset.transport === "STDIO") {
-      // STDIO MCP：打开真实调试弹窗
-      handleOpenDebug(asset);
-      return;
-    }
-    // 非 STDIO（HTTP MCP）：点击即通过
+  const handleDebugComplete = (asset: DeveloperAsset) => {
+    handleOpenDebug(asset);
+  };
+
+  const handleMarkDebugPassed = async () => {
+    if (!debugAsset?.id) return;
     try {
-      await debugCapability(asset.id);
-      triggerFlashAlert(`能力 [${asset.name}] 调试通过`);
+      await debugCapability(debugAsset.id);
+      triggerFlashAlert(`能力 [${debugAsset.name}] 调试通过`);
+      setShowDebugModal(false);
       refresh();
     } catch (error) {
       triggerFlashAlert(errorMessage(error));
@@ -453,7 +454,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     const errors: Record<string, string> = {};
     if (!/^\d+\.\d+\.\d+$/.test(newVersionNum.trim())) errors.version = t.developerVersionFormat;
     if (!newVersionDesc.trim()) errors.description = t.developerDescriptionRequired;
-    if (newVersionAsset.type === "Skill" && !newVersionPackageToken) errors.zipName = t.developerSkillZipRequired;
+    if ((newVersionAsset.type === "Skill" || newVersionAsset.type === "MCP Server") && !newVersionPackageToken) errors.zipName = t.developerSkillZipRequired;
     if (Object.keys(errors).length) {
       setNewVersionErrors(errors);
       return;
@@ -598,7 +599,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     newVersionDesc, setNewVersionDesc, newVersionZipName, setNewVersionZipName,
     newVersionZipSize, setNewVersionZipSize, newVersionZipFiles, setNewVersionZipFiles, setNewVersionPackageToken,
     newVersionErrors, handleIncrementVersion, handleNewVersionZipUploaded, handleSaveNewVersion,
-    handleSubmitReview, handleDeployAsset, handleDebugComplete,
+    handleSubmitReview, handleDeployAsset, handleDebugComplete, handleMarkDebugPassed,
     handlePublishAsset, handleOfflineAsset, handleDeleteAsset, deleteTarget, setDeleteTarget,
     handleCopyAssetCode, handleOpenDebug, showDebugModal, setShowDebugModal, debugAsset,
     debugStatus, currentStepIndex, terminalLogs, setTerminalLogs, stepDurations, stepStatuses,

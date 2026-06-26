@@ -118,6 +118,16 @@ def stop_deployment(
     )
 
 
+@router.post("/sync-status")
+def sync_status(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    actor: Annotated[User, Depends(require_capabilities("mcp_runtime.read"))],
+) -> ApiResponse[dict]:
+    """手动触发 K8s → DB 状态同步，立即返回更新实例数量。"""
+    return success_response(request, service.sync_k8s_status(db, actor))
+
+
 @router.post("/deployments/{deployment_id}/restart", response_model=ApiResponse[McpTaskCreated])
 def restart_deployment(
     deployment_id: int,

@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { File as FileIcon, Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,7 @@ const DefaultGridIcon = () => (
 interface DeveloperAssetFormDialogProps {
   open: boolean;
   onClose: () => void;
+  isEditing?: boolean;
   currentAsset: Partial<DeveloperAsset>;
   setCurrentAsset: React.Dispatch<React.SetStateAction<Partial<DeveloperAsset>>>;
   tagsInputText: string;
@@ -46,9 +47,14 @@ interface DeveloperAssetFormDialogProps {
   onClearZip: () => void;
 }
 
+const ZIP_LOCKED_STATUSES = new Set([
+  "deployed", "debug_passed", "debug_failed", "published", "offline",
+]);
+
 export function DeveloperAssetFormDialog({
   open,
   onClose,
+  isEditing = false,
   currentAsset,
   setCurrentAsset,
   tagsInputText,
@@ -60,6 +66,7 @@ export function DeveloperAssetFormDialog({
   onIconUploaded,
   onClearZip,
 }: DeveloperAssetFormDialogProps) {
+  const isZipLocked = isEditing && ZIP_LOCKED_STATUSES.has(currentAsset.status ?? "");
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
       <DialogContent className="max-w-4xl p-6 bg-white border-border shadow-xl rounded-xl">
@@ -113,6 +120,7 @@ export function DeveloperAssetFormDialog({
             >
               <Input
                 required
+                disabled={isEditing}
                 value={currentAsset.code || ""}
                 onChange={(event) => {
                   setCurrentAsset((prev) => ({ ...prev, code: event.target.value }));
@@ -121,29 +129,43 @@ export function DeveloperAssetFormDialog({
                   }
                 }}
                 placeholder="支持小写字母、数字和中划线，3-50 个字符"
-                className={`h-9 text-xs font-mono placeholder:text-slate-350 bg-white rounded-lg ${formErrors.code ? "border-destructive focus-visible:ring-destructive" : "border-slate-200"}`}
+                className={`h-9 text-xs font-mono placeholder:text-slate-350 rounded-lg ${
+                  isEditing
+                    ? "bg-slate-50 text-slate-400 cursor-not-allowed border-slate-200"
+                    : formErrors.code
+                    ? "bg-white border-destructive focus-visible:ring-destructive"
+                    : "bg-white border-slate-200"
+                }`}
               />
             </FormField>
 
             {currentAsset.type === "MCP Server" && (
               <FormField label="连接方式">
-                <Combobox
-                  value={currentAsset.transport || "HTTP"}
-                  onValueChange={(value) => setCurrentAsset((prev) => ({ ...prev, transport: value as any }))}
-                  items={[
-                    { value: "HTTP", label: "HTTP" },
-                    { value: "STDIO", label: "STDIO" }
-                  ]}
-                  className="w-full"
-                >
-                  <ComboboxInput className="w-full h-9 font-semibold text-xs rounded-lg bg-white border-slate-200" placeholder="HTTP" />
-                  <ComboboxContent className="w-full bg-white rounded-lg">
-                    <ComboboxList>
-                      <ComboboxItem value="HTTP">HTTP</ComboboxItem>
-                      <ComboboxItem value="STDIO">STDIO</ComboboxItem>
-                    </ComboboxList>
-                  </ComboboxContent>
-                </Combobox>
+                {isEditing ? (
+                  <Input
+                    disabled
+                    value={currentAsset.transport || "HTTP"}
+                    className="h-9 text-xs font-semibold bg-slate-50 text-slate-400 cursor-not-allowed border-slate-200 rounded-lg"
+                  />
+                ) : (
+                  <Combobox
+                    value={currentAsset.transport || "HTTP"}
+                    onValueChange={(value) => setCurrentAsset((prev) => ({ ...prev, transport: value as any }))}
+                    items={[
+                      { value: "HTTP", label: "HTTP" },
+                      { value: "STDIO", label: "STDIO" }
+                    ]}
+                    className="w-full"
+                  >
+                    <ComboboxInput className="w-full h-9 font-semibold text-xs rounded-lg bg-white border-slate-200" placeholder="HTTP" />
+                    <ComboboxContent className="w-full bg-white rounded-lg">
+                      <ComboboxList>
+                        <ComboboxItem value="HTTP">HTTP</ComboboxItem>
+                        <ComboboxItem value="STDIO">STDIO</ComboboxItem>
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </Combobox>
+                )}
               </FormField>
             )}
           </div>
@@ -248,27 +270,55 @@ export function DeveloperAssetFormDialog({
             </FormField>
           </div>
 
-          {/* ROW 3: Skill / MCP 文件 (Requirement 5) */}
+          {/* ROW 3: Skill / MCP 文件 */}
           {(currentAsset.type === "Skill" || currentAsset.type === "MCP Server") && (
             <FormField
               label={currentAsset.type === "MCP Server" ? "MCP 文件" : "Skill 文件"}
-              required
+              required={!isZipLocked}
               error={formErrors.zipName}
             >
-              <ZipUploadField
-                zipName={currentAsset.zipName}
-                zipSize={currentAsset.zipSize}
-                zipFiles={currentAsset.zipFiles}
-                onUploaded={onZipUploaded}
-                onClear={onClearZip}
-                error={formErrors.zipName}
-                placeholderDesc={
-                  currentAsset.type === "MCP Server"
-                    ? "支持 zip 文件需包含 MCP 逻辑或配置文件，大小不超过 10MB"
-                    : "支持 zip 文件需包含 SKILL.md，大小不超过 10MB"
-                }
-                inputId="skill-zip-file-input2"
-              />
+              {isZipLocked ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-slate-500">
+                      {currentAsset.zipFiles && currentAsset.zipFiles.length > 0
+                        ? `已选择 ${currentAsset.zipFiles.length} 个文件，总大小 ${currentAsset.zipSize}`
+                        : "当前版本文件"}
+                    </span>
+                    <span className="text-xs text-amber-600 font-medium">如需更新文件，请新建版本</span>
+                  </div>
+                  {currentAsset.zipFiles && currentAsset.zipFiles.length > 0 ? (
+                    <div className="divide-y divide-slate-100">
+                      {currentAsset.zipFiles.map((f) => (
+                        <div key={f.name} className="flex items-center justify-between py-1.5 gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileIcon size={13} className="text-slate-400 shrink-0" />
+                            <span className="text-xs text-slate-600 truncate">{f.name}</span>
+                          </div>
+                          <span className="text-xs text-slate-400 shrink-0">{f.size}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-400">文件信息不可用，如需更新请新建版本</span>
+                  )}
+                </div>
+              ) : (
+                <ZipUploadField
+                  zipName={currentAsset.zipName}
+                  zipSize={currentAsset.zipSize}
+                  zipFiles={currentAsset.zipFiles}
+                  onUploaded={onZipUploaded}
+                  onClear={onClearZip}
+                  error={formErrors.zipName}
+                  placeholderDesc={
+                    currentAsset.type === "MCP Server"
+                      ? "支持 zip 文件需包含 MCP 逻辑或配置文件，大小不超过 10MB"
+                      : "支持 zip 文件需包含 SKILL.md，大小不超过 10MB"
+                  }
+                  inputId="skill-zip-file-input2"
+                />
+              )}
             </FormField>
           )}
 

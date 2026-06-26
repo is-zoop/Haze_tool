@@ -363,6 +363,31 @@ class KubernetesRuntimeProvider:
         self._delete_if_exists("service", name, ns)
         self._delete_if_exists("networkpolicy", f"{name}-netpol", ns)
 
+    def get_deployment_status(self, deployment_name: str, namespace: str) -> dict | None:
+        """查询 K8s Deployment 当前副本状态，返回 None 表示资源不存在。
+
+        返回 dict：ready_replicas, replicas, deploy_status（running/stopped/deploying）
+        Mock 模式：返回空字典（不做任何同步，保持 DB 原状）。
+        """
+        if self._mock:
+            return None  # Mock 模式无法查询真实 K8s，跳过同步
+
+        try:
+            d = self._apps.read_namespaced_deployment(deployment_name, namespace)
+            desired = d.spec.replicas or 0
+            ready = d.status.ready_replicas or 0
+            if desired == 0:
+                deploy_status = "stopped"
+            elif ready >= desired:
+                deploy_status = "running"
+            else:
+                deploy_status = "deploying"
+            return {"ready_replicas": ready, "replicas": desired, "deploy_status": deploy_status}
+        except kubernetes.client.exceptions.ApiException as exc:
+            if exc.status == 404:
+                return None  # K8s 资源已不存在
+            raise
+
     def get_pod_logs(self, dep: McpDeployment, tail_lines: int = 100) -> str:
         """返回最新 Pod 日志，无 Pod 时返回空字符串。"""
         if self._mock:

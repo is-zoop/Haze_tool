@@ -359,8 +359,8 @@ def create_version(
     payload: CapabilityVersionCreate,
 ) -> CapabilityData:
     capability = _get_capability(db, capability_id, actor)
-    if capability.status != "published":
-        raise AppException(code=4093, message="Only published capabilities can create a version", status_code=409)
+    if capability.status not in {"published", "debug_passed", "offline", "deploy_failed"}:
+        raise AppException(code=4093, message="New versions can only be created from published, debug_passed, offline, or deploy_failed capabilities", status_code=409)
     version = _normalize_version(payload.version)
     if db.scalar(
         select(CapabilityVersion.id).where(
@@ -369,8 +369,8 @@ def create_version(
         )
     ) is not None:
         raise AppException(code=4094, message="Capability version already exists", status_code=409)
-    if capability.type == "skill" and not payload.package_upload_token:
-        raise AppException(code=4009, message="Skill version requires a ZIP package", status_code=400)
+    if capability.type in {"skill", "mcp"} and not payload.package_upload_token:
+        raise AppException(code=4009, message="Skill/MCP version requires a ZIP package", status_code=400)
 
     package_upload = None
     if payload.package_upload_token:
@@ -391,7 +391,7 @@ def create_version(
             created_paths.add(package_path)
             extension["package"] = package_meta
         capability.version = version
-        capability.status = "reviewing"
+        capability.status = "draft"
         capability.extension_json = extension
         capability.updated_by = actor.id
         db.add(

@@ -42,7 +42,7 @@ import { DeveloperAssetFormDialog } from "../../components/developer-center/Deve
 import { NewVersionDialog } from "../../components/developer-center/NewVersionDialog";
 import { McpConnectionTestDialog } from "../../components/developer-center/McpConnectionTestDialog";
 import { McpDeploymentProgressDialog } from "../../components/developer-center/McpDeploymentProgressDialog";
-import { STDIO_TEST_STEPS } from "../../components/developer-center/config";
+import { MCP_TEST_STEPS, STDIO_TEST_STEPS } from "../../components/developer-center/config";
 import { AssetTypeFilter, useDeveloperCapabilities } from "../../components/developer-center/useDeveloperCapabilities";
 
 interface PageProps {
@@ -59,14 +59,14 @@ export function DeveloperCenter({
     assets, tabCounts, totalItems, totalPages, safeCurrentPage,
     searchQuery, setSearchQuery, activeTypeTab, setActiveTypeTab, statusFilter, setStatusFilter,
     pageSize, setPageSize, setCurrentPage, resetToFirstPage, handleResetFilters,
-    showEditModal, setShowEditModal, currentAsset, setCurrentAsset,
+    showEditModal, setShowEditModal, isEditing, currentAsset, setCurrentAsset,
     tagsInputText, setTagsInputText, formErrors, setFormErrors,
     handleOpenAddAsset, handleOpenEditAsset, handleIconFileUploaded, handleZipFileUploaded, handleSaveAssetForm,
     showNewVersionModal, setShowNewVersionModal, newVersionAsset, newVersionNum, setNewVersionNum,
     newVersionDesc, setNewVersionDesc, newVersionZipName, setNewVersionZipName,
     newVersionZipSize, setNewVersionZipSize, newVersionZipFiles, setNewVersionZipFiles, setNewVersionPackageToken,
     newVersionErrors, handleIncrementVersion, handleNewVersionZipUploaded, handleSaveNewVersion,
-    handleSubmitReview, handleDeployAsset, handleDebugComplete,
+    handleSubmitReview, handleDeployAsset, handleDebugComplete, handleMarkDebugPassed,
     handlePublishAsset, handleOfflineAsset, handleDeleteAsset, deleteTarget, setDeleteTarget,
     handleCopyAssetCode,
     showDebugModal, setShowDebugModal, debugAsset,
@@ -279,6 +279,7 @@ export function DeveloperCenter({
       <DeveloperAssetFormDialog
         open={showEditModal}
         onClose={() => setShowEditModal(false)}
+        isEditing={isEditing}
         currentAsset={currentAsset}
         setCurrentAsset={setCurrentAsset}
         tagsInputText={tagsInputText}
@@ -343,7 +344,8 @@ export function DeveloperCenter({
         onStartTest={() => { setTestStarted(true); runRealTest(); }}
         onClearLogs={() => setTerminalLogs([])}
         onTriggerAlert={triggerFlashAlert}
-        steps={STDIO_TEST_STEPS}
+        onMarkPassed={handleMarkDebugPassed}
+        steps={debugAsset?.transport === "HTTP" ? MCP_TEST_STEPS : STDIO_TEST_STEPS}
       />
 
     </div>

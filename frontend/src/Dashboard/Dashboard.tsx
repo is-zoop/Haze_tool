@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { 
-  LayoutDashboard, 
-  ShoppingBag, 
-  Code, 
-  ShieldCheck, 
+import {
+  LayoutDashboard,
+  ShoppingBag,
+  Code,
+  ShieldCheck,
   Settings,
   Bell,
   PanelLeft,
@@ -11,7 +11,8 @@ import {
   MoreHorizontal,
   User,
   BookOpen,
-  LogOut
+  LogOut,
+  Activity,
 } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -21,6 +22,7 @@ import { DeveloperCenter } from "./pages/DeveloperCenter";
 import { AuditCenter } from "./pages/AuditCenter";
 import { Settings as SettingsPage } from "./pages/Settings";
 import { Guide } from "./pages/Guide";
+import { McpRuntime } from "./pages/McpRuntime";
 
 // Import real shadcn/ui components
 import { Button } from "@/components/ui/button";
@@ -178,10 +180,11 @@ const i18n = {
   }
 };
 
-type MenuKey = 
+type MenuKey =
   | "workbench"
   | "market"
   | "developer"
+  | "mcpRuntime"
   | "audit"
   | "settings"
   | "guide";
@@ -267,12 +270,14 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
 
   const menuItemsGroup1 = useMemo(() => {
     const permissionMap: Partial<Record<MenuKey, string>> = {
-      workbench: "page.home", market: "page.marketplace", developer: "page.developer", guide: "page.guide",
+      workbench: "page.home", market: "page.marketplace", developer: "page.developer",
+      mcpRuntime: "page.developer", guide: "page.guide",
     };
     return [
       { key: "workbench" as const, label: t.workbench, icon: LayoutDashboard },
       { key: "market" as const, label: t.market, icon: ShoppingBag },
       { key: "developer" as const, label: t.developer, icon: Code },
+      { key: "mcpRuntime" as const, label: langCode === "ZH" ? "MCP 运行监控" : langCode === "JA" ? "MCP 運用監視" : langCode === "ES" ? "Monitor de Ejecución MCP" : "MCP Runtime", icon: Activity },
       { key: "guide" as const, label: langCode === "ZH" ? "开发者指南" : langCode === "JA" ? "開発者ガイド" : langCode === "ES" ? "Guía de Desarrolladores" : "Developer Guide", icon: BookOpen }
     ].filter(item => user.permissions.includes(permissionMap[item.key]!));
   }, [t, langCode, user.permissions]);
@@ -649,6 +654,7 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
               )}
               {activeMenu === "market" && <Market onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} setActiveMenu={(menu) => setActiveMenu(menu as MenuKey)} />}
               {activeMenu === "developer" && <DeveloperCenter onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
+              {activeMenu === "mcpRuntime" && <McpRuntime langCode={langCode} />}
               {activeMenu === "audit" && <AuditCenter onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
               {activeMenu === "settings" && <SettingsPage onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
               {activeMenu === "guide" && <Guide onBackToHome={() => setActiveMenu("workbench")} setActiveMenu={(menu) => setActiveMenu(menu as MenuKey)} />}

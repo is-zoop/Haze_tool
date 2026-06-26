@@ -168,6 +168,7 @@ function getFlowActions(asset: DeveloperAsset) {
   const s = asset.status;
   return {
     canSubmitReview: s === "draft" || s === "rejected",
+    canNewVersion: s === "published" || s === "debug_passed" || s === "offline" || s === "deploy_failed",
     showDeploy: isHttp,
     canDeploy: isHttp && (s === "approved" || s === "deploy_failed"),
     canDebug: isMcp && (isHttp ? s === "deployed" || s === "debug_failed" : s === "approved" || s === "debug_failed"),
@@ -395,7 +396,7 @@ export function DeveloperAssetTable({
                             className="z-50 w-auto min-w-40 rounded-xl border border-slate-100 bg-white p-1 text-xs text-slate-700 shadow-md"
                           >
                             <DropdownMenuItem
-                              disabled={asset.status !== "published"}
+                              disabled={!flow.canNewVersion}
                               onClick={() => onIncrementVersion(asset)}
                               className="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg p-2 font-bold hover:bg-slate-50 focus:bg-slate-50"
                             >

@@ -111,9 +111,9 @@ export function NewVersionDialog({
           </FormField>
 
           {/* 2. Upload Zip area custom binding */}
-          {newVersionAsset?.type === "Skill" && (
+          {(newVersionAsset?.type === "Skill" || newVersionAsset?.type === "MCP Server") && (
             <FormField
-              label="Skill 文件"
+              label={newVersionAsset.type === "MCP Server" ? "MCP 文件" : "Skill 文件"}
               required
               error={newVersionErrors.zipName}
             >
@@ -124,7 +124,11 @@ export function NewVersionDialog({
                 onUploaded={onZipUploaded}
                 onClear={onClearZip}
                 error={newVersionErrors.zipName}
-                placeholderDesc="支持 zip 文件需包含 SKILL.md，大小不超过 10MB"
+                placeholderDesc={
+                  newVersionAsset.type === "MCP Server"
+                    ? "支持 zip 文件需包含 server.py 及依赖，大小不超过 10MB"
+                    : "支持 zip 文件需包含 SKILL.md，大小不超过 10MB"
+                }
                 inputId="new-version-zip-file-input"
               />
             </FormField>

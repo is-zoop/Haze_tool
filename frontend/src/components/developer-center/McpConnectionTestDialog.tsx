@@ -1,4 +1,4 @@
-import { Play, RotateCw, Terminal } from "lucide-react";
+import { CheckCircle2, Play, RotateCw, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,6 +24,7 @@ interface McpConnectionTestDialogProps {
   onStartTest: () => void;
   onClearLogs: () => void;
   onTriggerAlert: (msg: string) => void;
+  onMarkPassed?: () => void;
   steps?: { name: string; desc: string }[];
 }
 
@@ -41,6 +42,7 @@ export function McpConnectionTestDialog({
   onStartTest,
   onClearLogs,
   onTriggerAlert,
+  onMarkPassed,
   steps,
 }: McpConnectionTestDialogProps) {
   if (!debugAsset) return null;
@@ -94,13 +96,25 @@ export function McpConnectionTestDialog({
             )}
           </Button>
 
-          <Button
-            size="sm"
-            onClick={onClose}
-            className="h-9 px-4 text-xs font-bold rounded-lg bg-black text-white hover:bg-zinc-900 border-none select-none transition-all cursor-pointer"
-          >
-            {langCode === "ZH" ? "关闭测试" : "Close Test"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {debugStatus === "pass" && onMarkPassed && (
+              <Button
+                size="sm"
+                onClick={onMarkPassed}
+                className="h-9 px-4 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white border-none select-none transition-all cursor-pointer gap-1.5"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {langCode === "ZH" ? "调试通过" : "Mark Passed"}
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={onClose}
+              className="h-9 px-4 text-xs font-bold rounded-lg bg-black text-white hover:bg-zinc-900 border-none select-none transition-all cursor-pointer"
+            >
+              {langCode === "ZH" ? "关闭测试" : "Close Test"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

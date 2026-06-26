@@ -19,6 +19,8 @@ export interface McpDeployment {
   capability_id: number;
   capability_name: string | null;
   capability_code: string | null;
+  version_id: number | null;
+  deployment_name: string;
   deploy_status: string;
   desired_status: string;
   actual_status: string;
@@ -27,10 +29,31 @@ export interface McpDeployment {
   internal_url: string | null;
   public_url: string | null;
   gateway_route: string | null;
+  replicas: number;
   ready_replicas: number;
+  restart_count: number;
   health_status: string;
   last_error: string | null;
+  created_at: string;
   updated_at: string;
+  started_at: string | null;
+  stopped_at: string | null;
+}
+
+export interface McpCallLog {
+  id: number;
+  capability_id: number;
+  deployment_id: number | null;
+  asset_code: string;
+  request_id: string | null;
+  client_ip: string | null;
+  method: string | null;
+  tool_name: string | null;
+  status_code: number | null;
+  success: boolean | null;
+  duration_ms: number | null;
+  error_message: string | null;
+  created_at: string;
 }
 
 export interface McpDeployTask {
@@ -50,6 +73,7 @@ export interface McpDeployTask {
 
 interface McpDeploymentListData { items: McpDeployment[]; total: number; }
 interface McpDeployTaskListData { items: McpDeployTask[]; total: number; }
+interface McpCallLogListData { items: McpCallLog[]; total: number; }
 
 interface ApiPackageFile {
   name: string;
@@ -378,4 +402,21 @@ export async function listMarketCapabilities(params: {
 export async function toggleMarketFavorite(id: string): Promise<boolean> {
   const data = (await apiRequest<{ is_favorite: boolean }>(`/api/marketplace/capabilities/${id}/favorite`, { method: "POST" })).data;
   return data.is_favorite;
+}
+
+export async function listMcpCallLogs(deploymentId: number): Promise<McpCallLog[]> {
+  const data = (await apiRequest<McpCallLogListData>(`/api/mcp-runtime/deployments/${deploymentId}/calls?page=1&page_size=20`)).data;
+  return data.items;
+}
+
+export async function startMcpDeployment(deploymentId: number): Promise<void> {
+  await apiRequest(`/api/mcp-runtime/deployments/${deploymentId}/start`, { method: "POST" });
+}
+
+export async function stopMcpDeployment(deploymentId: number): Promise<void> {
+  await apiRequest(`/api/mcp-runtime/deployments/${deploymentId}/stop`, { method: "POST" });
+}
+
+export async function restartMcpDeployment(deploymentId: number): Promise<void> {
+  await apiRequest(`/api/mcp-runtime/deployments/${deploymentId}/restart`, { method: "POST" });
 }

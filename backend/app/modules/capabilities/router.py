@@ -15,6 +15,7 @@ from app.db.session import get_db
 from app.modules.capabilities import service
 from app.modules.capabilities.models import Capability
 from app.modules.capabilities.test_runner import run_http_mcp_test, run_stdio_mcp_test
+from app.modules.mcp_runtime.models import McpDeployment
 from app.modules.capabilities.schemas import (
     CapabilityCreate,
     CapabilityData,
@@ -244,6 +245,16 @@ async def run_capability_test(
     start_command: str = config.get("startCommand", "")
     start_args: str = config.get("startArgs", "")
 
+    # For HTTP MCPs deployed to K8s, fall back to the deployment's internal URL
+    if transport != "STDIO" and not server_url:
+        dep = db.scalar(
+            select(McpDeployment)
+            .where(McpDeployment.capability_id == capability.id)
+            .order_by(McpDeployment.id.desc())
+        )
+        if dep and dep.internal_url:
+            server_url = dep.internal_url
+
     async def event_stream() -> AsyncGenerator[str, None]:
         final_status = "fail"
         try:
@@ -254,7 +265,7 @@ async def run_capability_test(
                 gen = run_stdio_mcp_test(start_command, start_args, zip_abs)
             else:
                 if not server_url:
-                    yield f"data: {json.dumps({'type': 'error', 'step': 0, 'message': 'serverUrl 未配置'})}\n\n"
+                    yield f"data: {json.dumps({'type': 'error', 'step': 0, 'message': 'serverUrl 未配置，且尚未完成 K8s 部署'})}\n\n"
                     yield f"data: {json.dumps({'type': 'done', 'status': 'fail'})}\n\n"
                     return
                 gen = run_http_mcp_test(server_url, capability.code)

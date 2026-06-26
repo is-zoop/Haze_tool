@@ -248,6 +248,57 @@ def _handle_restart(db: Session, task: McpDeployTask) -> None:
     task.logs = f"K8s Deployment/{dep.deployment_name} 滚动重启已触发"
 
 
+def _sync_k8s_status(db: Session, provider: KubernetesRuntimeProvider) -> None:
+    """将 K8s 实际副本状态同步到 DB，弥补 Worker 无法感知 K8s 外部变化的问题。
+
+    同步 running / stopped / deploying / failed 状态的实例，覆盖 Pod 已就绪但 DB 仍停在
+    deploying 的场景（任务流程正常结束时会更新，但超时或进程重启可能导致遗漏）。
+    """
+    deps = db.scalars(
+        select(McpDeployment).where(
+            McpDeployment.deploy_status.in_([
+                enums.DEPLOY_STATUS_RUNNING,
+                enums.DEPLOY_STATUS_STOPPED,
+                enums.DEPLOY_STATUS_DEPLOYING,  # Pod 已就绪但 DB 仍停留在部署中
+                enums.DEPLOY_STATUS_FAILED,     # 短暂失败后 Pod 可能已恢复
+            ])
+        )
+    ).all()
+
+    updated = 0
+    for dep in deps:
+        try:
+            k8s = provider.get_deployment_status(dep.deployment_name, dep.namespace)
+        except Exception as exc:
+            logger.warning("查询 K8s 状态失败 deployment=%s: %s", dep.deployment_name, exc)
+            continue
+
+        if k8s is None:
+            continue  # Mock 模式或资源不存在，跳过
+
+        ready: int = k8s["ready_replicas"]
+        desired: int = k8s["replicas"]
+        new_deploy: str = k8s["deploy_status"]
+        new_actual = enums.ACTUAL_STATUS_RUNNING if ready > 0 else enums.ACTUAL_STATUS_STOPPED
+
+        changed = (
+            dep.deploy_status != new_deploy
+            or dep.actual_status != new_actual
+            or dep.ready_replicas != ready
+            or dep.replicas != desired
+        )
+        if changed:
+            dep.deploy_status = new_deploy
+            dep.actual_status = new_actual
+            dep.ready_replicas = ready
+            dep.replicas = desired
+            updated += 1
+
+    if updated:
+        db.commit()
+        logger.info("K8s 状态同步：%d 个实例已更新", updated)
+
+
 _HANDLERS = {
     enums.TASK_TYPE_DEPLOY:   _handle_deploy,
     enums.TASK_TYPE_REDEPLOY: _handle_deploy,
@@ -303,6 +354,9 @@ def _process_task(db: Session, task: McpDeployTask) -> None:
             )
 
 
+_K8S_SYNC_INTERVAL = 30  # 每 30 秒同步一次 K8s 实际状态
+
+
 def run_worker() -> None:
     """Worker 主循环，阻塞运行直到进程退出。"""
     settings = get_worker_settings()
@@ -310,9 +364,13 @@ def run_worker() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
-    logger.info("Deploy Worker 启动，轮询间隔 %ds", settings.poll_interval_seconds)
+    logger.info("Deploy Worker 启动，轮询间隔 %ds，K8s 状态同步间隔 %ds",
+                settings.poll_interval_seconds, _K8S_SYNC_INTERVAL)
 
     SessionFactory = _make_session_factory()
+    # 提前创建 provider，避免每次循环重新加载 kubeconfig
+    sync_provider = KubernetesRuntimeProvider(settings)
+    last_k8s_sync = 0.0
 
     while True:
         task_claimed = False
@@ -322,6 +380,15 @@ def run_worker() -> None:
                 if task:
                     task_claimed = True
                     _process_task(db, task)
+
+                # 周期性 K8s → DB 状态同步（与任务处理共用同一 db session）
+                now = time.monotonic()
+                if now - last_k8s_sync >= _K8S_SYNC_INTERVAL:
+                    try:
+                        _sync_k8s_status(db, sync_provider)
+                    except Exception:
+                        logger.exception("K8s 状态同步失败，跳过本次同步")
+                    last_k8s_sync = now
         except Exception:
             logger.exception("Worker 主循环异常，等待重试")
 
