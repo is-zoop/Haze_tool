@@ -1,21 +1,28 @@
 from __future__ import annotations
 
+from pathlib import PurePosixPath
 from typing import Annotated, Literal
+from zipfile import BadZipFile, ZipFile
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import AppException
 from app.core.response import ApiResponse, success_response
 from app.core.security import require_capabilities
 from app.db.session import get_db
-from app.modules.capabilities.models import Capability
+from app.modules.capabilities.models import Capability, CapabilityVersion
+from app.modules.capabilities.storage import resolve_stored_file
 from app.modules.marketplace.models import CapabilityFavorite
-from app.modules.marketplace.schemas import FavoriteResult, MarketCapabilityData, MarketListData
+from app.modules.marketplace.schemas import FavoriteResult, MarketCapabilityData, MarketContentData, MarketListData, MarketVersionData
 from app.modules.users.models import Department, User
 
 router = APIRouter(prefix="/api/marketplace", tags=["marketplace"])
+
+MARKET_CONTENT_FILES = {"quick_start.md", "README.md"}
+MAX_MARKET_CONTENT_SIZE = 1024 * 1024
 
 
 def _format_author(owner_name: str | None, department_name: str | None) -> str:
@@ -29,8 +36,10 @@ def _serialize_item(
     owner_name: str | None,
     department_name: str | None,
     is_favorite: bool,
+    version_history: list[MarketVersionData],
 ) -> MarketCapabilityData:
     extension = capability.extension_json or {}
+    config = extension.get("config") or {}
     cap_type = "Skill" if capability.type == "skill" else "MCP"
     return MarketCapabilityData(
         id=str(capability.id),
@@ -41,6 +50,8 @@ def _serialize_item(
         author=_format_author(owner_name, department_name),
         department=department_name,
         category=capability.category,
+        connect_type=str(config.get("transport") or "HTTP").upper() if capability.type == "mcp" else None,
+        version_history=version_history,
         tags=extension.get("tags", []),
         calls=int(extension.get("calls", 0)),
         is_favorite=is_favorite,
@@ -110,17 +121,81 @@ def list_market_capabilities(
         ).all()
     )
 
+    versions_by_capability: dict[int, list[MarketVersionData]] = {capability_id: [] for capability_id in capability_ids}
+    version_rows = db.scalars(
+        select(CapabilityVersion)
+        .where(CapabilityVersion.capability_id.in_(capability_ids))
+        .order_by(CapabilityVersion.created_at.desc(), CapabilityVersion.id.desc())
+    ).all()
+    for version in version_rows:
+        versions_by_capability[version.capability_id].append(
+            MarketVersionData(
+                version=version.version,
+                created_at=version.created_at.isoformat(),
+                changelog=version.changelog,
+            )
+        )
+
     items = [
         _serialize_item(
             c,
             owners.get(c.owner_id) if c.owner_id else None,
             depts.get(c.department_id) if c.department_id else None,
             c.id in favorited,
+            versions_by_capability.get(c.id, []),
         )
         for c in rows
     ]
 
     return success_response(request, MarketListData(items=items, page=page, page_size=page_size, total=total))
+
+
+def _read_market_content(capability: Capability, file_name: str) -> str | None:
+    if file_name not in MARKET_CONTENT_FILES:
+        return None
+    package = (capability.extension_json or {}).get("package") or {}
+    package_path = package.get("path")
+    if not package_path:
+        return None
+
+    try:
+        with ZipFile(resolve_stored_file(str(package_path))) as archive:
+            candidates = [
+                info
+                for info in archive.infolist()
+                if not info.is_dir()
+                and PurePosixPath(info.filename).name.lower() == file_name.lower()
+                and info.file_size <= MAX_MARKET_CONTENT_SIZE
+            ]
+            if not candidates:
+                return None
+            target = min(candidates, key=lambda info: len(PurePosixPath(info.filename).parts))
+            return archive.read(target).decode("utf-8-sig")
+    except (BadZipFile, UnicodeDecodeError, OSError):
+        return None
+
+
+@router.get("/capabilities/{capability_id}/content", response_model=ApiResponse[MarketContentData])
+def get_market_content(
+    capability_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    actor: Annotated[User, Depends(require_capabilities("page.marketplace"))],
+    file_name: Literal["quick_start.md", "README.md"] = Query(alias="file"),
+) -> ApiResponse[MarketContentData]:
+    capability = db.scalar(
+        select(Capability).where(
+            Capability.id == capability_id,
+            Capability.status == "published",
+            Capability.deleted_at.is_(None),
+        )
+    )
+    if capability is None:
+        raise AppException(code=4042, message="Capability not found", status_code=404)
+    return success_response(
+        request,
+        MarketContentData(file_name=file_name, content=_read_market_content(capability, file_name)),
+    )
 
 
 @router.post("/capabilities/{capability_id}/favorite", response_model=ApiResponse[FavoriteResult])
@@ -138,7 +213,6 @@ def toggle_favorite(
         )
     )
     if capability is None:
-        from app.core.exceptions import AppException
         raise AppException(code=4042, message="Capability not found", status_code=404)
 
     existing = db.scalar(

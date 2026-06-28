@@ -1,19 +1,16 @@
 import { Fragment, useMemo, useState, useEffect } from "react";
+import type { ReactNode } from "react";
 import {
   BookOpen,
   Check,
   Clock3,
   Copy,
   Cpu,
-  Database,
   Eye,
-  FileText,
-  Lock,
   Rocket,
   Search,
   Sparkles,
   Star,
-  Terminal,
   X,
   LayoutGrid,
   List,
@@ -34,7 +31,6 @@ import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
@@ -64,12 +60,8 @@ import {
 } from "@/components/ui/table";
 import { getI18n } from "../../i18n";
 import { CUSTOM_CATEGORIES } from "../../temp/sharedOptions";
-import {
-  DEFAULT_MARKETPLACE_README,
-  MARKETPLACE_README_BY_ID,
-} from "../../temp/marketplaceReadmeData";
-import { CapabilityItem } from "../../types/capability";
-import { listMarketCapabilities, toggleMarketFavorite } from "../../lib/capabilities";
+import { CapabilityItem, CapabilityVersionRecord } from "../../types/capability";
+import { getMarketCapabilityContent, listMarketCapabilities, toggleMarketFavorite } from "../../lib/capabilities";
 import { PageHeader } from "../../components/common/PageHeader";
 import { DataTableFooter } from "../../components/common/DataTableFooter";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -223,23 +215,33 @@ export function Market({
       type,
       favoriteOnly: showFavoritesOnly || undefined,
     }).then(({ items, total }) => {
-      const toItem = (raw: typeof items[0]): CapabilityItem => ({
-        id: raw.id,
-        name: raw.name,
-        type: raw.type === "MCP" ? "MCP" : "Skill",
-        description: raw.description ?? "",
-        calls: raw.calls,
-        status: "active",
-        author: raw.author,
-        version: `v${raw.version}`,
-        updateTime: raw.updated_at,
-        permissionsStatus: "direct",
-        riskLevel: "low",
-        department: raw.department ?? "",
-        tags: raw.tags,
-        isFavorite: raw.is_favorite,
-        icon: raw.icon,
-      });
+      const toItem = (raw: typeof items[0]): CapabilityItem => {
+        const versionHistory = raw.version_history ?? raw.versions ?? [];
+        return {
+          id: raw.id,
+          name: raw.name,
+          type: raw.type === "MCP" ? "MCP" : "Skill",
+          description: raw.description ?? "",
+          calls: raw.calls,
+          status: "active",
+          author: raw.author,
+          version: raw.version.startsWith("v") ? raw.version : `v${raw.version}`,
+          updateTime: raw.updated_at,
+          permissionsStatus: "direct",
+          riskLevel: "low",
+          department: raw.department ?? "",
+          category: raw.category ?? "",
+          tags: raw.tags,
+          connectType: raw.connect_type ?? undefined,
+          versionHistory: versionHistory.map((record) => ({
+            version: record.version.startsWith("v") ? record.version : `v${record.version}`,
+            updatedAt: record.updated_at ?? record.created_at ?? "",
+            content: record.changelog ?? record.content ?? null,
+          })),
+          isFavorite: raw.is_favorite,
+          icon: raw.icon,
+        };
+      };
       setSkills(items.filter((i) => i.type === "Skill").map(toItem));
       setMcps(items.filter((i) => i.type === "MCP").map(toItem));
       setTotalItems(total);
@@ -867,7 +869,29 @@ function CapabilitySheet({
   onFavorite: () => void;
 }) {
   const display = getCopy(item);
-  const readme = MARKETPLACE_README_BY_ID[item.id] ?? DEFAULT_MARKETPLACE_README;
+  const contentFile = mode === "quickStart" ? "quick_start.md" : mode === "readme" ? "README.md" : null;
+  const [documentContent, setDocumentContent] = useState<string | null>(null);
+  const [isDocumentLoading, setIsDocumentLoading] = useState(false);
+
+  useEffect(() => {
+    if (!contentFile) return;
+    let active = true;
+    setIsDocumentLoading(true);
+    setDocumentContent(null);
+    getMarketCapabilityContent(item.id, contentFile)
+      .then((content) => {
+        if (active) setDocumentContent(content);
+      })
+      .catch(() => {
+        if (active) setDocumentContent(null);
+      })
+      .finally(() => {
+        if (active) setIsDocumentLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [contentFile, item.id]);
 
   return (
     <>
@@ -877,9 +901,15 @@ function CapabilitySheet({
             "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
             item.isMcp ? "bg-violet-50 text-violet-700" : "bg-blue-50 text-blue-700",
           )}>
-            {item.isMcp ? <Cpu className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
+            {item.icon ? (
+              <img src={item.icon} alt="" className="h-full w-full rounded-lg object-cover" />
+            ) : item.isMcp ? (
+              <Cpu className="h-5 w-5" />
+            ) : (
+              <Sparkles className="h-5 w-5" />
+            )}
           </span>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <SheetTitle className="text-sm font-semibold normal-case tracking-tight text-slate-950">
                 {display.name}
@@ -888,10 +918,20 @@ function CapabilitySheet({
                 {item.isMcp ? "MCP" : "Skill"}
               </Badge>
             </div>
-            <SheetDescription className="mt-1 text-xs leading-5 text-slate-500">
-              {display.description}
-            </SheetDescription>
           </div>
+          {mode === "details" && (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 shrink-0 text-slate-500"
+              onClick={onFavorite}
+              aria-label={item.isFavorite ? "取消收藏" : "收藏"}
+              title={item.isFavorite ? "取消收藏" : "收藏"}
+            >
+              <Star className={cn("h-4 w-4", item.isFavorite && "fill-amber-400 text-amber-500")} />
+            </Button>
+          )}
         </div>
         <div className="mt-4 flex items-center gap-1 rounded-lg bg-slate-100 p-1">
           <Button type="button" size="sm" variant={mode === "details" ? "secondary" : "ghost"} className="h-7 flex-1 text-xs" onClick={() => onModeChange("details")}>
@@ -910,52 +950,14 @@ function CapabilitySheet({
       </SheetHeader>
 
       <ScrollArea className="min-h-0 flex-1 bg-slate-50/70">
-        {mode === "readme" ? (
-          <ReadmeDocument content={readme} />
-        ) : mode === "quickStart" ? (
-          <div className="space-y-3 p-4">
-            {!item.isMcp ? <SkillDetails item={item} /> : <McpDetails item={item} onCopy={onCopy} copiedText={copiedText} />}
-          </div>
+        {mode === "details" ? (
+          <CapabilityDetails item={item} display={display} />
         ) : (
-          <div className="space-y-3 p-4">
-            <Card className="rounded-lg border-slate-100 bg-white shadow-none">
-              <CardContent className="grid grid-cols-2 gap-3 p-4 text-xs">
-                <InfoCell label="开发者姓名" value={display.author} />
-                <InfoCell label="归属部门" value={display.department} />
-                <InfoCell label="版本" value={item.version} />
-                <InfoCell label="更新时间" value={item.updateTime} />
-                <InfoCell label="累计调用" value={`${item.calls} 次`} />
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-lg border-slate-100 bg-white shadow-none">
-              <CardHeader className="p-4 pb-2 text-left">
-                <CardTitle className="text-xs font-semibold text-slate-800">能力标签</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-wrap gap-1.5 p-4 pt-0">
-                {display.tags.map((tag) => <Badge key={tag} variant="secondary" className="rounded-md border-none text-xs">{tag}</Badge>)}
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-lg border-slate-100 bg-white shadow-none">
-              <CardHeader className="p-4 pb-2 text-left">
-                <CardTitle className="text-xs font-semibold text-slate-800">能力概览</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 p-4 pt-0 text-left">
-                {(item.whatItCanDo ?? item.scenarios ?? []).slice(0, 5).map((content, index) => (
-                  <div key={`${content}-${index}`} className="rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">{content}</div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
+          <MarketDocument content={documentContent} loading={isDocumentLoading} />
         )}
       </ScrollArea>
 
       <SheetFooter className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-white p-4">
-        <Button variant="outline" onClick={() => onModeChange("readme")} className="w-full sm:w-auto">
-          <BookOpen className="mr-1 h-3.5 w-3.5" />
-          查看文档
-        </Button>
         <Button variant="outline" onClick={onFavorite} className="w-full sm:w-auto">
           <Star className={cn("mr-1 h-3.5 w-3.5", item.isFavorite && "fill-amber-400 text-amber-500")} />
           <span>{item.isFavorite ? "取消收藏" : "收藏"}</span>
@@ -967,6 +969,152 @@ function CapabilitySheet({
       </SheetFooter>
     </>
   );
+}
+
+function formatDetailDate(value?: string) {
+  if (!value) return "-";
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) return value;
+  return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).format(timestamp);
+}
+
+function getVersionContent(content?: string | string[] | null) {
+  if (Array.isArray(content)) return content.map((item) => item.trim()).filter(Boolean);
+  if (!content) return [];
+  return content
+    .split(/\r?\n/)
+    .map((item) => item.replace(/^[-*]\s*/, "").trim())
+    .filter(Boolean);
+}
+
+function DetailField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0 text-left">
+      <p className="text-xs text-slate-400">{label}</p>
+      <div className="mt-1 flex min-h-5 items-center gap-1.5 text-xs font-semibold text-slate-800">{children}</div>
+    </div>
+  );
+}
+
+function CapabilityDetails({
+  item,
+  display,
+}: {
+  item: MarketItem;
+  display: ReturnType<typeof getCopy>;
+}) {
+  const versions = [...(item.versionHistory ?? [])].sort((left, right) => (
+    (Date.parse(right.updatedAt) || 0) - (Date.parse(left.updatedAt) || 0)
+  ));
+
+  return (
+    <div className="space-y-3 p-4">
+      <Card className="rounded-lg border-slate-200 bg-white shadow-none">
+        <CardHeader className="p-4 pb-3 text-left">
+          <CardTitle className="text-xs font-semibold text-slate-800">基本信息</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-x-5 gap-y-4 p-4 pt-0 sm:grid-cols-3">
+          <DetailField label="版本号">
+            <span>{item.version || "-"}</span>
+          </DetailField>
+          {item.isMcp && (
+            <DetailField label="连接方式">
+              {item.connectType ? <Badge variant="outline" className="h-5 rounded-md px-1.5 text-xs uppercase">{item.connectType}</Badge> : "-"}
+            </DetailField>
+          )}
+          <DetailField label="调用次数">{Number.isFinite(item.calls) ? `${item.calls} 次` : "-"}</DetailField>
+          <DetailField label="开发者">{display.author || "-"}</DetailField>
+          <DetailField label="归属部门">{display.department || "-"}</DetailField>
+          <DetailField label="更新时间">{formatDetailDate(item.updateTime)}</DetailField>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-lg border-slate-200 bg-white shadow-none">
+        <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
+          <div className="text-left">
+            <p className="text-xs font-semibold text-slate-800">业务分类</p>
+            <div className="mt-2">
+              {item.category ? <Badge variant="outline" className="rounded-md text-xs">{item.category}</Badge> : <span className="text-xs text-slate-400">-</span>}
+            </div>
+          </div>
+          <div className="text-left">
+            <p className="text-xs font-semibold text-slate-800">能力标签</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {display.tags.length > 0 ? display.tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="rounded-md border-none text-xs font-medium">{tag}</Badge>
+              )) : <span className="text-xs text-slate-400">暂无标签</span>}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-lg border-slate-200 bg-white shadow-none">
+        <CardHeader className="p-4 pb-2 text-left">
+          <CardTitle className="text-xs font-semibold text-slate-800">能力描述</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 pt-0 text-left">
+          <p className="whitespace-pre-wrap text-xs leading-6 text-slate-600">
+            {display.description || "暂无能力描述"}
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-lg border-slate-200 bg-white shadow-none">
+        <CardHeader className="p-4 pb-2 text-left">
+          <CardTitle className="flex items-center gap-2 text-xs font-semibold text-slate-800">
+            <Clock3 className="h-3.5 w-3.5 text-slate-500" />
+            版本更新记录
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 pt-1 text-left">
+          {versions.length === 0 ? (
+            <div className="rounded-md border border-dashed border-slate-200 px-3 py-6 text-center text-xs text-slate-400">暂无版本更新记录</div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {versions.map((record: CapabilityVersionRecord, index) => {
+                const normalizedVersion = record.version.startsWith("v") ? record.version : `v${record.version}`;
+                const contents = getVersionContent(record.content);
+                return (
+                  <div key={`${normalizedVersion}-${record.updatedAt}-${index}`} className="relative py-3 pl-5 first:pt-1 last:pb-1">
+                    <span className="absolute left-0 top-4 h-2 w-2 rounded-full bg-slate-300 first:top-2" />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-semibold text-slate-900">{normalizedVersion || "-"}</span>
+                      <span className="text-xs text-slate-400">{formatDetailDate(record.updatedAt)}</span>
+                    </div>
+                    {contents.length > 0 ? (
+                      <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-5 text-slate-600">
+                        {contents.map((content, contentIndex) => <li key={`${content}-${contentIndex}`}>{content}</li>)}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-xs text-slate-400">暂无更新说明</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function MarketDocument({ content, loading }: { content: string | null; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="m-4 rounded-lg border border-slate-200 bg-white px-5 py-10 text-center text-xs text-slate-400">
+        正在加载...
+      </div>
+    );
+  }
+  if (!content?.trim()) {
+    return (
+      <div className="m-4 rounded-lg border border-dashed border-slate-200 bg-white px-5 py-10 text-center text-xs text-slate-400">
+        没有可以展示的内容
+      </div>
+    );
+  }
+  return <ReadmeDocument content={content} />;
 }
 
 function ReadmeDocument({ content }: { content: string }) {
@@ -987,115 +1135,5 @@ function ReadmeDocument({ content }: { content: string }) {
         {content}
       </ReactMarkdown>
     </article>
-  );
-}
-
-function InfoCell({
-  label,
-  value,
-  valueClassName,
-}: {
-  label: string;
-  value: string;
-  valueClassName?: string;
-}) {
-  return (
-    <div className="min-w-0 rounded-lg bg-slate-50 p-3 text-left">
-      <p className="text-xs font-semibold text-slate-400">{label}</p>
-      <p className={cn("mt-1 truncate font-black text-slate-900 text-xs", valueClassName)}>{value}</p>
-    </div>
-  );
-}
-
-function SkillDetails({ item }: { item: MarketItem }) {
-  return (
-    <div className="space-y-3">
-      <Card className="rounded-lg bg-white shadow-none border-slate-100">
-        <CardHeader className="p-4 pb-2 text-left">
-          <CardTitle className="flex items-center gap-2 text-xs font-black text-slate-800">
-            <Terminal className="h-3.5 w-3.5 text-blue-600" />
-            输入示例
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 pt-0 text-left">
-          <pre className="max-h-32 overflow-auto rounded-lg bg-slate-950 p-3 text-xs leading-5 text-slate-100 font-mono">
-            {item.inputExample || "暂无输入示例"}
-          </pre>
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-lg bg-white shadow-none border-slate-100">
-        <CardHeader className="p-4 pb-2 text-left">
-          <CardTitle className="flex items-center gap-2 text-xs font-black text-slate-800">
-            <FileText className="h-3.5 w-3.5 text-emerald-600" />
-            适用场景
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 p-4 pt-0 text-left">
-          {(item.scenarios ?? []).slice(0, 4).map((scenario, index) => (
-            <div key={`${scenario}-${index}`} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600 font-semibold">
-              {scenario}
-            </div>
-          ))}
-          {(!item.scenarios || item.scenarios.length === 0) && (
-            <p className="text-xs text-muted-foreground">暂无场景说明。</p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function McpDetails({
-  item,
-  onCopy,
-  copiedText,
-}: {
-  item: MarketItem;
-  onCopy: () => void;
-  copiedText: boolean;
-}) {
-  return (
-    <div className="space-y-3 font-sans">
-      <Card className="rounded-lg bg-white shadow-none border-slate-100">
-        <CardHeader className="flex-row items-center justify-between space-y-0 p-4 pb-2 text-left">
-          <CardTitle className="flex items-center gap-2 text-xs font-black text-slate-800">
-            <Database className="h-3.5 w-3.5 text-violet-600" />
-            MCP 能力概览
-          </CardTitle>
-          <Button variant="outline" size="sm" className="h-7 font-black cursor-pointer" onClick={onCopy}>
-            {copiedText ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
-            <span>{copiedText ? "已复制" : "复制"}</span>
-          </Button>
-        </CardHeader>
-        <CardContent className="grid grid-cols-3 gap-2 p-4 pt-0">
-          <InfoCell label="Tools" value={String(item.toolsCount ?? item.toolsList?.length ?? 0)} />
-          <InfoCell label="Resources" value={String(item.resourcesCount ?? item.resourcesList?.length ?? 0)} />
-          <InfoCell label="延迟" value={item.avgResponseTime ?? "-"} />
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-lg bg-white shadow-none border-slate-100">
-        <CardHeader className="p-4 pb-2 text-left">
-          <CardTitle className="flex items-center gap-2 text-xs font-black text-slate-800">
-            <Lock className="h-3.5 w-3.5 text-slate-600" />
-            已发现工具
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 p-4 pt-0 text-left">
-          {(item.toolsList ?? []).map((tool) => (
-            <div key={tool.name} className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-left">
-              <div className="mb-1 flex flex-wrap items-center gap-2">
-                <code className="rounded bg-white px-1.5 py-0.5 text-xs font-bold text-slate-900 font-mono">{tool.name}</code>
-                <Badge variant={tool.isReadonly ? "secondary" : "destructive"} className="text-xs font-bold h-5 border-none">
-                  {tool.isReadonly ? "只读" : "写入"}
-                </Badge>
-              </div>
-              <p className="text-xs leading-5 text-muted-foreground text-xs">{tool.description}</p>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </div>
   );
 }

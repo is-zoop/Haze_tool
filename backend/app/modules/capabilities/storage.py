@@ -8,7 +8,7 @@ from io import BytesIO
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 from uuid import uuid4
-from zipfile import BadZipFile, ZipFile
+from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
 
 from fastapi import UploadFile
 
@@ -165,11 +165,65 @@ async def create_upload(
     return metadata
 
 
+async def create_document_upload(
+    uploads: list[UploadFile],
+    paths: list[str] | None,
+    *,
+    actor_id: int,
+) -> dict[str, Any]:
+    if not uploads or len(uploads) > MAX_ZIP_FILES:
+        _raise_upload("Documentation must contain between 1 and 500 files")
+    if paths is not None and len(paths) != len(uploads):
+        _raise_upload("Documentation paths do not match uploaded files")
+
+    buffer = BytesIO()
+    files: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    total_size = 0
+    with ZipFile(buffer, "w", compression=ZIP_DEFLATED) as archive:
+        for index, upload in enumerate(uploads):
+            raw_path = paths[index] if paths else upload.filename
+            path = _safe_zip_path((raw_path or upload.filename or "file").replace("\\", "/"))
+            normalized = path.as_posix()
+            if normalized.lower() in seen:
+                _raise_upload(f"Duplicate documentation path: {normalized}")
+            seen.add(normalized.lower())
+            data = await upload.read(MAX_PACKAGE_SIZE + 1)
+            await upload.close()
+            total_size += len(data)
+            if total_size > MAX_PACKAGE_SIZE:
+                _raise_upload("Documentation files exceed 10MB")
+            archive.writestr(normalized, data)
+            files.append({"name": normalized, "size": len(data)})
+
+    payload = buffer.getvalue()
+    token = uuid4().hex
+    expires_at = datetime.now(timezone.utc) + UPLOAD_TTL
+    token_dir = _token_dir()
+    payload_path = token_dir / f"{token}.bin"
+    metadata_path = token_dir / f"{token}.json"
+    payload_path.write_bytes(payload)
+    metadata = {
+        "token": token,
+        "actor_id": actor_id,
+        "kind": "documentation",
+        "capability_type": None,
+        "file_name": "documentation.zip",
+        "size": total_size,
+        "expires_at": expires_at.isoformat(),
+        "files": files,
+        "manifest": None,
+        "payload_path": str(payload_path),
+    }
+    metadata_path.write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+    return metadata
+
+
 def peek_upload(
     token: str,
     *,
     actor_id: int,
-    kind: Literal["icon", "package"],
+    kind: Literal["icon", "package", "documentation"],
     capability_type: str | None = None,
 ) -> dict[str, Any]:
     if not token or not token.isalnum() or len(token) != 32:

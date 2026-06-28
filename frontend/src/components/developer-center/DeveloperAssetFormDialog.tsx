@@ -288,7 +288,7 @@ export function DeveloperAssetFormDialog({
                     <span className="text-xs text-amber-600 font-medium">如需更新文件，请新建版本</span>
                   </div>
                   {currentAsset.zipFiles && currentAsset.zipFiles.length > 0 ? (
-                    <div className="divide-y divide-slate-100">
+                    <div className="max-h-56 overflow-y-auto overscroll-contain divide-y divide-slate-100 pr-1">
                       {currentAsset.zipFiles.map((f) => (
                         <div key={f.name} className="flex items-center justify-between py-1.5 gap-3">
                           <div className="flex items-center gap-2 min-w-0">

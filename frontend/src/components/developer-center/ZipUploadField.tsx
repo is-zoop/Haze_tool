@@ -40,7 +40,7 @@ export function ZipUploadField({
             </button>
           </div>
 
-          <div className="border border-slate-200 rounded-lg bg-white divide-y divide-slate-100 overflow-hidden shadow-2xs">
+          <div className="max-h-56 overflow-y-auto overscroll-contain rounded-lg border border-slate-200 bg-white divide-y divide-slate-100 shadow-2xs">
             {(zipFiles || []).map((file, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 text-xs">
                 <div className="flex items-center gap-2 text-slate-700">

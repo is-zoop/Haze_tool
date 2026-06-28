@@ -358,6 +358,14 @@ export async function loadCapabilityIcon(path: string): Promise<string> {
   return URL.createObjectURL(blob);
 }
 
+export interface MarketCapabilityVersion {
+  version: string;
+  updated_at?: string;
+  created_at?: string;
+  changelog?: string | string[] | null;
+  content?: string | string[] | null;
+}
+
 export interface MarketCapabilityItem {
   id: string;
   name: string;
@@ -367,6 +375,9 @@ export interface MarketCapabilityItem {
   author: string;
   department: string | null;
   category: string | null;
+  connect_type?: string | null;
+  version_history?: MarketCapabilityVersion[];
+  versions?: MarketCapabilityVersion[];
   tags: string[];
   calls: number;
   is_favorite: boolean;
@@ -397,6 +408,17 @@ export async function listMarketCapabilities(params: {
     }
   }));
   return { items, total: data.total };
+}
+
+export async function getMarketCapabilityContent(
+  id: string,
+  fileName: "quick_start.md" | "README.md",
+): Promise<string | null> {
+  const query = new URLSearchParams({ file: fileName });
+  const data = (await apiRequest<{ file_name: string; content: string | null }>(
+    `/api/marketplace/capabilities/${id}/content?${query}`,
+  )).data;
+  return data.content;
 }
 
 export async function toggleMarketFavorite(id: string): Promise<boolean> {

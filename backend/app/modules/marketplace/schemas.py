@@ -9,6 +9,12 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class MarketVersionData(StrictModel):
+    version: str
+    created_at: str
+    changelog: str | list[str] | None
+
+
 class MarketCapabilityData(StrictModel):
     id: str
     name: str
@@ -18,11 +24,18 @@ class MarketCapabilityData(StrictModel):
     author: str
     department: str | None
     category: str | None
+    connect_type: str | None
+    version_history: list[MarketVersionData]
     tags: list[str]
     calls: int
     is_favorite: bool
     icon: str | None
     updated_at: str
+
+
+class MarketContentData(StrictModel):
+    file_name: str
+    content: str | None
 
 
 class MarketListData(StrictModel):

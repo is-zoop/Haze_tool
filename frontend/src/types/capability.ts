@@ -32,6 +32,12 @@ export interface ToolParamItem {
   description: string;
 }
 
+export interface CapabilityVersionRecord {
+  version: string;
+  updatedAt: string;
+  content?: string | string[] | null;
+}
+
 export interface CapabilityItem {
   id: string;
   name: string;
@@ -46,6 +52,8 @@ export interface CapabilityItem {
   riskLevel: RiskLevel;
   department: string;
   tags?: string[];
+  category?: string;
+  versionHistory?: CapabilityVersionRecord[];
   isFavorite?: boolean;
   icon?: string | null;
   lastUsedTime?: string;
