@@ -17,6 +17,7 @@ import {
   publishCapability,
   submitReviewCapability,
   updateCapability,
+  uploadCapabilityDocumentation,
   uploadCapabilityFile,
   uploadCapabilityIcon,
 } from "../../lib/capabilities";
@@ -262,7 +263,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     setIsEditing(true);
     setFormErrors({});
     setTagsInputText((asset.tags || []).join("，"));
-    setCurrentAsset({ ...asset, iconUploadToken: undefined, packageUploadToken: undefined });
+    setCurrentAsset({ ...asset, iconUploadToken: undefined, packageUploadToken: undefined, documentationUploadToken: undefined });
     setShowEditModal(true);
   };
 
@@ -298,6 +299,21 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
       setFormErrors((previous) => ({ ...previous, zipName: "" }));
     } catch (error) {
       setFormErrors((previous) => ({ ...previous, zipName: errorMessage(error) }));
+    }
+  };
+
+  const handleDocumentationUploaded = async (file: File) => {
+    try {
+      const upload = await uploadCapabilityDocumentation(file);
+      setCurrentAsset((previous) => ({
+        ...previous,
+        documentationUploadToken: upload.uploadToken,
+        documentationSize: formatFileSize(upload.size),
+        documentationFiles: upload.files.map((item) => ({ name: item.name, size: formatFileSize(item.size) })),
+      }));
+      setFormErrors((previous) => ({ ...previous, documentation: "" }));
+    } catch (error) {
+      setFormErrors((previous) => ({ ...previous, documentation: errorMessage(error) }));
     }
   };
 
@@ -580,7 +596,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     pageSize, setPageSize, currentPage, setCurrentPage, resetToFirstPage, handleResetFilters,
     showEditModal, setShowEditModal, isEditing, currentAsset, setCurrentAsset,
     tagsInputText, setTagsInputText, formErrors, setFormErrors,
-    handleOpenAddAsset, handleOpenEditAsset, handleIconFileUploaded, handleZipFileUploaded, handleSaveAssetForm,
+    handleOpenAddAsset, handleOpenEditAsset, handleIconFileUploaded, handleZipFileUploaded, handleDocumentationUploaded, handleSaveAssetForm,
     showNewVersionModal, setShowNewVersionModal, newVersionAsset, newVersionNum, setNewVersionNum,
     newVersionDesc, setNewVersionDesc, newVersionZipName, setNewVersionZipName,
     newVersionZipSize, setNewVersionZipSize, newVersionZipFiles, setNewVersionZipFiles, setNewVersionPackageToken,

@@ -103,6 +103,23 @@ async def upload_package(
     ))
 
 
+@router.post("/uploads/documentation", response_model=ApiResponse[UploadData])
+async def upload_documentation(
+    request: Request,
+    actor: Annotated[User, Depends(require_capabilities("capabilities.create"))],
+    file: Annotated[UploadFile, File(...)],
+) -> ApiResponse[UploadData]:
+    metadata = await create_upload(file, kind="documentation", actor_id=actor.id)
+    return success_response(request, UploadData(
+        upload_token=metadata["token"],
+        kind="documentation",
+        file_name=metadata["file_name"],
+        size=metadata["size"],
+        expires_at=metadata["expires_at"],
+        files=metadata["files"],
+    ))
+
+
 @router.post("/capabilities", response_model=ApiResponse[CapabilityData])
 def create_capability(
     payload: CapabilityCreate,

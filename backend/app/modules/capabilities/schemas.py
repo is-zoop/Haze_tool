@@ -39,6 +39,7 @@ class CapabilityCreate(StrictModel):
     config: dict[str, Any] = Field(default_factory=dict)
     icon_upload_token: str | None = None
     package_upload_token: str
+    documentation_upload_token: str | None = None
 
 
 class CapabilityUpdate(StrictModel):
@@ -51,6 +52,7 @@ class CapabilityUpdate(StrictModel):
     config: dict[str, Any] | None = None
     icon_upload_token: str | None = None
     package_upload_token: str | None = None
+    documentation_upload_token: str | None = None
 
 
 class CapabilityVersionCreate(StrictModel):
@@ -70,7 +72,7 @@ class UploadFileItem(StrictModel):
 
 class UploadData(StrictModel):
     upload_token: str
-    kind: Literal["icon", "package"]
+    kind: Literal["icon", "package", "documentation"]
     file_name: str
     size: int
     expires_at: datetime
@@ -98,6 +100,7 @@ class CapabilityData(StrictModel):
     calls: int
     recent_test_status: TestStatus
     package: dict[str, Any] | None
+    documentation: dict[str, Any] | None
     created_at: datetime
     updated_at: datetime
 

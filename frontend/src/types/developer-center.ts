@@ -47,6 +47,9 @@ export interface DeveloperAsset {
   zipFiles?: { name: string; size: string }[];
   iconUploadToken?: string;
   packageUploadToken?: string;
+  documentationUploadToken?: string;
+  documentationSize?: string;
+  documentationFiles?: { name: string; size: string }[];
 
   // MCP Server-specific fields
   transport?: "HTTP" | "STDIO";

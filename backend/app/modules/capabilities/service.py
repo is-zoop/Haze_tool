@@ -93,6 +93,7 @@ def _serialize(
         calls=int(extension.get("calls", 0)),
         recent_test_status=extension.get("recent_test_status", "none"),
         package=extension.get("package"),
+        documentation=extension.get("documentation"),
         created_at=capability.created_at,
         updated_at=capability.updated_at,
     )
@@ -218,6 +219,11 @@ def create_capability(db: Session, actor: User, payload: CapabilityCreate) -> Ca
         kind="package",
         capability_type=payload.type,
     )
+    documentation_upload = None
+    if payload.documentation_upload_token:
+        documentation_upload = peek_upload(
+            payload.documentation_upload_token, actor_id=actor.id, kind="documentation"
+        )
     icon_upload = None
     if payload.icon_upload_token:
         icon_upload = peek_upload(payload.icon_upload_token, actor_id=actor.id, kind="icon")
@@ -253,6 +259,13 @@ def create_capability(db: Session, actor: User, payload: CapabilityCreate) -> Ca
         )
         created_paths.add(package_path)
         extension["package"] = package_meta
+        if documentation_upload:
+            documentation_path, documentation_meta = consume_upload(
+                documentation_upload,
+                destination=Path("capabilities") / str(capability.id) / "documentation" / f"{uuid4().hex}.zip",
+            )
+            created_paths.add(documentation_path)
+            extension["documentation"] = documentation_meta
         if icon_upload:
             suffix = Path(icon_upload["file_name"]).suffix.lower()
             icon_path, icon_meta = consume_upload(
@@ -298,11 +311,16 @@ def update_capability(
 
     icon_upload = None
     package_upload = None
+    documentation_upload = None
     if values.get("icon_upload_token"):
         icon_upload = peek_upload(values["icon_upload_token"], actor_id=actor.id, kind="icon")
     if values.get("package_upload_token"):
         package_upload = peek_upload(
             values["package_upload_token"], actor_id=actor.id, kind="package", capability_type=capability.type
+        )
+    if values.get("documentation_upload_token"):
+        documentation_upload = peek_upload(
+            values["documentation_upload_token"], actor_id=actor.id, kind="documentation"
         )
 
     old_paths: set[str] = set()
@@ -336,6 +354,16 @@ def update_capability(
             )
             created_paths.add(package_path)
             extension["package"] = package_meta
+        if documentation_upload:
+            old_documentation = (extension.get("documentation") or {}).get("path")
+            if old_documentation:
+                old_paths.add(old_documentation)
+            documentation_path, documentation_meta = consume_upload(
+                documentation_upload,
+                destination=Path("capabilities") / str(capability.id) / "documentation" / f"{uuid4().hex}.zip",
+            )
+            created_paths.add(documentation_path)
+            extension["documentation"] = documentation_meta
         capability.extension_json = extension
         capability.updated_by = actor.id
         db.commit()
@@ -621,6 +649,9 @@ def delete_capability(db: Session, capability_id: int, actor: User) -> None:
     package = extension.get("package") or {}
     if package.get("path"):
         paths.add(package["path"])
+    documentation = extension.get("documentation") or {}
+    if documentation.get("path"):
+        paths.add(documentation["path"])
     for version in capability.versions:
         snapshot_extension = (version.snapshot_json or {}).get("extension_json") or {}
         snapshot_package = snapshot_extension.get("package") or {}

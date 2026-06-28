@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+import mimetypes
 from pathlib import PurePosixPath
 from typing import Annotated, Literal
 from zipfile import BadZipFile, ZipFile
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi.responses import FileResponse
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import AppException
 from app.core.response import ApiResponse, success_response
-from app.core.security import require_capabilities
+from app.core.security import get_personal_credential_user, require_capabilities
 from app.db.session import get_db
 from app.modules.capabilities.models import Capability, CapabilityVersion
 from app.modules.capabilities.storage import resolve_stored_file
@@ -150,13 +152,40 @@ def list_market_capabilities(
     return success_response(request, MarketListData(items=items, page=page, page_size=page_size, total=total))
 
 
-def _read_market_content(capability: Capability, file_name: str) -> str | None:
-    if file_name not in MARKET_CONTENT_FILES:
-        return None
-    package = (capability.extension_json or {}).get("package") or {}
+@router.get("/capabilities/{capability_id}/download", response_class=FileResponse)
+def download_capability_package(
+    capability_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    _user: Annotated[User, Depends(get_personal_credential_user)],
+) -> FileResponse:
+    capability = db.scalar(
+        select(Capability).where(
+            Capability.id == capability_id,
+            Capability.status == "published",
+            Capability.deleted_at.is_(None),
+        )
+    )
+    if capability is None:
+        raise AppException(code=4042, message="Capability not found", status_code=404)
+    extension = capability.extension_json or {}
+    transport = str((extension.get("config") or {}).get("transport") or "HTTP").upper()
+    if capability.type == "mcp" and transport != "STDIO":
+        raise AppException(code=4004, message="Only Skill or STDIO MCP packages can be downloaded", status_code=400)
+    package = extension.get("package") or {}
     package_path = package.get("path")
     if not package_path:
-        return None
+        raise AppException(code=4045, message="Capability package not found", status_code=404)
+    file_name = str(package.get("name") or f"{capability.code}-{capability.version}.zip")
+    return FileResponse(resolve_stored_file(str(package_path)), media_type="application/zip", filename=file_name)
+
+
+def _read_market_content(capability: Capability, file_name: str) -> tuple[str | None, str]:
+    if file_name not in MARKET_CONTENT_FILES:
+        return None, ""
+    documentation = (capability.extension_json or {}).get("documentation") or {}
+    package_path = documentation.get("path")
+    if not package_path:
+        return None, ""
 
     try:
         with ZipFile(resolve_stored_file(str(package_path))) as archive:
@@ -168,11 +197,13 @@ def _read_market_content(capability: Capability, file_name: str) -> str | None:
                 and info.file_size <= MAX_MARKET_CONTENT_SIZE
             ]
             if not candidates:
-                return None
+                return None, ""
             target = min(candidates, key=lambda info: len(PurePosixPath(info.filename).parts))
-            return archive.read(target).decode("utf-8-sig")
+            target_path = PurePosixPath(target.filename)
+            base_path = "" if str(target_path.parent) == "." else target_path.parent.as_posix()
+            return archive.read(target).decode("utf-8-sig"), base_path
     except (BadZipFile, UnicodeDecodeError, OSError):
-        return None
+        return None, ""
 
 
 @router.get("/capabilities/{capability_id}/content", response_model=ApiResponse[MarketContentData])
@@ -192,10 +223,43 @@ def get_market_content(
     )
     if capability is None:
         raise AppException(code=4042, message="Capability not found", status_code=404)
+    content, base_path = _read_market_content(capability, file_name)
     return success_response(
         request,
-        MarketContentData(file_name=file_name, content=_read_market_content(capability, file_name)),
+        MarketContentData(file_name=file_name, base_path=base_path, content=content),
     )
+
+
+@router.get("/capabilities/{capability_id}/documentation/{asset_path:path}")
+def get_market_document_asset(
+    capability_id: int,
+    asset_path: str,
+    db: Annotated[Session, Depends(get_db)],
+    actor: Annotated[User, Depends(require_capabilities("page.marketplace"))],
+) -> Response:
+    capability = db.scalar(
+        select(Capability).where(
+            Capability.id == capability_id,
+            Capability.status == "published",
+            Capability.deleted_at.is_(None),
+        )
+    )
+    if capability is None:
+        raise AppException(code=4042, message="Capability not found", status_code=404)
+    path = PurePosixPath(asset_path)
+    if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
+        raise AppException(code=4045, message="Documentation asset not found", status_code=404)
+    documentation = (capability.extension_json or {}).get("documentation") or {}
+    package_path = documentation.get("path")
+    if not package_path:
+        raise AppException(code=4045, message="Documentation asset not found", status_code=404)
+    try:
+        with ZipFile(resolve_stored_file(str(package_path))) as archive:
+            data = archive.read(path.as_posix())
+    except (BadZipFile, KeyError, OSError):
+        raise AppException(code=4045, message="Documentation asset not found", status_code=404)
+    media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    return Response(content=data, media_type=media_type)
 
 
 @router.post("/capabilities/{capability_id}/favorite", response_model=ApiResponse[FavoriteResult])

@@ -61,7 +61,7 @@ import {
 import { getI18n } from "../../i18n";
 import { CUSTOM_CATEGORIES } from "../../temp/sharedOptions";
 import { CapabilityItem, CapabilityVersionRecord } from "../../types/capability";
-import { getMarketCapabilityContent, listMarketCapabilities, toggleMarketFavorite } from "../../lib/capabilities";
+import { getMarketCapabilityContent, getMarketCapabilityDocumentAsset, listMarketCapabilities, toggleMarketFavorite } from "../../lib/capabilities";
 import { PageHeader } from "../../components/common/PageHeader";
 import { DataTableFooter } from "../../components/common/DataTableFooter";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -871,6 +871,7 @@ function CapabilitySheet({
   const display = getCopy(item);
   const contentFile = mode === "quickStart" ? "quick_start.md" : mode === "readme" ? "README.md" : null;
   const [documentContent, setDocumentContent] = useState<string | null>(null);
+  const [documentBasePath, setDocumentBasePath] = useState("");
   const [isDocumentLoading, setIsDocumentLoading] = useState(false);
 
   useEffect(() => {
@@ -878,9 +879,13 @@ function CapabilitySheet({
     let active = true;
     setIsDocumentLoading(true);
     setDocumentContent(null);
+    setDocumentBasePath("");
     getMarketCapabilityContent(item.id, contentFile)
-      .then((content) => {
-        if (active) setDocumentContent(content);
+      .then(({ content, basePath }) => {
+        if (active) {
+          setDocumentContent(content);
+          setDocumentBasePath(basePath);
+        }
       })
       .catch(() => {
         if (active) setDocumentContent(null);
@@ -953,7 +958,7 @@ function CapabilitySheet({
         {mode === "details" ? (
           <CapabilityDetails item={item} display={display} />
         ) : (
-          <MarketDocument content={documentContent} loading={isDocumentLoading} />
+          <MarketDocument capabilityId={item.id} basePath={documentBasePath} content={documentContent} loading={isDocumentLoading} />
         )}
       </ScrollArea>
 
@@ -1099,7 +1104,7 @@ function CapabilityDetails({
   );
 }
 
-function MarketDocument({ content, loading }: { content: string | null; loading: boolean }) {
+function MarketDocument({ capabilityId, basePath, content, loading }: { capabilityId: string; basePath: string; content: string | null; loading: boolean }) {
   if (loading) {
     return (
       <div className="m-4 rounded-lg border border-slate-200 bg-white px-5 py-10 text-center text-xs text-slate-400">
@@ -1114,10 +1119,45 @@ function MarketDocument({ content, loading }: { content: string | null; loading:
       </div>
     );
   }
-  return <ReadmeDocument content={content} />;
+  return <ReadmeDocument capabilityId={capabilityId} basePath={basePath} content={content} />;
 }
 
-function ReadmeDocument({ content }: { content: string }) {
+function DocumentationImage({ capabilityId, basePath, src, alt }: { capabilityId: string; basePath: string; src?: string; alt?: string }) {
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!src) return;
+    if (/^(?:https?:|data:|blob:)/i.test(src)) {
+      setResolvedSrc(src);
+      return;
+    }
+    const parts = `${basePath}/${src.split(/[?#]/, 1)[0]}`.split("/").filter(Boolean);
+    const normalized: string[] = [];
+    for (const part of parts) {
+      if (part === ".") continue;
+      if (part === "..") normalized.pop();
+      else normalized.push(part);
+    }
+    let active = true;
+    let objectUrl = "";
+    getMarketCapabilityDocumentAsset(capabilityId, normalized.join("/"))
+      .then((blob) => {
+        if (!active) return;
+        objectUrl = URL.createObjectURL(blob);
+        setResolvedSrc(objectUrl);
+      })
+      .catch(() => active && setResolvedSrc(null));
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [basePath, capabilityId, src]);
+
+  if (!resolvedSrc) return null;
+  return <img src={resolvedSrc} alt={alt || ""} className="my-3 max-h-96 max-w-full rounded-md border border-slate-100 object-contain" />;
+}
+
+function ReadmeDocument({ capabilityId, basePath, content }: { capabilityId: string; basePath: string; content: string }) {
   return (
     <article className="m-4 rounded-lg border border-slate-200 bg-white px-5 py-4 text-left shadow-sm">
       <ReactMarkdown
@@ -1130,6 +1170,7 @@ function ReadmeDocument({ content }: { content: string }) {
           ol: ({ children }) => <ol className="mb-4 list-decimal space-y-1.5 pl-5 text-xs leading-5 text-slate-600">{children}</ol>,
           code: ({ children }) => <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs text-slate-800">{children}</code>,
           pre: ({ children }) => <pre className="mb-4 overflow-x-auto rounded-lg bg-slate-950 p-3 text-xs leading-5 text-slate-100">{children}</pre>,
+          img: ({ src, alt }) => <DocumentationImage capabilityId={capabilityId} basePath={basePath} src={src} alt={alt} />,
         }}
       >
         {content}

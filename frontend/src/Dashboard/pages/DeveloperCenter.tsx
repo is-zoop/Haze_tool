@@ -61,7 +61,7 @@ export function DeveloperCenter({
     pageSize, setPageSize, setCurrentPage, resetToFirstPage, handleResetFilters,
     showEditModal, setShowEditModal, isEditing, currentAsset, setCurrentAsset,
     tagsInputText, setTagsInputText, formErrors, setFormErrors,
-    handleOpenAddAsset, handleOpenEditAsset, handleIconFileUploaded, handleZipFileUploaded, handleSaveAssetForm,
+    handleOpenAddAsset, handleOpenEditAsset, handleIconFileUploaded, handleZipFileUploaded, handleDocumentationUploaded, handleSaveAssetForm,
     showNewVersionModal, setShowNewVersionModal, newVersionAsset, newVersionNum, setNewVersionNum,
     newVersionDesc, setNewVersionDesc, newVersionZipName, setNewVersionZipName,
     newVersionZipSize, setNewVersionZipSize, newVersionZipFiles, setNewVersionZipFiles, setNewVersionPackageToken,
@@ -288,9 +288,13 @@ export function DeveloperCenter({
         setFormErrors={setFormErrors}
         onSave={handleSaveAssetForm}
         onZipUploaded={handleZipFileUploaded}
+        onDocumentationUploaded={handleDocumentationUploaded}
         onIconUploaded={handleIconFileUploaded}
         onClearZip={() => {
           setCurrentAsset(prev => ({ ...prev, packageUploadToken: undefined, zipName: undefined, zipSize: undefined, zipFiles: undefined }));
+        }}
+        onClearDocumentation={() => {
+          setCurrentAsset(prev => ({ ...prev, documentationUploadToken: undefined, documentationSize: undefined, documentationFiles: undefined }));
         }}
       />
 

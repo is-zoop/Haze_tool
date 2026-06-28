@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Combobox,
   ComboboxContent,
@@ -43,8 +44,10 @@ interface DeveloperAssetFormDialogProps {
   setFormErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   onSave: (event: React.FormEvent) => void;
   onZipUploaded: (file: File) => void;
+  onDocumentationUploaded: (file: File) => void;
   onIconUploaded: (file: File, previewUrl: string) => void;
   onClearZip: () => void;
+  onClearDocumentation: () => void;
 }
 
 const ZIP_LOCKED_STATUSES = new Set([
@@ -63,8 +66,10 @@ export function DeveloperAssetFormDialog({
   setFormErrors,
   onSave,
   onZipUploaded,
+  onDocumentationUploaded,
   onIconUploaded,
   onClearZip,
+  onClearDocumentation,
 }: DeveloperAssetFormDialogProps) {
   const isZipLocked = isEditing && ZIP_LOCKED_STATUSES.has(currentAsset.status ?? "");
   return (
@@ -272,13 +277,21 @@ export function DeveloperAssetFormDialog({
 
           {/* ROW 3: Skill / MCP 文件 */}
           {(currentAsset.type === "Skill" || currentAsset.type === "MCP Server") && (
-            <FormField
+            <Tabs defaultValue="package" className="space-y-3">
+              <TabsList className="h-9 w-fit rounded-lg bg-slate-100 p-1">
+                <TabsTrigger value="package" className="h-7 px-4 text-xs">
+                  {currentAsset.type === "MCP Server" ? "MCP 文件" : "Skill 文件"}
+                </TabsTrigger>
+                <TabsTrigger value="documentation" className="h-7 px-4 text-xs">说明文档</TabsTrigger>
+              </TabsList>
+              <TabsContent value="package" className="mt-0">
+                <FormField
               label={currentAsset.type === "MCP Server" ? "MCP 文件" : "Skill 文件"}
               required={!isZipLocked}
               error={formErrors.zipName}
             >
               {isZipLocked ? (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="flex h-64 flex-col rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs text-slate-500">
                       {currentAsset.zipFiles && currentAsset.zipFiles.length > 0
@@ -288,7 +301,7 @@ export function DeveloperAssetFormDialog({
                     <span className="text-xs text-amber-600 font-medium">如需更新文件，请新建版本</span>
                   </div>
                   {currentAsset.zipFiles && currentAsset.zipFiles.length > 0 ? (
-                    <div className="max-h-56 overflow-y-auto overscroll-contain divide-y divide-slate-100 pr-1">
+                    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain divide-y divide-slate-100 pr-1">
                       {currentAsset.zipFiles.map((f) => (
                         <div key={f.name} className="flex items-center justify-between py-1.5 gap-3">
                           <div className="flex items-center gap-2 min-w-0">
@@ -319,7 +332,23 @@ export function DeveloperAssetFormDialog({
                   inputId="skill-zip-file-input2"
                 />
               )}
-            </FormField>
+                </FormField>
+              </TabsContent>
+              <TabsContent value="documentation" className="mt-0">
+                <FormField label="说明文档" error={formErrors.documentation}>
+                  <ZipUploadField
+                    zipName={currentAsset.documentationFiles?.length ? "documentation.zip" : undefined}
+                    zipSize={currentAsset.documentationSize}
+                    zipFiles={currentAsset.documentationFiles}
+                    onUploaded={onDocumentationUploaded}
+                    onClear={onClearDocumentation}
+                    error={formErrors.documentation}
+                    placeholderDesc="支持 zip 文件，可包含 quick_start.md、README.md、图片及其他说明文档，大小不超过 10MB"
+                    inputId="documentation-zip-file-input"
+                  />
+                </FormField>
+              </TabsContent>
+            </Tabs>
           )}
 
           {/* ROW 4: Skill 描述 / MCP 描述 (Requirement 6) */}

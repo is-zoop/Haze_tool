@@ -106,6 +106,7 @@ interface ApiCapability {
   calls: number;
   recent_test_status: "none" | "testing" | "pass" | "fail";
   package?: ApiPackage | null;
+  documentation?: ApiPackage | null;
   updated_at: string;
 }
 
@@ -159,6 +160,8 @@ function mapCapability(item: ApiCapability): DeveloperAsset {
     zipName: packageInfo?.name,
     zipSize: packageInfo?.size !== undefined ? formatFileSize(packageInfo.size) : undefined,
     zipFiles: packageInfo?.files?.map((file) => ({ name: file.name, size: formatFileSize(file.size) })),
+    documentationSize: item.documentation?.size !== undefined ? formatFileSize(item.documentation.size) : undefined,
+    documentationFiles: item.documentation?.files?.map((file) => ({ name: file.name, size: formatFileSize(file.size) })),
     skillMd: typeof config.skillMd === "string" ? config.skillMd : undefined,
     dependentTools: Array.isArray(config.dependentTools) ? config.dependentTools as string[] : undefined,
     testCases: Array.isArray(config.testCases) ? config.testCases as DeveloperAsset["testCases"] : undefined,
@@ -245,6 +248,21 @@ export async function uploadCapabilityFile(file: File, type: CapabilityApiType):
   };
 }
 
+export async function uploadCapabilityDocumentation(file: File): Promise<UploadResult> {
+  const form = new FormData();
+  form.append("file", file);
+  const data = (await apiRequest<{ upload_token: string; file_name: string; size: number; files: ApiPackageFile[] }>(
+    "/api/developer/uploads/documentation",
+    { method: "POST", body: form },
+  )).data;
+  return {
+    uploadToken: data.upload_token,
+    fileName: data.file_name,
+    size: data.size,
+    files: data.files ?? [],
+  };
+}
+
 export async function uploadCapabilityIcon(file: File): Promise<UploadResult> {
   const form = new FormData();
   form.append("file", file);
@@ -276,6 +294,7 @@ export async function createCapability(asset: Partial<DeveloperAsset>): Promise<
       version: asset.version?.replace(/^v/, "") || "1.0.0",
       icon_upload_token: asset.iconUploadToken || null,
       package_upload_token: asset.packageUploadToken,
+      documentation_upload_token: asset.documentationUploadToken || null,
     },
   })).data;
   return mapCapability(data);
@@ -288,6 +307,7 @@ export async function updateCapability(asset: Partial<DeveloperAsset>): Promise<
       ...payloadFromAsset(asset),
       icon_upload_token: asset.iconUploadToken || null,
       package_upload_token: asset.packageUploadToken || null,
+      documentation_upload_token: asset.documentationUploadToken || null,
     },
   })).data;
   return mapCapability(data);
@@ -413,12 +433,17 @@ export async function listMarketCapabilities(params: {
 export async function getMarketCapabilityContent(
   id: string,
   fileName: "quick_start.md" | "README.md",
-): Promise<string | null> {
+): Promise<{ content: string | null; basePath: string }> {
   const query = new URLSearchParams({ file: fileName });
-  const data = (await apiRequest<{ file_name: string; content: string | null }>(
+  const data = (await apiRequest<{ file_name: string; base_path: string; content: string | null }>(
     `/api/marketplace/capabilities/${id}/content?${query}`,
   )).data;
-  return data.content;
+  return { content: data.content, basePath: data.base_path };
+}
+
+export function getMarketCapabilityDocumentAsset(id: string, assetPath: string): Promise<Blob> {
+  const encodedPath = assetPath.split("/").map(encodeURIComponent).join("/");
+  return apiBlobRequest(`/api/marketplace/capabilities/${id}/documentation/${encodedPath}`);
 }
 
 export async function toggleMarketFavorite(id: string): Promise<boolean> {

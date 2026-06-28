@@ -89,6 +89,10 @@
 - 验证方式：能力 API 目标 pytest、现有认证/成员回归测试、Python 编译、路由加载和 SQLite 元数据建表检查。
 - 更新时间：2026-06-24
 
+- 2026-06-28 change: Added independent documentation ZIP upload tokens and storage metadata for Skill/MCP. Documentation ZIP can be replaced through capability edit in every lifecycle status without replacing the capability ZIP.
+- 2026-06-28 APIs: `POST /api/developer/uploads/documentation`; create/update capability payloads accept `documentation_upload_token`.
+- 2026-06-28 verification: Python compile for storage, schemas, router, and service.
+
 ### Developer center frontend API integration
 
 - 所属模块：frontend developer center / capabilities API
@@ -102,6 +106,10 @@
 - 验证方式：前端 TypeScript 检查、Vite 生产构建、后端完整 pytest 和临时数据引用扫描。
 - 更新时间：2026-06-24
 
+- 2026-06-28 change: The Skill/MCP form file area now has Capability Files and Documentation tabs. Documentation uses ZIP upload and remains editable for published capabilities; both upload panels use a fixed height with internal scrolling.
+- 2026-06-28 main files: `DeveloperAssetFormDialog.tsx`, `ZipUploadField.tsx`, `useDeveloperCapabilities.ts`, `DeveloperCenter.tsx`, capability types/API client.
+- 2026-06-28 verification: frontend TypeScript no-emit check.
+
 ### Marketplace capability listing and favorites
 
 - 所属模块：marketplace
@@ -114,6 +122,11 @@
 - 是否影响已有功能：仅改变能力市场「快速开始 / 查看文档」内容来源，不改变开发者中心上传、版本和发布逻辑。
 - 验证方式：市场 schema/router Python 语法检查，前端 TypeScript 检查，静态核对两个 Tab 的文件映射。
 - 更新时间：2026-06-27
+
+- 2026-06-28 change: Quick Start and Documentation now read only from the independent documentation package. Relative Markdown images are loaded through an authenticated, path-restricted document asset endpoint.
+- 2026-06-28 API: `GET /api/marketplace/capabilities/{id}/documentation/{asset_path}`.
+- 2026-06-28 impact: Existing capability ZIP and version/deployment logic are unchanged; capabilities without an uploaded documentation package show the existing empty state.
+- 2026-06-28 API: `GET /api/marketplace/capabilities/{id}/download` returns the original uploaded Skill or STDIO MCP ZIP and requires `Authorization: Bearer <personal service credential>`. HTTP MCP and documentation ZIP downloads are rejected.
 
 ### Capability lifecycle status flow (submit-review / deploy / debug / publish)
 
@@ -152,17 +165,17 @@
 - 验证方式：Python import 检查通过；backend pytest 4 项全部通过。
 - 更新时间：2026-06-24
 
-### Personal center profile and MCP credential
+### Personal center profile and personal service credential
 
-- Module: auth / users / mcp credential
+- Module: auth / users / personal service credential
 - Status: changed
 - APIs: `PATCH /api/auth/me/profile`, `POST /api/auth/me/reset-password`, `GET /api/auth/me/mcp-credential`, `POST /api/auth/me/mcp-credential/reset`
 - Tables: `users.avatar_url`, `user_mcp_credentials`
 - Main files: `backend/app/modules/auth/`, `backend/app/modules/users/models.py`, `backend/alembic/versions/20260626_0006_personal_profile_mcp_credential.py`, `frontend/src/Dashboard/pages/PersonalCenter.tsx`, `frontend/src/lib/profile.ts`
-- Summary: Adds self-service personal center support. Users can view read-only identity fields, upload a validated/cropped avatar image, reset their own password after current-password verification, and manage a per-user MCP API Key whose plaintext is only returned on reset.
-- Impact: Does not change member management permissions or existing MCP runtime APIs. Password reset increments `token_version`, invalidating the current session. `GET /api/auth/me/mcp-credential` now creates and returns a masked default credential when missing.
+- Summary: Adds self-service personal center support. Users can manage a personal service access credential used as a Bearer token for approved service APIs. New credentials use the `haze_` prefix; legacy `haze_mcp_` credentials rotate when the credential page is opened.
+- Impact: Existing credential endpoints remain compatible. Legacy credential rotation invalidates the previous key. Normal login JWTs are not accepted by personal-credential-only APIs.
 - Verification: Python compile, Alembic upgrade check, and frontend build.
-- Updated: 2026-06-26
+- Updated: 2026-06-28
 
 ### Developer center MCP sandbox auto debug pass
 

@@ -35,6 +35,7 @@ class MarketCapabilityData(StrictModel):
 
 class MarketContentData(StrictModel):
     file_name: str
+    base_path: str
     content: str | None
 
 
