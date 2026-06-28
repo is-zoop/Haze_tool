@@ -1,4 +1,4 @@
-# Function Register
+﻿# Function Register
 
 本文件用于登记 Haze Tool 后端已经实现、修改或稳定的功能。
 
@@ -193,3 +193,25 @@
 - Impact: Keeps failed test behavior unchanged. Published/offline/debug_passed capabilities are not demoted by retesting; only eligible debugging states are advanced.
 - Verification: Frontend build; backend compile was not run because the local Python environment is unavailable.
 - Updated: 2026-06-26
+### Home capability portal overview and personal usage
+
+- 所属模块：home / marketplace / capabilities / audit
+- 功能状态：新增
+- 涉及接口：`GET /api/home/overview`、`POST /api/home/capabilities/{id}/usage`
+- 涉及数据表：`capability_user_usage`、`capabilities`、`capability_favorites`、`capability_audit_records`
+- 涉及主要文件：`backend/app/modules/home/`、`frontend/src/Dashboard/pages/Home.tsx`、`frontend/src/lib/home.ts`、`frontend/src/Dashboard/pages/Market.tsx`
+- 功能说明：首页提供已发布能力、本周新增、我的能力、待审核真实指标，以及推荐/最新/热门能力、我的收藏和个人常用能力；推荐按调用量 70% 与 30 天新鲜度 30% 计算。能力市场快速开始成功后累计个人使用次数。
+- 是否影响已有功能：不改变能力市场和审核接口响应；新增独立首页聚合接口与个人使用记录表。无开发或审核权限时对应指标卡显示禁用态。
+- 验证方式：前端 TypeScript no-emit 检查；后端模块与迁移语法检查。
+- 更新时间：2026-06-28
+### MCP runtime monitoring metadata and metrics
+
+- 所属模块：mcp_runtime / capabilities / frontend MCP 运行监控
+- 功能状态：修复
+- 涉及接口：`GET /api/mcp-runtime/deployments`、`GET /api/mcp-runtime/deployments/{id}/calls`、`GET /api/mcp-runtime/deployments/{id}/tasks`
+- 涉及数据表：`mcp_deployments`、`mcp_deploy_tasks`、`mcp_call_logs`、`capability_versions`、`users`
+- 涉及主要文件：`backend/app/modules/mcp_runtime/{schemas,service}.py`、`backend/app/modules/capabilities/service.py`、`frontend/src/Dashboard/pages/McpRuntime.tsx`、`frontend/src/lib/capabilities.ts`
+- 本次改动说明：运行实例返回能力创建人；调用记录返回调用人姓名及全量今日成功率/平均耗时指标；部署记录返回版本号。首次创建实例记录 deploy，已有实例的新版本或重试部署记录 redeploy；数据迁移将历史每个能力除最早一条外的重复 deploy 纠正为 redeploy。
+- 是否影响已有功能：仅扩展 MCP Runtime 响应字段和修正部署任务类型，不改变运行操作权限、路由或状态机。
+- 验证方式：前端 TypeScript no-emit 检查、后端 Python 语法检查、迁移语法检查。
+- 更新时间：2026-06-28

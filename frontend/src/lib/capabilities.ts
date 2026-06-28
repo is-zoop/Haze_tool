@@ -19,6 +19,7 @@ export interface McpDeployment {
   capability_id: number;
   capability_name: string | null;
   capability_code: string | null;
+  creator_name: string | null;
   version_id: number | null;
   deployment_name: string;
   deploy_status: string;
@@ -46,6 +47,8 @@ export interface McpCallLog {
   deployment_id: number | null;
   asset_code: string;
   request_id: string | null;
+  user_id: number | null;
+  caller_name: string | null;
   client_ip: string | null;
   method: string | null;
   tool_name: string | null;
@@ -60,6 +63,7 @@ export interface McpDeployTask {
   id: number;
   capability_id: number;
   version_id: number | null;
+  version: string | null;
   task_type: string;
   task_status: string;
   runtime_provider: string;
@@ -73,7 +77,7 @@ export interface McpDeployTask {
 
 interface McpDeploymentListData { items: McpDeployment[]; total: number; }
 interface McpDeployTaskListData { items: McpDeployTask[]; total: number; }
-interface McpCallLogListData { items: McpCallLog[]; total: number; }
+export interface McpCallLogListData { items: McpCallLog[]; total: number; today_total: number; today_errors: number; success_rate: number | null; avg_duration_ms: number | null; }
 
 interface ApiPackageFile {
   name: string;
@@ -460,9 +464,8 @@ export async function toggleMarketFavorite(id: string): Promise<boolean> {
   return data.is_favorite;
 }
 
-export async function listMcpCallLogs(deploymentId: number): Promise<McpCallLog[]> {
-  const data = (await apiRequest<McpCallLogListData>(`/api/mcp-runtime/deployments/${deploymentId}/calls?page=1&page_size=20`)).data;
-  return data.items;
+export async function listMcpCallLogs(deploymentId: number): Promise<McpCallLogListData> {
+  return (await apiRequest<McpCallLogListData>(`/api/mcp-runtime/deployments/${deploymentId}/calls?page=1&page_size=20`)).data;
 }
 
 export async function startMcpDeployment(deploymentId: number): Promise<void> {

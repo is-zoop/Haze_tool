@@ -529,6 +529,7 @@ def deploy_capability(db: Session, capability_id: int, actor: User) -> Capabilit
     deployment = db.scalar(
         select(McpDeployment).where(McpDeployment.capability_id == capability_id)
     )
+    is_initial_deploy = deployment is None
     deployment_name = f"mcp-{capability.code}"
     gateway_route = f"/assets/{capability.code}/mcp"
     public_url = f"{get_settings().gateway_public_base_url.rstrip('/')}/assets/{capability.code}/mcp"
@@ -560,7 +561,7 @@ def deploy_capability(db: Session, capability_id: int, actor: User) -> Capabilit
     task = McpDeployTask(
         capability_id=capability_id,
         version_id=latest_version.id if latest_version else None,
-        task_type=mcp_enums.TASK_TYPE_DEPLOY,
+        task_type=mcp_enums.TASK_TYPE_DEPLOY if is_initial_deploy else mcp_enums.TASK_TYPE_REDEPLOY,
         task_status=mcp_enums.TASK_STATUS_PENDING,
         runtime_provider=mcp_enums.RUNTIME_PROVIDER_K8S,
         created_by=actor.id,

@@ -16,7 +16,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { DataTableFooter } from "@/components/common/DataTableFooter";
 import {
-  McpDeployment, McpDeployTask, McpCallLog,
+  McpDeployment, McpDeployTask, McpCallLog, McpCallLogListData,
   listMcpDeployments, listMcpDeployTasks, listMcpCallLogs,
   startMcpDeployment, stopMcpDeployment, restartMcpDeployment,
 } from "@/lib/capabilities";
@@ -75,10 +75,6 @@ function fmtTime(iso: string | null | undefined): string {
   return iso.replace("T", " ").slice(0, 16);
 }
 
-function todayPrefix(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-xl border border-border/60 bg-white p-4 flex flex-col gap-1 shadow-xs">
@@ -92,6 +88,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
   const [deployments, setDeployments] = useState<McpDeployment[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [callLogs, setCallLogs] = useState<McpCallLog[]>([]);
+  const [callStats, setCallStats] = useState<Pick<McpCallLogListData, "today_total" | "today_errors" | "success_rate" | "avg_duration_ms">>({ today_total: 0, today_errors: 0, success_rate: null, avg_duration_ms: null });
   const [tasks, setTasks] = useState<McpDeployTask[]>([]);
   const [activeTab, setActiveTab] = useState("instances");
   const [loading, setLoading] = useState(false);
@@ -141,7 +138,14 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
   async function selectCalls(id: number) {
     setSelectedId(id);
     setActiveTab("calls");
-    try { setCallLogs(await listMcpCallLogs(id)); } catch { setCallLogs([]); }
+    try {
+      const data = await listMcpCallLogs(id);
+      setCallLogs(data.items);
+      setCallStats(data);
+    } catch {
+      setCallLogs([]);
+      setCallStats({ today_total: 0, today_errors: 0, success_rate: null, avg_duration_ms: null });
+    }
   }
 
   async function selectTasks(id: number) {
@@ -187,13 +191,6 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, totalPages);
   const paged = deployments.slice((safePage - 1) * pageSize, safePage * pageSize);
-
-  // 调用统计
-  const todayLogs = callLogs.filter(l => l.created_at.startsWith(todayPrefix()));
-  const successRate = todayLogs.length > 0
-    ? `${Math.round(todayLogs.filter(l => l.success).length / todayLogs.length * 100)}%` : "—";
-  const avgMs = todayLogs.length > 0
-    ? Math.round(todayLogs.reduce((s, l) => s + (l.duration_ms ?? 0), 0) / todayLogs.length) : 0;
 
   return (
     <div className="dashboard-page-stack h-full overflow-hidden text-left font-sans flex flex-col gap-3 animate-in fade-in duration-300">
@@ -261,7 +258,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                   <Table>
                     <TableHeader className="border-b border-border bg-slate-50">
                       <TableRow className="h-11 hover:bg-transparent bg-slate-50">
-                        {["能力名称", "部署状态", "运行状态", "健康", "副本", "更新时间", "操作"].map(h => (
+                        {["能力名称", "创建人", "部署状态", "运行状态", "健康", "副本", "更新时间", "操作"].map(h => (
                           <TableHead key={h}
                             className="sticky top-0 z-10 px-4 text-xs font-bold text-muted-foreground bg-slate-50">
                             {h}
@@ -272,7 +269,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                     <TableBody>
                       {paged.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="h-48 text-center p-0">
+                          <TableCell colSpan={8} className="h-48 text-center p-0">
                             <EmptyState title="暂无运行实例"
                               description="完成 MCP HTTP 能力部署后，实例将在此显示。" />
                           </TableCell>
@@ -297,6 +294,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                                 </div>
                               )}
                             </TableCell>
+                            <TableCell className="px-4 py-3 text-xs text-muted-foreground">{dep.creator_name ?? "—"}</TableCell>
                             <TableCell className="px-4 py-3">
                               <StatusBadge status={db.k} labels={{ [db.k]: db.l }} />
                             </TableCell>
@@ -391,10 +389,10 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
             ) : (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
-                  <StatCard label="今日调用" value={todayLogs.length} />
-                  <StatCard label="成功率" value={successRate} />
-                  <StatCard label="平均耗时" value={avgMs > 0 ? `${avgMs} ms` : "—"} />
-                  <StatCard label="今日错误" value={todayLogs.filter(l => !l.success).length} />
+                  <StatCard label="今日调用" value={callStats.today_total} />
+                  <StatCard label="成功率" value={callStats.success_rate == null ? "—" : `${callStats.success_rate}%`} />
+                  <StatCard label="平均耗时" value={callStats.avg_duration_ms == null ? "—" : `${callStats.avg_duration_ms} ms`} />
+                  <StatCard label="今日错误" value={callStats.today_errors} />
                 </div>
                 <div className="flex-grow flex-1 min-h-0 overflow-hidden rounded-xl border border-border/60 bg-white">
                   <ScrollArea className="h-full w-full">
@@ -402,7 +400,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                       <Table>
                         <TableHeader className="border-b border-border bg-slate-50">
                           <TableRow className="h-11 hover:bg-transparent bg-slate-50">
-                            {["时间", "方法", "工具名", "状态码", "耗时(ms)", "结果", "来源 IP"].map(h => (
+                            {["时间", "调用人", "方法", "工具名", "状态码", "耗时(ms)", "结果", "来源 IP"].map(h => (
                               <TableHead key={h}
                                 className="sticky top-0 z-10 px-4 text-xs font-bold text-muted-foreground bg-slate-50">
                                 {h}
@@ -413,7 +411,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                         <TableBody>
                           {callLogs.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={7} className="h-40 text-center p-0">
+                              <TableCell colSpan={8} className="h-40 text-center p-0">
                                 <EmptyState title="暂无调用记录"
                                   description="通过 Gateway 发起 MCP 调用后，记录将在此显示。" />
                               </TableCell>
@@ -422,6 +420,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                             <TableRow key={log.id}
                               className="h-12 border-b border-border/50 hover:bg-slate-50/50">
                               <TableCell className="px-4 py-3 text-xs text-muted-foreground">{fmtTime(log.created_at)}</TableCell>
+                              <TableCell className="px-4 py-3 text-xs text-muted-foreground">{log.caller_name ?? "—"}</TableCell>
                               <TableCell className="px-4 py-3 text-xs font-semibold">{log.method ?? "—"}</TableCell>
                               <TableCell className="px-4 py-3 text-xs font-semibold">{log.tool_name ?? "—"}</TableCell>
                               <TableCell className="px-4 py-3 text-xs">{log.status_code ?? "—"}</TableCell>
@@ -457,7 +456,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                     <Table>
                       <TableHeader className="border-b border-border bg-slate-50">
                         <TableRow className="h-11 hover:bg-transparent bg-slate-50">
-                          {["任务类型", "任务状态", "创建时间", "开始时间", "完成时间", "错误信息"].map(h => (
+                          {["任务类型", "版本号", "任务状态", "创建时间", "开始时间", "完成时间", "错误信息"].map(h => (
                             <TableHead key={h}
                               className="sticky top-0 z-10 px-4 text-xs font-bold text-muted-foreground bg-slate-50">
                               {h}
@@ -468,7 +467,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                       <TableBody>
                         {tasks.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="h-40 text-center p-0">
+                            <TableCell colSpan={7} className="h-40 text-center p-0">
                               <EmptyState title="暂无部署记录"
                                 description="每次部署、启动、停止、重启都会生成一条任务记录。" />
                             </TableCell>
@@ -482,6 +481,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                               <TableCell className="px-4 py-3">
                                 <StatusBadge status={tb.k} labels={{ [tb.k]: tb.l }} />
                               </TableCell>
+                              <TableCell className="px-4 py-3 text-xs font-semibold text-muted-foreground">{task.version ? `v${task.version.replace(/^v/, "")}` : "—"}</TableCell>
                               <TableCell className="px-4 py-3">
                                 <StatusBadge status={sb.k} labels={{ [sb.k]: sb.l }} />
                               </TableCell>

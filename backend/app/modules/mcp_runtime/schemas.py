@@ -20,6 +20,8 @@ class McpDeployTaskData(StrictModel):
     """关联能力ID"""
     version_id: int | None
     """关联版本ID，首次 deploy 时关联当前最新版本"""
+    version: str | None
+    """关联版本号"""
     task_type: str
     """任务类型：deploy/start/stop/restart/redeploy/rollback"""
     task_status: str
@@ -62,6 +64,8 @@ class McpDeploymentData(StrictModel):
     """能力名称（join 自 capabilities 表）"""
     capability_code: str | None
     """能力编码（join 自 capabilities 表）"""
+    creator_name: str | None
+    """能力创建人姓名"""
     version_id: int | None
     """当前部署的版本ID"""
     deployment_name: str
@@ -131,7 +135,9 @@ class McpCallLogData(StrictModel):
     request_id: str | None
     """请求唯一ID"""
     user_id: int | None
-    """调用方用户ID，v1 为 null"""
+    """调用方用户ID"""
+    caller_name: str | None
+    """调用方用户姓名"""
     client_ip: str | None
     """调用方 IP 地址"""
     method: str | None
@@ -151,10 +157,14 @@ class McpCallLogData(StrictModel):
 
 
 class McpCallLogListData(StrictModel):
-    """调用日志列表的响应数据。"""
+    """调用日志列表及今日聚合指标。"""
 
     items: list[McpCallLogData]
     total: int
+    today_total: int
+    today_errors: int
+    success_rate: float | None
+    avg_duration_ms: int | None
 
 
 # ── 操作任务创建结果 ─────────────────────────────────────────────────────────

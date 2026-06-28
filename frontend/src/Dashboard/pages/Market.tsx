@@ -68,6 +68,7 @@ import {
 import { CUSTOM_CATEGORIES } from "../../temp/sharedOptions";
 import { CapabilityItem, CapabilityVersionRecord } from "../../types/capability";
 import { createMarketCapabilityDownloadLink, getMarketCapabilityContent, getMarketCapabilityDocumentAsset, listMarketCapabilities, toggleMarketFavorite } from "../../lib/capabilities";
+import { recordHomeCapabilityUsage } from "../../lib/home";
 import { PageHeader } from "../../components/common/PageHeader";
 import { DataTableFooter } from "../../components/common/DataTableFooter";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -390,6 +391,7 @@ export function Market({
         });
       }
       await navigator.clipboard.writeText(prompt);
+      recordHomeCapabilityUsage(item.id).catch(() => {});
       setCopiedText(true);
     } catch {
       setCopyFailed(true);
