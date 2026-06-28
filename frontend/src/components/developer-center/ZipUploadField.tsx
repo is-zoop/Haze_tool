@@ -23,10 +23,10 @@ export function ZipUploadField({
   inputId,
 }: ZipUploadFieldProps) {
   return (
-    <div className="w-full">
+    <div className="h-64 w-full">
       {zipName ? (
         /* Uploaded File List View (Requirement 7 / Image 4) */
-        <div className="space-y-2 w-full animate-fade-in text-left">
+        <div className="flex h-full w-full flex-col gap-2 animate-fade-in text-left">
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500 font-medium select-none">
               已选择 {zipFiles?.length || 0} 个文件，总大小 {zipSize || "0 B"}
@@ -40,7 +40,7 @@ export function ZipUploadField({
             </button>
           </div>
 
-          <div className="max-h-56 overflow-y-auto overscroll-contain rounded-lg border border-slate-200 bg-white divide-y divide-slate-100 shadow-2xs">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-lg border border-slate-200 bg-white divide-y divide-slate-100 shadow-2xs">
             {(zipFiles || []).map((file, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 text-xs">
                 <div className="flex items-center gap-2 text-slate-700">
@@ -55,7 +55,7 @@ export function ZipUploadField({
       ) : (
         /* Centered Upload Drop Area (Requirement 4 / Image 2) */
         <div 
-          className={`border border-dashed rounded-lg p-6 transition-colors flex flex-col items-center justify-center text-center gap-3 relative cursor-pointer group min-h-[160px] ${
+          className={`border border-dashed rounded-lg p-6 transition-colors flex flex-col items-center justify-center text-center gap-3 relative cursor-pointer group h-full ${
             error 
               ? "border-destructive/60 bg-rose-50/10 hover:bg-rose-50/20" 
               : "border-blue-200 bg-white hover:bg-slate-50/50"

@@ -205,7 +205,7 @@ export function PersonalCenter({ user, onLogout, onUserChange }: PersonalCenterP
 
   return (
     <div className="dashboard-page-stack h-full overflow-hidden text-left font-sans animate-in fade-in duration-300">
-      <PageHeader title="个人中心" description="查看个人信息，维护头像与个人 MCP 服务访问凭证" />
+      <PageHeader title="个人中心" description="查看个人信息，维护头像与个人服务访问凭证" />
 
       <div className="flex-1 min-h-0 rounded-xl border border-border/75 bg-white p-4 shadow-sm overflow-hidden">
         <Tabs defaultValue="settings" className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
@@ -214,7 +214,7 @@ export function PersonalCenter({ user, onLogout, onUserChange }: PersonalCenterP
               个人设置
             </TabsTrigger>
             <TabsTrigger value="mcp" className="h-7 px-4 text-xs font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              MCP 服务
+              个人凭证
             </TabsTrigger>
           </TabsList>
 
@@ -281,7 +281,7 @@ export function PersonalCenter({ user, onLogout, onUserChange }: PersonalCenterP
             <Card className="rounded-xl border-border/70 bg-white shadow-none">
               <CardHeader className="flex-row items-center justify-between space-y-0 p-4 pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
-                  <KeyRound size={15} /> MCP 服务访问凭证
+                  <KeyRound size={15} /> 个人服务访问凭证
                 </CardTitle>
                 <Button variant="outline" disabled={credentialLoading} onClick={handleCredentialReset} className="h-8 gap-1.5 rounded-lg border-border/70 text-xs font-semibold">
                   <RefreshCw size={13} className={credentialLoading ? "animate-spin" : ""} /> 重置凭证
@@ -289,15 +289,15 @@ export function PersonalCenter({ user, onLogout, onUserChange }: PersonalCenterP
               </CardHeader>
               <CardContent className="space-y-4 p-4 pt-2">
                 <div className="grid gap-3 md:grid-cols-3">
-                  <InfoItem label="凭证名称" value={credential?.name ?? "Personal MCP API Key"} />
+                  <InfoItem label="凭证名称" value={credential?.name ?? "Personal Service Access Credential"} />
                   <InfoItem label="创建时间" value={fmtTime(credential?.created_at)} />
                   <InfoItem label="最近重置" value={fmtTime(credential?.updated_at)} />
                 </div>
                 <div className="rounded-lg border border-dashed border-border bg-slate-50/70 p-3">
-                  <div className="text-xs font-semibold text-muted-foreground">MCP 服务凭证</div>
+                  <div className="text-xs font-semibold text-muted-foreground">个人服务访问凭证</div>
                   <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                     <div className="min-h-9 flex-1 rounded-lg border border-border bg-white px-3 py-2 font-mono text-[13px] font-medium tracking-wide text-foreground leading-5 break-all select-all">
-                      {showFullKey ? (credential?.key ?? "—") : (credential?.masked_key ?? "正在生成默认个人 MCP 访问凭证…")}
+                      {showFullKey ? (credential?.key ?? "—") : (credential?.masked_key ?? "正在生成默认个人服务访问凭证…")}
                     </div>
                     <Button variant="outline" disabled={!credential?.key} onClick={handleCopyKey} className="h-9 gap-1.5 rounded-lg border-border/70 text-xs font-semibold shrink-0">
                       {copyDone ? <Check size={13} /> : <Copy size={13} />}

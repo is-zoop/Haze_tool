@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta, timezone
+import hashlib
 from typing import Annotated, Any
 
 import jwt
 from fastapi import Depends, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from pwdlib import PasswordHash
 from pydantic import BaseModel, ConfigDict, Field
@@ -16,10 +17,11 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.exceptions import AppException
 from app.db.session import get_db
-from app.modules.users.models import User
+from app.modules.users.models import User, UserMcpCredential
 
 password_hash = PasswordHash.recommended()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+personal_credential_scheme = HTTPBearer(auto_error=False)
 
 
 class TokenPayload(BaseModel):
@@ -105,6 +107,20 @@ def get_current_user(
             message="invalid or expired token",
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
+    return user
+
+
+def get_personal_credential_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(personal_credential_scheme)],
+    db: Annotated[Session, Depends(get_db)],
+) -> User:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise AppException(code=4013, message="personal service credential required", status_code=status.HTTP_401_UNAUTHORIZED)
+    key_hash = hashlib.sha256(credentials.credentials.encode("utf-8")).hexdigest()
+    credential = db.scalar(select(UserMcpCredential).where(UserMcpCredential.key_hash == key_hash))
+    user = db.get(User, credential.user_id) if credential else None
+    if user is None or user.deleted != 0 or user.status != "active":
+        raise AppException(code=4013, message="invalid personal service credential", status_code=status.HTTP_401_UNAUTHORIZED)
     return user
 
 

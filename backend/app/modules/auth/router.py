@@ -25,7 +25,7 @@ from app.modules.auth.schemas import (
 from app.modules.users.models import User, UserMcpCredential
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
-MCP_KEY_PREFIX = "haze_mcp_"
+PERSONAL_KEY_PREFIX = "haze_"
 
 
 def _hash_mcp_key(key: str) -> str:
@@ -33,11 +33,11 @@ def _hash_mcp_key(key: str) -> str:
 
 
 def _generate_mcp_key() -> str:
-    return f"{MCP_KEY_PREFIX}{secrets.token_urlsafe(32)}"
+    return f"{PERSONAL_KEY_PREFIX}{secrets.token_urlsafe(32)}"
 
 
 def _mask_mcp_key(key_prefix: str, key_suffix: str) -> str:
-    return f"{key_prefix}{'•' * 8}{key_suffix}"
+    return f"{key_prefix}{'*' * 8}{key_suffix}"
 
 
 def _serialize_mcp_credential(credential: UserMcpCredential) -> McpCredentialSecretData:
@@ -55,11 +55,25 @@ def _serialize_mcp_credential(credential: UserMcpCredential) -> McpCredentialSec
 def _get_or_create_mcp_credential(db: Session, user: User) -> UserMcpCredential:
     credential = db.scalar(select(UserMcpCredential).where(UserMcpCredential.user_id == user.id))
     if credential is not None:
+        changed = False
+        if credential.key_prefix.startswith("haze_mcp_"):
+            key = _generate_mcp_key()
+            credential.key_prefix = key[:18]
+            credential.key_suffix = key[-4:]
+            credential.key_hash = _hash_mcp_key(key)
+            credential.key_raw = key
+            changed = True
+        if credential.name != "Personal Service Access Credential":
+            credential.name = "Personal Service Access Credential"
+            changed = True
+        if changed:
+            db.commit()
+            db.refresh(credential)
         return credential
     key = _generate_mcp_key()
     credential = UserMcpCredential(
         user_id=user.id,
-        name="Personal MCP API Key",
+        name="Personal Service Access Credential",
         key_prefix=key[:18],
         key_suffix=key[-4:],
         key_hash=_hash_mcp_key(key),

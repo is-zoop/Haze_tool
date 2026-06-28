@@ -64,7 +64,7 @@ class UserMcpCredential(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    name: Mapped[str] = mapped_column(String(100), default="Personal MCP API Key")
+    name: Mapped[str] = mapped_column(String(100), default="Personal Service Access Credential")
     key_prefix: Mapped[str] = mapped_column(String(32), index=True)
     key_suffix: Mapped[str] = mapped_column(String(8), default="")
     key_hash: Mapped[str] = mapped_column(String(64))
