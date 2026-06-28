@@ -25,12 +25,18 @@ class MarketCapabilityData(StrictModel):
     department: str | None
     category: str | None
     connect_type: str | None
+    server_url: str | None
     version_history: list[MarketVersionData]
     tags: list[str]
     calls: int
     is_favorite: bool
     icon: str | None
     updated_at: str
+
+
+class DownloadLinkData(StrictModel):
+    download_url: str
+    expires_at: datetime
 
 
 class MarketContentData(StrictModel):

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import mimetypes
+import secrets
+from datetime import datetime, timedelta, timezone
 from pathlib import PurePosixPath
 from typing import Annotated, Literal
 from zipfile import BadZipFile, ZipFile
@@ -11,17 +14,20 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.exceptions import AppException
 from app.core.response import ApiResponse, success_response
 from app.core.security import get_personal_credential_user, require_capabilities
 from app.db.session import get_db
 from app.modules.capabilities.models import Capability, CapabilityVersion
 from app.modules.capabilities.storage import resolve_stored_file
-from app.modules.marketplace.models import CapabilityFavorite
-from app.modules.marketplace.schemas import FavoriteResult, MarketCapabilityData, MarketContentData, MarketListData, MarketVersionData
+from app.modules.marketplace.models import CapabilityDownloadToken, CapabilityFavorite
+from app.modules.mcp_runtime.models import McpDeployment
+from app.modules.marketplace.schemas import DownloadLinkData, FavoriteResult, MarketCapabilityData, MarketContentData, MarketListData, MarketVersionData
 from app.modules.users.models import Department, User
 
 router = APIRouter(prefix="/api/marketplace", tags=["marketplace"])
+public_router = APIRouter(prefix="/api/public", tags=["public-downloads"])
 
 MARKET_CONTENT_FILES = {"quick_start.md", "README.md"}
 MAX_MARKET_CONTENT_SIZE = 1024 * 1024
@@ -39,10 +45,12 @@ def _serialize_item(
     department_name: str | None,
     is_favorite: bool,
     version_history: list[MarketVersionData],
+    deployment_public_url: str | None,
 ) -> MarketCapabilityData:
     extension = capability.extension_json or {}
     config = extension.get("config") or {}
     cap_type = "Skill" if capability.type == "skill" else "MCP"
+    transport = str(config.get("transport") or "HTTP").upper()
     return MarketCapabilityData(
         id=str(capability.id),
         name=capability.name,
@@ -52,7 +60,9 @@ def _serialize_item(
         author=_format_author(owner_name, department_name),
         department=department_name,
         category=capability.category,
-        connect_type=str(config.get("transport") or "HTTP").upper() if capability.type == "mcp" else None,
+        connect_type=transport if capability.type == "mcp" else None,
+        server_url=(deployment_public_url or str(config.get("serverUrl") or "") or None)
+        if capability.type == "mcp" and transport != "STDIO" else None,
         version_history=version_history,
         tags=extension.get("tags", []),
         calls=int(extension.get("calls", 0)),
@@ -138,6 +148,13 @@ def list_market_capabilities(
             )
         )
 
+    deployment_urls = dict(
+        db.execute(
+            select(McpDeployment.capability_id, McpDeployment.public_url)
+            .where(McpDeployment.capability_id.in_(capability_ids))
+        ).all()
+    )
+
     items = [
         _serialize_item(
             c,
@@ -145,11 +162,94 @@ def list_market_capabilities(
             depts.get(c.department_id) if c.department_id else None,
             c.id in favorited,
             versions_by_capability.get(c.id, []),
+            deployment_urls.get(c.id),
         )
         for c in rows
     ]
 
     return success_response(request, MarketListData(items=items, page=page, page_size=page_size, total=total))
+
+
+@router.post("/capabilities/{capability_id}/download-link", response_model=ApiResponse[DownloadLinkData])
+def create_capability_download_link(
+    capability_id: int,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    actor: Annotated[User, Depends(require_capabilities("page.marketplace"))],
+) -> ApiResponse[DownloadLinkData]:
+    capability = db.scalar(
+        select(Capability).where(
+            Capability.id == capability_id,
+            Capability.status == "published",
+            Capability.deleted_at.is_(None),
+        )
+    )
+    if capability is None:
+        raise AppException(code=4042, message="能力不存在或已下线", status_code=404)
+    extension = capability.extension_json or {}
+    transport = str((extension.get("config") or {}).get("transport") or "HTTP").upper()
+    if capability.type == "mcp" and transport != "STDIO":
+        raise AppException(code=4001, message="该能力不支持 ZIP 下载", status_code=400)
+    package = extension.get("package") or {}
+    package_path = package.get("path")
+    if not package_path:
+        raise AppException(code=4045, message="能力 ZIP 文件不存在", status_code=404)
+
+    settings = get_settings()
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(
+        minutes=settings.download_link_expire_minutes
+    )
+    db.add(CapabilityDownloadToken(
+        token_hash=hashlib.sha256(token.encode("utf-8")).hexdigest(),
+        capability_id=capability.id,
+        package_path=str(package_path),
+        file_name=str(package.get("name") or f"{capability.code}-{capability.version}.zip"),
+        version=capability.version,
+        created_by=actor.id,
+        expires_at=expires_at,
+    ))
+    db.commit()
+    download_url = f"{settings.download_public_base_url.rstrip('/')}/api/public/downloads/{token}"
+    return success_response(request, DownloadLinkData(download_url=download_url, expires_at=expires_at))
+
+
+@public_router.get("/downloads/{token}", response_class=FileResponse)
+def download_with_short_lived_token(
+    token: str,
+    db: Annotated[Session, Depends(get_db)],
+) -> FileResponse:
+    if len(token) < 20 or len(token) > 200:
+        raise AppException(code=4046, message="下载链接无效，请重新生成", status_code=404)
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    record = db.scalar(
+        select(CapabilityDownloadToken).where(CapabilityDownloadToken.token_hash == token_hash)
+    )
+    if record is None:
+        raise AppException(code=4046, message="下载链接无效，请重新生成", status_code=404)
+    if record.revoked_at is not None:
+        raise AppException(code=4102, message="下载链接已撤销，请重新生成", status_code=410)
+    if record.expires_at <= datetime.now(timezone.utc).replace(tzinfo=None):
+        raise AppException(code=4101, message="下载链接已过期，请重新生成", status_code=410)
+    capability = db.scalar(
+        select(Capability).where(
+            Capability.id == record.capability_id,
+            Capability.status == "published",
+            Capability.deleted_at.is_(None),
+        )
+    )
+    if capability is None:
+        raise AppException(code=4042, message="能力不存在或已下线", status_code=404)
+    try:
+        package_file = resolve_stored_file(record.package_path)
+    except AppException as exc:
+        raise AppException(code=4045, message="能力 ZIP 文件不存在", status_code=404) from exc
+    return FileResponse(
+        package_file,
+        media_type="application/zip",
+        filename=record.file_name,
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.get("/capabilities/{capability_id}/download", response_class=FileResponse)

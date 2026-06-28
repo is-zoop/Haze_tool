@@ -127,6 +127,11 @@
 - 2026-06-28 API: `GET /api/marketplace/capabilities/{id}/documentation/{asset_path}`.
 - 2026-06-28 impact: Existing capability ZIP and version/deployment logic are unchanged; capabilities without an uploaded documentation package show the existing empty state.
 - 2026-06-28 API: `GET /api/marketplace/capabilities/{id}/download` returns the original uploaded Skill or STDIO MCP ZIP and requires `Authorization: Bearer <personal service credential>`. HTTP MCP and documentation ZIP downloads are rejected.
+- 2026-06-28 change: Marketplace list responses now include `server_url` for HTTP MCP, preferring deployment `public_url` and falling back to configured `serverUrl`. Copy actions render configurable Skill/STDIO/HTTP access Prompt templates; HTTP Prompt copy fetches and embeds the current personal service credential.
+- 2026-06-28 API: `POST /api/marketplace/capabilities/{id}/download-link` creates a 30-minute URL; `GET /api/public/downloads/{token}` returns the original Skill/STDIO MCP ZIP without login authentication.
+- 2026-06-28 table: `capability_download_tokens` stores only SHA-256 token hashes, package snapshots, creator, expiry, and revocation state.
+- 2026-06-28 errors: Invalid, expired, revoked, offline, unsupported, and missing-file responses use the unified JSON envelope with a user-readable `message`.
+- 2026-06-28 config: `DOWNLOAD_PUBLIC_BASE_URL` controls local/public URL generation and `DOWNLOAD_LINK_EXPIRE_MINUTES` defaults to 30.
 
 ### Capability lifecycle status flow (submit-review / deploy / debug / publish)
 

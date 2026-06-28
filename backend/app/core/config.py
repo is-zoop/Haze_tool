@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     )
     local_storage_dir: Path = Path("./storage")
     gateway_public_base_url: str = "http://127.0.0.1:8001"
+    download_public_base_url: str = "http://127.0.0.1:8000"
+    download_link_expire_minutes: int = Field(default=30, ge=1, le=1440)
     mcp_docker_prepull: bool = False
     mcp_docker_images: list[str] = Field(
         default_factory=lambda: ["node:20-slim", "python:3.12-slim"]

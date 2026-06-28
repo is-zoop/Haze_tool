@@ -396,6 +396,7 @@ export interface MarketCapabilityItem {
   department: string | null;
   category: string | null;
   connect_type?: string | null;
+  server_url?: string | null;
   version_history?: MarketCapabilityVersion[];
   versions?: MarketCapabilityVersion[];
   tags: string[];
@@ -428,6 +429,14 @@ export async function listMarketCapabilities(params: {
     }
   }));
   return { items, total: data.total };
+}
+
+export async function createMarketCapabilityDownloadLink(id: string): Promise<{ downloadUrl: string; expiresAt: string }> {
+  const data = (await apiRequest<{ download_url: string; expires_at: string }>(
+    `/api/marketplace/capabilities/${id}/download-link`,
+    { method: "POST" },
+  )).data;
+  return { downloadUrl: data.download_url, expiresAt: data.expires_at };
 }
 
 export async function getMarketCapabilityContent(

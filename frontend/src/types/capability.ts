@@ -74,7 +74,8 @@ export interface CapabilityItem {
   toolsCount?: number;          // 可用 Tool 数量
   resourcesCount?: number;      // Resources 数量
   promptsCount?: number;        // Prompts 数量
-  connectType?: string;         // 连接方式
+  connectType?: string;
+  serverUrl?: string;         // 连接方式
   avgResponseTime?: string;     // 平均响应时间
   toolsList?: MCPToolListItem[]; // Tools 列表
   resourcesList?: string[];     // Resources 列表

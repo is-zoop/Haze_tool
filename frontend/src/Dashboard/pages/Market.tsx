@@ -59,9 +59,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getI18n } from "../../i18n";
+import { getMcpCredential } from "../../lib/profile";
+import {
+  renderHttpMcpAccessPrompt,
+  renderSkillAccessPrompt,
+  renderStdioMcpAccessPrompt,
+} from "../../config/capability-prompts";
 import { CUSTOM_CATEGORIES } from "../../temp/sharedOptions";
 import { CapabilityItem, CapabilityVersionRecord } from "../../types/capability";
-import { getMarketCapabilityContent, getMarketCapabilityDocumentAsset, listMarketCapabilities, toggleMarketFavorite } from "../../lib/capabilities";
+import { createMarketCapabilityDownloadLink, getMarketCapabilityContent, getMarketCapabilityDocumentAsset, listMarketCapabilities, toggleMarketFavorite } from "../../lib/capabilities";
 import { PageHeader } from "../../components/common/PageHeader";
 import { DataTableFooter } from "../../components/common/DataTableFooter";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -177,6 +183,7 @@ export function Market({
   const [selectedItem, setSelectedItem] = useState<MarketItem | null>(null);
   const [sheetMode, setSheetMode] = useState<SheetMode>("details");
   const [copiedText, setCopiedText] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   // Read preferred view mode from localStorage
   const [viewMode, setViewMode] = useState<"card" | "table">(() => {
@@ -233,6 +240,7 @@ export function Market({
           category: raw.category ?? "",
           tags: raw.tags,
           connectType: raw.connect_type ?? undefined,
+          serverUrl: raw.server_url ?? undefined,
           versionHistory: versionHistory.map((record) => ({
             version: record.version.startsWith("v") ? record.version : `v${record.version}`,
             updatedAt: record.updated_at ?? record.created_at ?? "",
@@ -356,33 +364,45 @@ export function Market({
     setShowRecentlyUsedOnly(false);
   };
 
-  const handleCopyConfig = (item: MarketItem) => {
-    const configObj = item.isMcp
-      ? {
-          mcpServers: {
-            [getCopy(item).name.replace(/\s+/g, "-").toLowerCase()]: {
-              command: item.connectType === "STDIO/Process" ? "npx" : "node",
-              args: ["@haze-mcp/connector", "--server-url", item.id],
-              env: {
-                HAZE_API_KEY: "SEC_SECRET_REF",
-              },
-            },
-          },
-        }
-      : {
-          skillId: item.id,
-          name: getCopy(item).name,
-          instructions: item.scenarios || [],
-          version: item.version,
-        };
+  const handleCopyConfig = async (item: MarketItem) => {
+    setCopiedText(false);
+    setCopyFailed(false);
+    const values = {
+      abilityName: getCopy(item).name,
+      version: item.version || "-",
+    };
 
-    navigator.clipboard.writeText(JSON.stringify(configObj, null, 2));
-    setCopiedText(true);
-    setTimeout(() => setCopiedText(false), 1500);
+    try {
+      let prompt: string;
+      if (!item.isMcp) {
+        const { downloadUrl } = await createMarketCapabilityDownloadLink(item.id);
+        prompt = renderSkillAccessPrompt({ ...values, downloadUrl });
+      } else if ((item.connectType || "").toUpperCase() === "STDIO") {
+        const { downloadUrl } = await createMarketCapabilityDownloadLink(item.id);
+        prompt = renderStdioMcpAccessPrompt({ ...values, downloadUrl });
+      } else {
+        const credential = await getMcpCredential();
+        if (!credential.key) throw new Error("Personal service credential is unavailable");
+        prompt = renderHttpMcpAccessPrompt({
+          ...values,
+          serverUrl: item.serverUrl,
+          personalCredential: credential.key,
+        });
+      }
+      await navigator.clipboard.writeText(prompt);
+      setCopiedText(true);
+    } catch {
+      setCopyFailed(true);
+    }
+    window.setTimeout(() => {
+      setCopiedText(false);
+      setCopyFailed(false);
+    }, 1500);
   };
 
   const openCapabilitySheet = (item: MarketItem, mode: SheetMode) => {
     setCopiedText(false);
+    setCopyFailed(false);
     setSheetMode(mode);
     setSelectedItem(item);
   };
@@ -790,7 +810,7 @@ export function Market({
                                     <DropdownMenu>
                                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-600"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                       <DropdownMenuContent align="end" className="text-xs">
-                                        <DropdownMenuItem onClick={() => handleCopyConfig(item)}>{item.isMcp ? "复制接入配置" : "复制 Skill 配置"}</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleCopyConfig(item)}>复制接入 Prompt</DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => toggleFavorite(item.id, item.isMcp)}>{item.isFavorite ? "取消收藏" : "移入收藏"}</DropdownMenuItem>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
@@ -832,6 +852,7 @@ export function Market({
               mode={sheetMode}
               onModeChange={setSheetMode}
               copiedText={copiedText}
+              copyFailed={copyFailed}
               onCopy={() => handleCopyConfig(selectedItem)}
               onFavorite={() => toggleFavorite(selectedItem.id, selectedItem.isMcp)}
             />
@@ -858,6 +879,7 @@ function CapabilitySheet({
   mode,
   onModeChange,
   copiedText,
+  copyFailed,
   onCopy,
   onFavorite,
 }: {
@@ -865,6 +887,7 @@ function CapabilitySheet({
   mode: SheetMode;
   onModeChange: (mode: SheetMode) => void;
   copiedText: boolean;
+  copyFailed: boolean;
   onCopy: () => void;
   onFavorite: () => void;
 }) {
@@ -969,7 +992,7 @@ function CapabilitySheet({
         </Button>
         <Button onClick={onCopy} className="w-full bg-slate-900 text-white hover:bg-slate-800 sm:w-auto">
           {copiedText ? <Check className="mr-1 h-3.5 w-3.5" /> : <Copy className="mr-1 h-3.5 w-3.5" />}
-          <span>{copiedText ? "已复制" : item.isMcp ? "复制接入配置" : "复制 Skill 配置"}</span>
+          <span>{copiedText ? "已复制" : copyFailed ? "复制失败" : "复制接入 Prompt"}</span>
         </Button>
       </SheetFooter>
     </>
