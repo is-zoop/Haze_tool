@@ -132,6 +132,11 @@ For fixes, update the existing feature entry instead of creating a duplicate.
 * If a dependency is required, explain why before adding it.
 * Do not modify lock files unless dependency changes are intentional.
 
+### Project Python / Sandbox Access
+
+* For Python and backend commands, use `E:\HazeToolPlat\.venv\Scripts\python.exe` (or `..\.venv\Scripts\python.exe` when the working directory is `backend/`).
+* This virtual environment depends on a base Python under the user profile. If the sandbox reports `No Python` or `Access is denied`, retry the same command with `require_escalated` and request permission from the user. Do not treat the virtual environment as broken and do not switch to Docker first.
+
 ## Test Strategy
 
 * Do not run full test suites first.

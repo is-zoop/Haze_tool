@@ -12,3 +12,4 @@ from app.modules.home import models as home_models  # noqa: E402,F401
 from app.modules.roles import models as role_models  # noqa: E402,F401
 from app.modules.users import models as user_models  # noqa: E402,F401
 from app.modules.mcp_runtime import models as mcp_runtime_models  # noqa: E402,F401
+from app.modules.business_categories import models as business_category_models  # noqa: E402,F401

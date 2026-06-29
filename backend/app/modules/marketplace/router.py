@@ -59,6 +59,7 @@ def _serialize_item(
         version=capability.version,
         author=_format_author(owner_name, department_name),
         department=department_name,
+        category_id=capability.category_id,
         category=capability.category,
         connect_type=transport if capability.type == "mcp" else None,
         server_url=(deployment_public_url or str(config.get("serverUrl") or "") or None)
@@ -81,15 +82,15 @@ def list_market_capabilities(
     page_size: int = Query(default=20, ge=1, le=200),
     search: str = "",
     capability_type: Literal["skill", "mcp"] | None = Query(default=None, alias="type"),
-    category: str | None = None,
+    category_id: int | None = None,
     favorite_only: bool = False,
 ) -> ApiResponse[MarketListData]:
     base = [Capability.status == "published", Capability.deleted_at.is_(None)]
 
     if capability_type:
         base.append(Capability.type == capability_type)
-    if category:
-        base.append(Capability.category == category)
+    if category_id:
+        base.append(Capability.category_id == category_id)
     if search.strip():
         term = f"%{search.strip()}%"
         base.append(or_(Capability.name.like(term), Capability.description.like(term)))

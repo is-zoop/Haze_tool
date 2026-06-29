@@ -16,6 +16,7 @@ class AuditCapabilityItem(StrictModel):
     type: str
     status: str
     version: str
+    category_id: int | None
     category: str | None
     tags: list[str]
     author: str
@@ -47,6 +48,7 @@ class AuditDetailCapability(StrictModel):
     code: str
     type: str
     version: str
+    category_id: int | None
     category: str | None
     tags: list[str]
     description: str | None

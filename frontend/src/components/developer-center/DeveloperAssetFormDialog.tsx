@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { File as FileIcon, Sparkles } from "lucide-react";
 import {
   Dialog,
@@ -18,7 +19,7 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import { DeveloperAsset } from "../../types/developer-center";
-import { CUSTOM_CATEGORIES } from "../../temp/sharedOptions";
+import { BusinessCategory, listBusinessCategories } from "../../lib/businessCategories";
 import { FormField } from "./FormField";
 import { ZipUploadField } from "./ZipUploadField";
 
@@ -72,6 +73,8 @@ export function DeveloperAssetFormDialog({
   onClearDocumentation,
 }: DeveloperAssetFormDialogProps) {
   const isZipLocked = isEditing && ZIP_LOCKED_STATUSES.has(currentAsset.status ?? "");
+  const [categories, setCategories] = useState<BusinessCategory[]>([]);
+  useEffect(() => { if (open) void listBusinessCategories().then(setCategories); }, [open]);
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
       <DialogContent className="max-w-4xl p-6 bg-white border-border shadow-xl rounded-xl">
@@ -217,16 +220,17 @@ export function DeveloperAssetFormDialog({
               error={formErrors.project}
             >
               <Combobox
-                value={currentAsset.project || "企业办公"}
+                value={currentAsset.categoryId ? String(currentAsset.categoryId) : ""}
                 onValueChange={(value) => {
-                  setCurrentAsset((prev) => ({ ...prev, project: String(value) }));
+                  const category = categories.find((item) => String(item.id) === String(value));
+                  setCurrentAsset((prev) => ({ ...prev, categoryId: Number(value), project: category?.name ?? "" }));
                   if (formErrors.project) {
                     setFormErrors((prev) => ({ ...prev, project: "" }));
                   }
                 }}
-                items={CUSTOM_CATEGORIES.filter((category) => category.id !== "all").map((category) => ({
-                  value: category.zh,
-                  label: category.zh,
+                items={categories.map((category) => ({
+                  value: String(category.id),
+                  label: category.name,
                 }))}
                 className="w-full"
               >
@@ -238,9 +242,9 @@ export function DeveloperAssetFormDialog({
                 />
                 <ComboboxContent className="w-full bg-white">
                   <ComboboxList>
-                    {CUSTOM_CATEGORIES.filter((category) => category.id !== "all").map((category) => (
-                      <ComboboxItem key={category.id} value={category.zh} className="font-normal">
-                        {category.zh}
+                    {categories.map((category) => (
+                      <ComboboxItem key={category.id} value={String(category.id)} className="font-normal">
+                        {category.name}
                       </ComboboxItem>
                     ))}
                   </ComboboxList>

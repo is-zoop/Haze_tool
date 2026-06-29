@@ -17,6 +17,8 @@ PERMISSION_DEFINITIONS = {
     "page.guide": ("Developer guide", "Access developer guide"),
     "page.audit": ("Release audit", "Access release audit"),
     "page.members": ("Member management", "Access member management"),
+    "page.system": ("System management", "Access system management"),
+    "business_categories.manage": ("Manage business categories", "Create, update, and delete business categories"),
     "members.read": ("Read members", "View member list and details"),
     "members.create": ("Create members", "Add enterprise members"),
     "members.update": ("Update members", "Edit member profiles"),

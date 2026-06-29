@@ -32,7 +32,7 @@ class CapabilityCreate(StrictModel):
     name: str = Field(min_length=1, max_length=200)
     type: CapabilityType
     description: str | None = Field(default=None, max_length=1000)
-    category: str | None = Field(default=None, max_length=100)
+    category_id: int | None = None
     version: str = Field(default="1.0.0", pattern=VERSION_PATTERN)
     visibility: Literal["internal"] = "internal"
     tags: list[str] = Field(default_factory=list, max_length=30)
@@ -46,7 +46,7 @@ class CapabilityUpdate(StrictModel):
     code: str | None = Field(default=None, pattern=CODE_PATTERN)
     name: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=1000)
-    category: str | None = Field(default=None, max_length=100)
+    category_id: int | None = None
     visibility: Literal["internal"] | None = None
     tags: list[str] | None = Field(default=None, max_length=30)
     config: dict[str, Any] | None = None
@@ -86,6 +86,7 @@ class CapabilityData(StrictModel):
     name: str
     type: CapabilityType
     description: str | None
+    category_id: int | None
     category: str | None
     icon: str | None
     version: str

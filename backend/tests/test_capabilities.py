@@ -62,6 +62,8 @@ def capability_client(tmp_path: Path) -> Generator[tuple[TestClient, dict[str, d
     with TestClient(application, raise_server_exceptions=False) as client:
         admin = _login(client, "13800138000", "AdminPass!123")
         headers: dict[str, dict[str, str]] = {"admin": admin}
+        category_response = client.post("/api/business-categories", headers=admin, json={"name": "Engineering", "description": "Engineering capabilities"})
+        assert category_response.status_code == 200, category_response.text
         for suffix, name in (("1", "Developer One"), ("2", "Developer Two")):
             response = client.post(
                 "/api/users",
@@ -80,6 +82,12 @@ def capability_client(tmp_path: Path) -> Generator[tuple[TestClient, dict[str, d
             headers[f"dev{suffix}"] = _login(client, f"1380013800{suffix}", temporary_password)
         yield client, headers, TestingSession
     settings.local_storage_dir = original_storage
+
+
+def _category_id(client: TestClient, headers: dict[str, str], name: str) -> int:
+    response = client.get("/api/business-categories", headers=headers)
+    assert response.status_code == 200, response.text
+    return next(item["id"] for item in response.json()["data"] if item["name"] == name)
 
 
 def _upload_package(client: TestClient, headers: dict[str, str], capability_type: str, files: dict[str, str]) -> dict:
@@ -109,7 +117,7 @@ def _create_capability(
             "name": f"Capability {code}",
             "type": capability_type,
             "description": "Capability description",
-            "category": "Engineering",
+            "category_id": _category_id(client, headers, "Engineering"),
             "version": "1.0.0",
             "tags": ["automation"],
             "config": {"transport": "HTTP"} if capability_type == "mcp" else {"skill_md": "SKILL.md"},
@@ -137,7 +145,7 @@ def test_skill_lifecycle_versions_and_code_reuse(capability_client) -> None:
             "name": "Finance Skill",
             "type": "skill",
             "description": "Analyze finance data",
-            "category": "Finance",
+            "category_id": _category_id(client, headers["dev1"], "\u8d22\u52a1"),
             "version": "v1.0.0",
             "tags": ["finance"],
             "config": {"skill_md": "SKILL.md"},
@@ -235,7 +243,7 @@ def _create_stdio_mcp(client: TestClient, headers: dict[str, str], *, code: str)
             "name": f"Capability {code}",
             "type": "mcp",
             "description": "Capability description",
-            "category": "Engineering",
+            "category_id": _category_id(client, headers, "Engineering"),
             "version": "1.0.0",
             "tags": ["automation"],
             "config": {"transport": "STDIO", "startCommand": "node index.js"},

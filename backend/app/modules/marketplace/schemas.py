@@ -23,6 +23,7 @@ class MarketCapabilityData(StrictModel):
     version: str
     author: str
     department: str | None
+    category_id: int | None
     category: str | None
     connect_type: str | None
     server_url: str | None

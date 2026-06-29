@@ -1,4 +1,4 @@
-﻿# Function Register
+# Function Register
 
 本文件用于登记 Haze Tool 后端已经实现、修改或稳定的功能。
 
@@ -215,3 +215,15 @@
 - 是否影响已有功能：仅扩展 MCP Runtime 响应字段和修正部署任务类型，不改变运行操作权限、路由或状态机。
 - 验证方式：前端 TypeScript no-emit 检查、后端 Python 语法检查、迁移语法检查。
 - 更新时间：2026-06-28
+
+### System management business categories
+
+- Module: system management / business categories / capabilities / marketplace
+- Status: added
+- APIs: `GET/POST /api/business-categories`, `PUT/DELETE /api/business-categories/{id}`; capability write APIs now accept `category_id`
+- Tables: `business_categories`, `capabilities.category_id`
+- Main files: `backend/app/modules/business_categories/`, `backend/alembic/versions/20260629_0012_business_categories.py`, `frontend/src/Dashboard/pages/SystemManagement.tsx`
+- Summary: Adds administrator-managed business categories with case-insensitive unique names and creator/updater audit fields. Capability records reference category IDs, while read APIs retain the category name and add `category_id`. Developer Center and Marketplace load the shared category source.
+- Impact: Historical category strings are migrated to managed rows; built-in categories are seeded and unmatched historical names are preserved. Referenced categories return HTTP 409 on deletion. Existing display responses retain the `category` field.
+- Verification: Frontend TypeScript no-emit and production build passed. Fixed the backend response-module import and made migration 0012 resumable after non-transactional MySQL partial failure; backend execution still requires the user environment because the sandbox cannot launch its Python interpreter or Docker Desktop.
+- Updated: 2026-06-29

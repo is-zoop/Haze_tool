@@ -39,7 +39,7 @@ def _serialize(db: Session, user_id: int, capabilities: list[Capability], usage_
     return [HomeCapabilityItem(
         id=str(c.id), name=c.name, type="Skill" if c.type == "skill" else "MCP",
         description=c.description, author=owners.get(c.owner_id, ""), department=departments.get(c.department_id),
-        category=c.category, calls=_calls(c), is_favorite=c.id in favorites,
+        category_id=c.category_id, category=c.category, calls=_calls(c), is_favorite=c.id in favorites,
         icon=f"/api/developer/capabilities/{c.id}/icon" if c.icon else None,
         updated_at=c.updated_at.strftime("%Y-%m-%d"),
         use_count=usage_map[c.id].use_count if c.id in usage_map else None,

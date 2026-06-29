@@ -29,6 +29,7 @@ export interface DeveloperAsset {
   description: string;
   version: string;
   project: string;
+  categoryId?: number;
   owner: string;
   status: AssetStatus;
   recentTestStatus: TestStatus;

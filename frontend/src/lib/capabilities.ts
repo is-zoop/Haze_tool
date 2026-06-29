@@ -98,6 +98,7 @@ interface ApiCapability {
   name: string;
   type: CapabilityApiType;
   description?: string | null;
+  category_id?: number | null;
   category?: string | null;
   icon?: string | null;
   version: string;
@@ -153,6 +154,7 @@ function mapCapability(item: ApiCapability): DeveloperAsset {
     description: item.description ?? "",
     version: formatVersion(item.version),
     project: item.category ?? "",
+    categoryId: item.category_id ?? undefined,
     owner: item.owner ?? "",
     status: item.status,
     recentTestStatus: item.recent_test_status,
@@ -282,7 +284,7 @@ function payloadFromAsset(asset: Partial<DeveloperAsset>) {
     code: asset.code,
     name: asset.name,
     description: asset.description || null,
-    category: asset.project || null,
+    category_id: asset.categoryId || null,
     visibility: "internal" as const,
     tags: asset.tags ?? [],
     config: buildCapabilityConfig(asset),
@@ -398,6 +400,7 @@ export interface MarketCapabilityItem {
   version: string;
   author: string;
   department: string | null;
+  category_id: number | null;
   category: string | null;
   connect_type?: string | null;
   server_url?: string | null;
@@ -415,13 +418,13 @@ export async function listMarketCapabilities(params: {
   pageSize?: number;
   search?: string;
   type?: "skill" | "mcp";
-  category?: string;
+  categoryId?: number;
   favoriteOnly?: boolean;
 }): Promise<{ items: MarketCapabilityItem[]; total: number }> {
   const query = new URLSearchParams({ page: String(params.page ?? 1), page_size: String(params.pageSize ?? 100) });
   if (params.search) query.set("search", params.search);
   if (params.type) query.set("type", params.type);
-  if (params.category) query.set("category", params.category);
+  if (params.categoryId) query.set("category_id", String(params.categoryId));
   if (params.favoriteOnly) query.set("favorite_only", "true");
   const data = (await apiRequest<{ items: MarketCapabilityItem[]; page: number; page_size: number; total: number }>(`/api/marketplace/capabilities?${query}`)).data;
   const items = await Promise.all(data.items.map(async (item) => {

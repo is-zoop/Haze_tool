@@ -23,7 +23,8 @@ class Capability(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False, comment="能力名称")
     type: Mapped[str] = mapped_column(String(50), nullable=False, comment="能力类型：skill/mcp")
     description: Mapped[str | None] = mapped_column(String(1000), nullable=True, comment="能力描述")
-    category: Mapped[str | None] = mapped_column(String(100), nullable=True, comment="能力分类")
+    category_id: Mapped[int | None] = mapped_column(BIGINT_PK, ForeignKey("business_categories.id", ondelete="RESTRICT"), nullable=True, index=True, comment="业务分类ID")
+    business_category = relationship("BusinessCategory")
     icon: Mapped[str | None] = mapped_column(String(255), nullable=True, comment="图标路径")
     version: Mapped[str] = mapped_column(
         String(50), nullable=False, default="1.0.0", server_default="1.0.0", comment="当前版本"
@@ -64,6 +65,10 @@ class Capability(Base):
         comment="更新时间",
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, comment="软删除时间")
+
+    @property
+    def category(self) -> str | None:
+        return self.business_category.name if self.business_category else None
 
     versions: Mapped[list[CapabilityVersion]] = relationship(
         back_populates="capability", cascade="all, delete-orphan", passive_deletes=True

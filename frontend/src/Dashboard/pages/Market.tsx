@@ -65,7 +65,7 @@ import {
   renderSkillAccessPrompt,
   renderStdioMcpAccessPrompt,
 } from "../../config/capability-prompts";
-import { CUSTOM_CATEGORIES } from "../../temp/sharedOptions";
+import { BusinessCategory, listBusinessCategories } from "../../lib/businessCategories";
 import { CapabilityItem, CapabilityVersionRecord } from "../../types/capability";
 import { createMarketCapabilityDownloadLink, getMarketCapabilityContent, getMarketCapabilityDocumentAsset, listMarketCapabilities, toggleMarketFavorite } from "../../lib/capabilities";
 import { recordHomeCapabilityUsage } from "../../lib/home";
@@ -174,10 +174,12 @@ export function Market({
 }: MarketPageProps) {
   const t = getI18n(_langCode);
   const [skills, setSkills] = useState<CapabilityItem[]>([]);
+  const [categories, setCategories] = useState<BusinessCategory[]>([]);
   const [mcps, setMcps] = useState<CapabilityItem[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [activeTypeTab, setActiveTypeTab] = useState<TypeTab>("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  useEffect(() => { void listBusinessCategories().then(setCategories); }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showRecentlyUsedOnly, setShowRecentlyUsedOnly] = useState(false);
@@ -221,6 +223,7 @@ export function Market({
       pageSize,
       search: searchQuery.trim() || undefined,
       type,
+      categoryId: selectedCategory === "all" ? undefined : Number(selectedCategory),
       favoriteOnly: showFavoritesOnly || undefined,
     }).then(({ items, total }) => {
       const toItem = (raw: typeof items[0]): CapabilityItem => {
@@ -238,6 +241,7 @@ export function Market({
           permissionsStatus: "direct",
           riskLevel: "low",
           department: raw.department ?? "",
+          categoryId: raw.category_id ?? undefined,
           category: raw.category ?? "",
           tags: raw.tags,
           connectType: raw.connect_type ?? undefined,
@@ -255,7 +259,7 @@ export function Market({
       setMcps(items.filter((i) => i.type === "MCP").map(toItem));
       setTotalItems(total);
     }).catch(() => {});
-  }, [currentPage, pageSize, searchQuery, activeTypeTab, showFavoritesOnly]);
+  }, [currentPage, pageSize, searchQuery, activeTypeTab, selectedCategory, showFavoritesOnly]);
 
   const allItems = useMemo<MarketItem[]>(() => {
     return [
@@ -266,15 +270,7 @@ export function Market({
 
   const categoryMatches = (item: MarketItem, categoryId: string) => {
     if (categoryId === "all") return true;
-    const sourceCategory = CUSTOM_CATEGORIES.find((category) => category.id === categoryId);
-    const categoryLabel = CATEGORY_LABELS[categoryId];
-    return item.tags?.some((tag) => (
-      tag.toLowerCase() === categoryId.toLowerCase()
-      || tag === sourceCategory?.zh
-      || tag === sourceCategory?.en
-      || tag === categoryLabel
-      || (DISPLAY_COPY[item.id]?.tags?.includes(categoryLabel) ?? false)
-    )) ?? false;
+    return item.categoryId === Number(categoryId);
   };
 
   const filteredItems = useMemo(() => {
@@ -333,14 +329,14 @@ export function Market({
   const marketStats = useMemo(() => {
     const favoriteCount = allItems.filter((item) => item.isFavorite).length;
     return { favoriteCount };
-  }, [allItems]);
+  }, [allItems, categories]);
 
   const categoryCounts = useMemo(() => {
-    return CUSTOM_CATEGORIES.reduce<Record<string, number>>((acc, category) => {
+    return [{ id: "all" }, ...categories.map((category) => ({ id: String(category.id) }))].reduce<Record<string, number>>((acc, category) => {
       acc[category.id] = allItems.filter((item) => categoryMatches(item, category.id)).length;
       return acc;
     }, {});
-  }, [allItems]);
+  }, [allItems, categories]);
 
   const activeFilterCount = [
     selectedCategory !== "all",
@@ -498,7 +494,7 @@ export function Market({
 
             <ScrollArea className="min-h-0 flex-1 pr-1">
               <div className="space-y-1">
-                {CUSTOM_CATEGORIES.map((category) => {
+                {[{ id: "all", name: "全部能力" }, ...categories.map((category) => ({ id: String(category.id), name: category.name }))].map((category) => {
                   const isSelected = selectedCategory === category.id && !showFavoritesOnly && !showRecentlyUsedOnly;
                   return (
                     <button
@@ -516,7 +512,7 @@ export function Market({
                       )}
                       style={isSelected ? { fontWeight: "900" } : undefined}
                     >
-                      <span className="truncate">{getCategoryLabel(category.id, _langCode)}</span>
+                      <span className="truncate">{category.name}</span>
                       <span className={cn(
                         "ml-2 rounded-full px-1.5 py-0 text-xs",
                         isSelected ? "bg-blue-100 text-blue-600 font-black" : "bg-slate-100/60 text-slate-400"

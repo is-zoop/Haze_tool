@@ -52,6 +52,7 @@ export interface CapabilityItem {
   riskLevel: RiskLevel;
   department: string;
   tags?: string[];
+  categoryId?: number;
   category?: string;
   versionHistory?: CapabilityVersionRecord[];
   isFavorite?: boolean;

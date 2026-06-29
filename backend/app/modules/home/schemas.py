@@ -30,6 +30,7 @@ class HomeCapabilityItem(StrictModel):
     description: str | None
     author: str
     department: str | None
+    category_id: int | None
     category: str | None
     calls: int
     is_favorite: bool

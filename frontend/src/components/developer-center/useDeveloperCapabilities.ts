@@ -323,7 +323,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     else if (currentAsset.name.length > 100) errors.name = "能力名称不能超过 100 个字符";
     if (!currentAsset.code?.trim()) errors.code = "Slug 不能为空";
     else if (!/^[a-z0-9-]{3,50}$/.test(currentAsset.code)) errors.code = "Slug 只允许小写字母、数字和中划线，3-50 个字符";
-    if (!currentAsset.project?.trim()) errors.project = "请选择业务分类";
+    if (!currentAsset.categoryId) errors.project = "请选择业务分类";
     if (!currentAsset.description?.trim()) errors.description = "能力描述不能为空";
     else if (currentAsset.description.length > 300) errors.description = "能力描述不能超过 300 个字符";
     const zipLocked = isEditing && ["deployed", "debug_passed", "debug_failed", "published", "offline"].includes(currentAsset.status ?? "");

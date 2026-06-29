@@ -12,6 +12,7 @@ from app.core.rbac import (
 )
 from app.core.security import hash_password
 from app.db.session import SessionLocal
+from app.modules.business_categories.models import BusinessCategory, DEFAULT_CATEGORY_NAMES
 from app.modules.roles.models import Permission, Role
 from app.modules.users.models import Department, User
 
@@ -97,6 +98,11 @@ def bootstrap(session: Session) -> None:
         admin.department_id = department.id
         admin.status = "active"
     admin.roles = [roles[SYSTEM_ADMIN]]
+    session.flush()
+    for category_name in DEFAULT_CATEGORY_NAMES:
+        normalized = category_name.casefold()
+        if session.scalar(select(BusinessCategory.id).where(BusinessCategory.name_normalized == normalized)) is None:
+            session.add(BusinessCategory(name=category_name, name_normalized=normalized, created_by=admin.id, updated_by=admin.id))
     session.commit()
 
 

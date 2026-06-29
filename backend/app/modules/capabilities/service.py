@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.exceptions import AppException
 from app.core.rbac import ADMIN, SYSTEM_ADMIN
+from app.modules.business_categories.models import BusinessCategory
 from app.modules.capabilities.models import Capability, CapabilityVersion
 from app.modules.capabilities.schemas import (
     CapabilityCreate,
@@ -48,6 +49,7 @@ def _snapshot(capability: Capability) -> dict[str, Any]:
         "name": capability.name,
         "type": capability.type,
         "description": capability.description,
+        "category_id": capability.category_id,
         "category": capability.category,
         "icon": capability.icon,
         "version": capability.version,
@@ -79,6 +81,7 @@ def _serialize(
         name=capability.name,
         type=capability.type,
         description=capability.description,
+        category_id=capability.category_id,
         category=capability.category,
         icon=f"/api/developer/capabilities/{capability.id}/icon" if capability.icon else None,
         version=capability.version,
@@ -140,7 +143,6 @@ def list_capabilities(
                 Capability.code.like(term),
                 Capability.name.like(term),
                 Capability.description.like(term),
-                Capability.category.like(term),
             )
         )
     if capability_type:
@@ -211,7 +213,13 @@ def list_versions(db: Session, capability_id: int, actor: User) -> CapabilityVer
     )
 
 
+def _ensure_category(db: Session, category_id: int | None) -> None:
+    if category_id is not None and db.get(BusinessCategory, category_id) is None:
+        raise AppException(code=4222, message="业务分类不存在", status_code=422)
+
+
 def create_capability(db: Session, actor: User, payload: CapabilityCreate) -> CapabilityData:
+    _ensure_category(db, payload.category_id)
     _ensure_code_available(db, payload.code)
     package_upload = peek_upload(
         payload.package_upload_token,
@@ -233,7 +241,7 @@ def create_capability(db: Session, actor: User, payload: CapabilityCreate) -> Ca
         name=payload.name.strip(),
         type=payload.type,
         description=payload.description.strip() if payload.description else None,
-        category=payload.category.strip() if payload.category else None,
+        category_id=payload.category_id,
         version=_normalize_version(payload.version),
         status="draft",
         visibility="internal",
@@ -306,6 +314,8 @@ def update_capability(
 ) -> CapabilityData:
     capability = _get_capability(db, capability_id, actor)
     values = payload.model_dump(exclude_unset=True)
+    if "category_id" in values:
+        _ensure_category(db, values["category_id"])
     if "code" in values and values["code"] != capability.code:
         _ensure_code_available(db, values["code"], exclude_id=capability.id)
 
@@ -327,7 +337,7 @@ def update_capability(
     created_paths: set[str] = set()
     extension = _extension(capability)
     try:
-        for field in ("code", "name", "description", "category", "visibility"):
+        for field in ("code", "name", "description", "category_id", "visibility"):
             if field in values:
                 value = values[field]
                 setattr(capability, field, value.strip() if isinstance(value, str) else value)

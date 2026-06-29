@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -24,6 +24,7 @@ import { Settings as SettingsPage } from "./pages/Settings";
 import { PersonalCenter } from "./pages/PersonalCenter";
 import { Guide } from "./pages/Guide";
 import { McpRuntime } from "./pages/McpRuntime";
+import { SystemManagement } from "./pages/SystemManagement";
 
 // Import real shadcn/ui components
 import { Button } from "@/components/ui/button";
@@ -188,6 +189,7 @@ type MenuKey =
   | "mcpRuntime"
   | "audit"
   | "settings"
+  | "systemManagement"
   | "profile"
   | "guide";
 
@@ -290,12 +292,15 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
   }, [t, langCode, sessionUser.permissions]);
 
   const menuItemsGroup2 = useMemo(() => {
-    const permissionMap: Partial<Record<MenuKey, string>> = { audit: "page.audit", settings: "page.members" };
+    const permissionMap: Partial<Record<MenuKey, string>> = { audit: "page.audit", settings: "page.members", systemManagement: "page.system" };
     return [
       { key: "audit" as const, label: langCode === "ZH" ? "发布审核" : langCode === "JA" ? "リリース監査" : langCode === "ES" ? "Control de Auditoría" : "Audit Center", icon: ShieldCheck },
-      { key: "settings" as const, label: langCode === "ZH" ? "成员管理" : langCode === "JA" ? "メンバー管理" : langCode === "ES" ? "Gestión de Miembros" : "Member Management", icon: Settings }
-    ].filter(item => sessionUser.permissions.includes(permissionMap[item.key]!));
-  }, [langCode, sessionUser.permissions]);
+      { key: "settings" as const, label: langCode === "ZH" ? "成员管理" : langCode === "JA" ? "メンバー管理" : langCode === "ES" ? "Gestión de Miembros" : "Member Management", icon: Settings },
+      { key: "systemManagement" as const, label: langCode === "ZH" ? "系统管理" : "System Management", icon: Settings }
+    ].filter(item => item.key === "systemManagement"
+      ? sessionUser.role_code === "SYSTEM_ADMIN" || sessionUser.role_code === "ADMIN"
+      : sessionUser.permissions.includes(permissionMap[item.key]!));
+  }, [langCode, sessionUser.permissions, sessionUser.role_code]);
 
   const menuItems = useMemo(() => {
     return [...menuItemsGroup1, ...menuItemsGroup2];
@@ -667,6 +672,7 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
               {activeMenu === "mcpRuntime" && <McpRuntime langCode={langCode} />}
               {activeMenu === "audit" && <AuditCenter onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
               {activeMenu === "settings" && <SettingsPage onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
+              {activeMenu === "systemManagement" && <SystemManagement />}
               {activeMenu === "profile" && <PersonalCenter user={sessionUser} onLogout={onLogout} onUserChange={setSessionUser} />}
               {activeMenu === "guide" && <Guide onBackToHome={() => setActiveMenu("workbench")} setActiveMenu={(menu) => setActiveMenu(menu as MenuKey)} />}
             </div>
