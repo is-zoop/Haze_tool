@@ -1,0 +1,123 @@
+name: haze
+
+services:
+  storage-init:
+    image: alpine:3.20
+    restart: "no"
+    user: "0:0"
+    command: ["sh", "-c", "mkdir -p /storage && chown -R ${PUID:-1000}:${PGID:-1000} /storage"]
+    volumes:
+      - type: bind
+        source: ${HAZE_STORAGE_PATH:-./data/storage}
+        target: /storage
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: haze-backend:${HAZE_VERSION:-latest}
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DATABASE_URL: "${DATABASE_URL:?Set DATABASE_URL for the external MySQL database}"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY}"
+      INITIAL_ADMIN_NAME: "${INITIAL_ADMIN_NAME:-admin}"
+      INITIAL_ADMIN_PHONE: "${INITIAL_ADMIN_PHONE:?Set INITIAL_ADMIN_PHONE}"
+      INITIAL_ADMIN_EMAIL: "${INITIAL_ADMIN_EMAIL:?Set INITIAL_ADMIN_EMAIL}"
+      INITIAL_ADMIN_PASSWORD: "${INITIAL_ADMIN_PASSWORD:?Set INITIAL_ADMIN_PASSWORD}"
+      INITIAL_ADMIN_DEPARTMENT: "${INITIAL_ADMIN_DEPARTMENT:-System Administration}"
+      CORS_ORIGINS: '["${PUBLIC_ORIGIN:-http://localhost}"]'
+      LOCAL_STORAGE_DIR: /app/storage
+      DOWNLOAD_PUBLIC_BASE_URL: "${PUBLIC_ORIGIN:-http://localhost}"
+      GATEWAY_PUBLIC_BASE_URL: "${GATEWAY_PUBLIC_BASE_URL:-http://localhost:8001}"
+      MCP_DOCKER_PREPULL: "false"
+      WEB_CONCURRENCY: "${WEB_CONCURRENCY:-2}"
+    volumes:
+      - type: bind
+        source: ${HAZE_STORAGE_PATH:-./data/storage}
+        target: /app/storage
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      storage-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  gateway:
+    image: haze-backend:${HAZE_VERSION:-latest}
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    command: ["python", "-m", "gateway.main"]
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: "${DATABASE_URL:?Set DATABASE_URL for the external MySQL database}"
+      GATEWAY_HOST: 0.0.0.0
+      GATEWAY_PORT: 8001
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${GATEWAY_PORT:-8001}:8001"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  worker:
+    image: haze-backend:${HAZE_VERSION:-latest}
+    restart: unless-stopped
+    user: "0:0"
+    command: ["python", "-m", "worker.main"]
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: "${DATABASE_URL:?Set DATABASE_URL for the external MySQL database}"
+      LOCAL_STORAGE_DIR: /app/storage
+      K8S_IN_CLUSTER: "false"
+      K8S_CONFIG_PATH: /run/haze/kubeconfig
+      K8S_NAMESPACE: "${K8S_NAMESPACE:-haze-runtime}"
+      GATEWAY_PUBLIC_BASE_URL: "${GATEWAY_PUBLIC_BASE_URL:-http://localhost:8001}"
+      REGISTRY_URL: "${REGISTRY_URL:?Set REGISTRY_URL}"
+      REGISTRY_PROJECT: "${REGISTRY_PROJECT:-haze-mcp}"
+      REGISTRY_PUSH_ENABLED: "${REGISTRY_PUSH_ENABLED:-true}"
+      DOCKER_CONFIG: /root/.docker
+    volumes:
+      - type: bind
+        source: ${HAZE_STORAGE_PATH:-./data/storage}
+        target: /app/storage
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+      - type: bind
+        source: ${KUBECONFIG_PATH:?Set KUBECONFIG_PATH}
+        target: /run/haze/kubeconfig
+        read_only: true
+      - type: bind
+        source: ${DOCKER_CONFIG_PATH:-/root/.docker}
+        target: /root/.docker
+        read_only: true
+    depends_on:
+      backend:
+        condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    image: haze-frontend:${HAZE_VERSION:-latest}
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
