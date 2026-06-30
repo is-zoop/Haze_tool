@@ -64,6 +64,28 @@ def test_bootstrap_login_me_and_logout(auth_client: TestClient) -> None:
     assert auth_client.get("/api/auth/me", headers=auth_header(token)).status_code == 401
 
 
+def test_personal_credential_can_query_user_and_old_key_expires(auth_client: TestClient) -> None:
+    token = login(auth_client, "13800138000", "AdminPass!123")["access_token"]
+    credential = auth_client.get("/api/auth/me/mcp-credential", headers=auth_header(token))
+    assert credential.status_code == 200, credential.text
+    key = credential.json()["data"]["key"]
+
+    profile = auth_client.get("/api/auth/personal-credential/me", headers=auth_header(key))
+    assert profile.status_code == 200, profile.text
+    assert profile.json()["data"]["member_no"] == "ADMIN0001"
+
+    invalid = auth_client.get("/api/auth/personal-credential/me", headers=auth_header("haze_invalid"))
+    assert invalid.status_code == 401
+    assert invalid.json()["message"] == "invalid or expired personal service credential"
+
+    reset = auth_client.post("/api/auth/me/mcp-credential/reset", headers=auth_header(token))
+    assert reset.status_code == 200, reset.text
+    expired = auth_client.get("/api/auth/personal-credential/me", headers=auth_header(key))
+    assert expired.status_code == 401
+    assert expired.json()["message"] == "invalid or expired personal service credential"
+    new_key = reset.json()["data"]["key"]
+    assert auth_client.get("/api/auth/personal-credential/me", headers=auth_header(new_key)).status_code == 200
+
 def test_member_lifecycle_and_role_boundaries(auth_client: TestClient) -> None:
     admin_token = login(auth_client, "13800138000", "AdminPass!123")["access_token"]
     headers = auth_header(admin_token)

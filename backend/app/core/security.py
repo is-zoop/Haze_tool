@@ -120,7 +120,7 @@ def get_personal_credential_user(
     credential = db.scalar(select(UserMcpCredential).where(UserMcpCredential.key_hash == key_hash))
     user = db.get(User, credential.user_id) if credential else None
     if user is None or user.deleted != 0 or user.status != "active":
-        raise AppException(code=4013, message="invalid personal service credential", status_code=status.HTTP_401_UNAUTHORIZED)
+        raise AppException(code=4013, message="invalid or expired personal service credential", status_code=status.HTTP_401_UNAUTHORIZED)
     return user
 
 

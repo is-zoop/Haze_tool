@@ -227,3 +227,25 @@
 - Impact: Historical category strings are migrated to managed rows; built-in categories are seeded and unmatched historical names are preserved. Referenced categories return HTTP 409 on deletion. Existing display responses retain the `category` field.
 - Verification: Frontend TypeScript no-emit and production build passed. Fixed the backend response-module import and made migration 0012 resumable after non-transactional MySQL partial failure; backend execution still requires the user environment because the sandbox cannot launch its Python interpreter or Docker Desktop.
 - Updated: 2026-06-29
+### Linux Docker Compose production deployment
+
+- Module: deployment / frontend / backend / MCP gateway
+- Status: added
+- APIs: no API changes
+- Tables: external MySQL; no schema changes
+- Main files: `docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx.conf`
+- Summary: Adds a single-host Linux Docker Compose deployment for the frontend, backend API, and MCP Gateway. The backend runs Alembic migrations before startup, the frontend proxies `/api` to the backend, and uploads are bind-mounted to a configurable Linux host directory instead of the container writable layer.
+- Impact: Existing application behavior is unchanged. The Compose stack starts the Kubernetes deployment Worker by default, mounts the Linux Docker socket for MCP image builds, and mounts kubeconfig plus Docker registry credentials for Kubernetes deployment and image push.
+- Verification: `docker compose config --quiet` passed with placeholder production, kubeconfig, and registry environment variables.
+- Updated: 2026-06-29
+### Personal credential user profile API
+
+- Module: auth / personal service credential
+- Status: added
+- APIs: `GET /api/auth/personal-credential/me`
+- Tables: `users`, `user_mcp_credentials`
+- Main files: `backend/app/modules/auth/router.py`, `backend/app/core/security.py`, `backend/tests/test_auth_users.py`
+- Summary: Adds a personal-service-credential-only endpoint that returns the existing authenticated user profile shape. Invalid, reset, disabled-user, or deleted-user credentials return HTTP 401 with `message=invalid or expired personal service credential`.
+- Impact: Existing JWT `/api/auth/me` behavior and response shape are unchanged. The shared personal credential validator now reports invalid credentials as invalid or expired.
+- Verification: Targeted authentication test and Python syntax check.
+- Updated: 2026-06-30

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import loginLandscape from "../assets/images/login_right_landscape_hd.png";
 
 interface LandscapePanelProps {
   enableMagnifier?: boolean;
@@ -21,7 +22,7 @@ export function LandscapePanel({ enableMagnifier = false }: LandscapePanelProps)
     setMousePos({ x, y });
   };
 
-  const imageSrc = "/src/assets/images/login_right_landscape_hd.png";
+  const imageSrc = loginLandscape;
   const lensSize = 80; // Diameter of the lens in pixels
   const zoomLevel = 2.2; // Magnification factor
 

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.exceptions import AppException
 from app.core.response import ApiResponse, success_response
-from app.core.security import create_access_token, get_current_user, get_user_permission_codes, hash_password, verify_password
+from app.core.security import create_access_token, get_current_user, get_personal_credential_user, get_user_permission_codes, hash_password, verify_password
 from app.db.session import get_db
 from app.modules.auth.schemas import (
     AuthUser,
@@ -134,6 +134,11 @@ def logout(request: Request, user: Annotated[User, Depends(get_current_user)], d
 
 @router.get("/me", response_model=ApiResponse[AuthUser])
 def me(request: Request, user: Annotated[User, Depends(get_current_user)]) -> ApiResponse[AuthUser]:
+    return success_response(request, serialize_auth_user(user))
+
+
+@router.get("/personal-credential/me", response_model=ApiResponse[AuthUser])
+def personal_credential_me(request: Request, user: Annotated[User, Depends(get_personal_credential_user)]) -> ApiResponse[AuthUser]:
     return success_response(request, serialize_auth_user(user))
 
 
