@@ -4,7 +4,6 @@ import secrets
 import string
 import time
 from typing import Annotated
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, or_, select
@@ -101,6 +100,12 @@ def _ensure_unique(db: Session, *, phone: str | None = None, email: str | None =
         raise AppException(code=4091, message=message, status_code=409)
 
 
+def _ensure_member_no_available(db: Session, member_no: str) -> None:
+    duplicate_id = db.scalar(select(User.id).where(func.lower(User.member_no) == member_no.lower()))
+    if duplicate_id is not None:
+        raise AppException(code=4091, message="Member number already exists", status_code=409)
+
+
 def _temporary_password() -> str:
     alphabet = string.ascii_letters + string.digits + "!@#$%"
     return "".join(secrets.choice(alphabet) for _ in range(14))
@@ -149,14 +154,18 @@ def list_users(
 
 @router.post("/users", response_model=ApiResponse[MemberCreatedData])
 def create_user(payload: MemberCreate, request: Request, db: Annotated[Session, Depends(get_db)], _: Annotated[User, Depends(require_capabilities("members.create"))]) -> ApiResponse[MemberCreatedData]:
-    _ensure_unique(db, phone=payload.phone, email=str(payload.email))
+    member_no = payload.member_no.strip()
+    if not member_no:
+        raise AppException(code=4221, message="Member number is required", status_code=422)
+    _ensure_unique(db, phone=payload.phone, email=str(payload.email) if payload.email else None)
+    _ensure_member_no_available(db, member_no)
     role = _get_role(db, payload.role_code)
     department = _get_or_create_department(db, payload.department)
-    temporary_password = _temporary_password()
+    temporary_password = payload.initial_password or _temporary_password()
     user = User(
-        member_no="M" + uuid4().hex[:8].upper(),
+        member_no=member_no,
         name=payload.name.strip(),
-        email=str(payload.email).lower(),
+        email=str(payload.email).lower() if payload.email else None,
         phone=payload.phone,
         password_hash=hash_password(temporary_password),
         department_id=department.id,
@@ -180,11 +189,11 @@ def update_user(member_no: str, payload: MemberUpdate, request: Request, db: Ann
     target = _get_target(db, member_no, actor)
     _ensure_mutable(target)
     values = payload.model_dump(exclude_unset=True)
-    _ensure_unique(db, phone=values.get("phone"), email=str(values["email"]) if "email" in values else None, exclude_id=target.id)
+    _ensure_unique(db, phone=values.get("phone"), email=str(values["email"]) if values.get("email") else None, exclude_id=target.id)
     if "department" in values:
         target.department = _get_or_create_department(db, values.pop("department"))
     for key, value in values.items():
-        setattr(target, key, str(value).lower() if key == "email" else value.strip() if isinstance(value, str) else value)
+        setattr(target, key, str(value).lower() if key == "email" and value else value.strip() if isinstance(value, str) else value)
     db.commit()
     return success_response(request, _serialize_member(target))
 

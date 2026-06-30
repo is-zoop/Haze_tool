@@ -73,6 +73,8 @@ def test_personal_credential_can_query_user_and_old_key_expires(auth_client: Tes
     profile = auth_client.get("/api/auth/personal-credential/me", headers=auth_header(key))
     assert profile.status_code == 200, profile.text
     assert profile.json()["data"]["member_no"] == "ADMIN0001"
+    assert "avatar_url" not in profile.json()["data"]
+    assert "permissions" not in profile.json()["data"]
 
     invalid = auth_client.get("/api/auth/personal-credential/me", headers=auth_header("haze_invalid"))
     assert invalid.status_code == 401
@@ -90,13 +92,15 @@ def test_member_lifecycle_and_role_boundaries(auth_client: TestClient) -> None:
     admin_token = login(auth_client, "13800138000", "AdminPass!123")["access_token"]
     headers = auth_header(admin_token)
     response = auth_client.post("/api/users", headers=headers, json={
+        "member_no": "MANAGER001", "initial_password": "ManagerPass!123",
         "name": "?????", "phone": "13800138001", "email": "manager@example.com",
         "department": "???", "role_code": "ADMIN", "status": "active",
     })
     assert response.status_code == 200, response.text
     created = response.json()["data"]
+    assert created["temporary_password"] == "ManagerPass!123"
     member_no = created["member"]["member_no"]
-    manager_token = login(auth_client, "13800138001", created["temporary_password"])["access_token"]
+    manager_token = login(auth_client, "13800138001", "ManagerPass!123")["access_token"]
     items = auth_client.get("/api/users", headers=auth_header(manager_token)).json()["data"]["items"]
     assert all(item["role_code"] != "SYSTEM_ADMIN" for item in items)
     assert auth_client.get("/api/users/ADMIN0001", headers=auth_header(manager_token)).status_code == 404
@@ -114,9 +118,12 @@ def test_member_lifecycle_and_role_boundaries(auth_client: TestClient) -> None:
 def test_developer_cannot_manage_members(auth_client: TestClient) -> None:
     token = login(auth_client, "13800138000", "AdminPass!123")["access_token"]
     response = auth_client.post("/api/users", headers=auth_header(token), json={
-        "name": "???", "phone": "13800138002", "email": "developer@example.com",
+        "member_no": "DEVELOPER001",
+        "name": "???", "phone": "13800138002",
         "department": "???", "role_code": "DEVELOPER",
     })
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["member"]["email"] is None
     password = response.json()["data"]["temporary_password"]
     developer_token = login(auth_client, "13800138002", password)["access_token"]
     assert auth_client.get("/api/users", headers=auth_header(developer_token)).status_code == 403

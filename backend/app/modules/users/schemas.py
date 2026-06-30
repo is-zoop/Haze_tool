@@ -7,12 +7,14 @@ from app.modules.auth.schemas import PHONE_PATTERN
 
 class MemberBase(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    email: EmailStr
+    email: EmailStr | None = None
     phone: str = Field(pattern=PHONE_PATTERN)
     department: str = Field(min_length=1, max_length=100)
 
 
 class MemberCreate(MemberBase):
+    member_no: str = Field(min_length=1, max_length=30)
+    initial_password: str | None = Field(default=None, min_length=6, max_length=128)
     role_code: str
     status: str = Field(default="active", pattern=r"^(active|disabled)$")
 

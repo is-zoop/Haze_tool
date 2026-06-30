@@ -225,7 +225,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadMembers(), 250);
-    return () => window.clearTimeout(timer);
+  return () => window.clearTimeout(timer);
   }, [loadMembers]);
 
   useEffect(() => {
@@ -270,7 +270,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
   const handleOpenAdd = () => {
     setIsEditing(false);
-    setCurrentMember({ name: "", email: "", department: "", phone: "", role: "User", status: "active" });
+    setCurrentMember({ memberNo: "", initialPassword: "", name: "", email: "", department: "", phone: "", role: "User", status: "active" });
     setFormError(""); setShowEditModal(true);
   };
 
@@ -280,8 +280,10 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
   const handleSaveForm = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!isEditing && !currentMember.memberNo?.trim()) {
+      return setFormError(_langCode === "ZH" ? "请输入成员编号" : "Member number is required");
+    }
     if (!currentMember.name?.trim()) return setFormError(t.memberMgmt_errName);
-    if (!currentMember.email?.trim()) return setFormError(t.memberMgmt_errEmail);
     if (!currentMember.department?.trim()) return setFormError(t.memberMgmt_errDept);
     if (!isEditing && !currentMember.phone?.trim()) return setFormError(t.memberMgmt_errPhone);
 
@@ -389,6 +391,47 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
   const handleViewDetails = (member: SystemMember) => {
     setDetailsMember(member); setShowDetailsModal(true);
   };
+  const renderDepartmentField = () => (
+    <div>
+      <label className="block text-xs font-bold text-muted-foreground pb-1.5">
+        {t.memberMgmt_formDept}
+      </label>
+      <div className="relative flex items-center">
+        <Input
+          type="text"
+          required
+          value={currentMember.department || ""}
+          onChange={(e) => setCurrentMember(prev => ({ ...prev, department: e.target.value }))}
+          className="w-full h-10 pl-3 pr-10 text-xs bg-background border border-input rounded-lg focus:outline-hidden focus:border-blue-500 font-medium text-foreground"
+        />
+        <div className="absolute right-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-md cursor-pointer"
+              >
+                <ChevronDown size={14} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-[200px] text-xs bg-white text-slate-700 border border-slate-200 shadow-md rounded-xl p-1 z-[100]" align="end">
+              {departments.map((dept) => (
+                <DropdownMenuItem
+                  key={dept}
+                  onClick={() => setCurrentMember(prev => ({ ...prev, department: dept }))}
+                  className="cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between"
+                >
+                  <span>{dept}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    </div>
+  );
   return (
     <div className="dashboard-page-stack h-full overflow-hidden text-left font-sans flex flex-col gap-3 animate-in fade-in duration-300" id="haze-settings-page-container">
       <PageHeader
@@ -733,7 +776,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-[420px] p-6 bg-card border border-border rounded-xl shadow-lg text-left"
+              className="w-full max-w-2xl p-6 bg-card border border-border rounded-xl shadow-lg text-left"
             >
               <div className="flex items-center justify-between pb-3 border-b border-border">
                 <div className="flex items-center gap-2 text-sm text-foreground font-bold">
@@ -757,90 +800,87 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
               )}
 
               <form onSubmit={handleSaveForm} className="mt-4 space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-muted-foreground pb-1.5">
-                    {t.memberMgmt_formName}
-                  </label>
-                  <Input
-                    type="text"
-                    required
-                    value={currentMember.name || ""}
-                    onChange={(e) => setCurrentMember(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full h-10 px-3 text-xs bg-background border border-input rounded-lg focus:outline-hidden focus:border-blue-500 font-medium text-foreground"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-muted-foreground pb-1.5">
-                    {t.memberMgmt_formEmail}
-                  </label>
-                  <Input
-                    type="email"
-                    required
-                    value={currentMember.email || ""}
-                    onChange={(e) => setCurrentMember(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full h-10 px-3 text-xs bg-background border border-input rounded-lg focus:outline-hidden focus:border-blue-500 font-medium text-foreground"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-muted-foreground pb-1.5">
-                    {t.memberMgmt_formPhone}
-                  </label>
-                  <Input
-                    type="text"
-                    required
-                    disabled={isEditing}
-                    value={currentMember.phone || ""}
-                    onChange={(e) => setCurrentMember(prev => ({ ...prev, phone: e.target.value }))}
-                    className={`w-full h-10 px-3 text-xs border border-input rounded-lg focus:outline-hidden focus:border-blue-500 font-medium text-foreground ${isEditing ? "bg-slate-50 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-muted-foreground pb-1.5">
-                    {t.memberMgmt_formDept}
-                  </label>
-                  <div className="relative flex items-center">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {!isEditing && (
+                    <div>
+                      <label className="block text-xs font-bold text-muted-foreground pb-1.5">
+                        {_langCode === "ZH" ? "\u6210\u5458\u7f16\u53f7" : "Member number"}<span className="text-destructive ml-0.5">*</span>
+                      </label>
+                      <Input
+                        type="text"
+                        required
+                        maxLength={30}
+                        value={currentMember.memberNo || ""}
+                        onChange={(e) => setCurrentMember(prev => ({ ...prev, memberNo: e.target.value }))}
+                        className="w-full h-10 px-3 text-xs bg-background border border-input rounded-lg focus:outline-hidden focus:border-blue-500 font-medium text-foreground"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground pb-1.5">
+                      {t.memberMgmt_formName}<span className="text-destructive ml-0.5">*</span>
+                    </label>
                     <Input
                       type="text"
                       required
-                      value={currentMember.department || ""}
-                      onChange={(e) => setCurrentMember(prev => ({ ...prev, department: e.target.value }))}
-                      className="w-full h-10 pl-3 pr-10 text-xs bg-background border border-input rounded-lg focus:outline-hidden focus:border-blue-500 font-medium text-foreground"
+                      value={currentMember.name || ""}
+                      onChange={(e) => setCurrentMember(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full h-10 px-3 text-xs bg-background border border-input rounded-lg focus:outline-hidden focus:border-blue-500 font-medium text-foreground"
                     />
-                    <div className="absolute right-1">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-md cursor-pointer"
-                          >
-                            <ChevronDown size={14} />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-[200px] text-xs bg-white text-slate-700 border border-slate-200 shadow-md rounded-xl p-1 z-[100]" align="end">
-                          {departments.map((dept) => (
-                            <DropdownMenuItem
-                              key={dept}
-                              onClick={() => setCurrentMember(prev => ({ ...prev, department: dept }))}
-                              className="cursor-pointer font-bold p-2 hover:bg-slate-50 focus:bg-slate-50 rounded-lg flex items-center justify-between"
-                            >
-                              <span>{dept}</span>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                  </div>
+                  {isEditing && renderDepartmentField()}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground pb-1.5">
+                      {t.memberMgmt_formEmail}
+                    </label>
+                    <Input
+                      type="email"
+                      value={currentMember.email || ""}
+                      onChange={(e) => setCurrentMember(prev => ({ ...prev, email: e.target.value }))}
+                      className="w-full h-10 px-3 text-xs bg-background border border-input rounded-lg focus:outline-hidden focus:border-blue-500 font-medium text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground pb-1.5">
+                      {t.memberMgmt_formPhone}<span className="text-destructive ml-0.5">*</span>
+                    </label>
+                    <Input
+                      type="text"
+                      required
+                      disabled={isEditing}
+                      value={currentMember.phone || ""}
+                      onChange={(e) => setCurrentMember(prev => ({ ...prev, phone: e.target.value }))}
+                      className={`w-full h-10 px-3 text-xs border border-input rounded-lg focus:outline-hidden focus:border-blue-500 font-medium text-foreground ${isEditing ? "bg-slate-50 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                    />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                {!isEditing && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {renderDepartmentField()}
+                    <div>
+                      <label className="block text-xs font-bold text-muted-foreground pb-1.5">
+                        {_langCode === "ZH" ? "\u521d\u59cb\u5bc6\u7801\uff08\u53ef\u9009\uff09" : "Initial password (optional)"}
+                      </label>
+                      <Input
+                        type="password"
+                        minLength={6}
+                        maxLength={128}
+                        value={currentMember.initialPassword || ""}
+                        placeholder={_langCode === "ZH" ? "\u7559\u7a7a\u5219\u81ea\u52a8\u751f\u6210" : "Leave blank to generate automatically"}
+                        onChange={(e) => setCurrentMember(prev => ({ ...prev, initialPassword: e.target.value }))}
+                        className="w-full h-10 px-3 text-xs bg-background border border-input rounded-lg focus:outline-hidden focus:border-blue-500 font-medium text-foreground"
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-muted-foreground pb-1.5">
-                      {t.memberMgmt_formRole}
+                      {t.memberMgmt_formRole}<span className="text-destructive ml-0.5">*</span>
                     </label>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -883,7 +923,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
                   <div>
                     <label className="block text-xs font-bold text-muted-foreground pb-1.5">
-                      {t.memberMgmt_formStatus}
+                      {t.memberMgmt_formStatus}<span className="text-destructive ml-0.5">*</span>
                     </label>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

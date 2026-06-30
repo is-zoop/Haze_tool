@@ -15,13 +15,24 @@ class AuthUser(BaseModel):
     member_no: str
     name: str
     phone: str
-    email: str
+    email: str | None = None
     avatar_url: str | None = None
     department: str
     role_code: str
     role_name: str
     status: str
     permissions: list[str]
+
+
+class PersonalCredentialUser(BaseModel):
+    member_no: str
+    name: str
+    phone: str
+    email: str | None = None
+    department: str
+    role_code: str
+    role_name: str
+    status: str
 
 
 class LoginData(BaseModel):

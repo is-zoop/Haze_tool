@@ -12,12 +12,14 @@ export interface SystemMember {
   status: MemberStatus;
   lastLoginAt?: string;
   phone: string;
+  memberNo?: string;
+  initialPassword?: string;
 }
 
 interface ApiMember {
   member_no: string;
   name: string;
-  email: string;
+  email: string | null;
   phone: string;
   department: string;
   role_code: "ADMIN" | "DEVELOPER" | "USER" | "SYSTEM_ADMIN";
@@ -40,7 +42,7 @@ function mapMember(member: ApiMember): SystemMember {
   return {
     id: member.member_no,
     name: member.name,
-    email: member.email,
+    email: member.email || "",
     phone: member.phone,
     department: member.department,
     role: codeToRole[member.role_code],
@@ -67,7 +69,16 @@ export async function listMembers(params: {
 export async function createMember(member: Omit<SystemMember, "id" | "lastLoginAt">): Promise<{ member: SystemMember; temporaryPassword: string }> {
   const data = (await apiRequest<{ member: ApiMember; temporary_password: string }>("/api/users", {
     method: "POST",
-    body: { name: member.name, email: member.email, phone: member.phone, department: member.department, role_code: roleToCode[member.role], status: member.status },
+    body: {
+      member_no: member.memberNo,
+      initial_password: member.initialPassword || undefined,
+      name: member.name,
+      email: member.email.trim() || null,
+      phone: member.phone,
+      department: member.department,
+      role_code: roleToCode[member.role],
+      status: member.status,
+    },
   })).data;
   return { member: mapMember(data.member), temporaryPassword: data.temporary_password };
 }
@@ -75,7 +86,7 @@ export async function createMember(member: Omit<SystemMember, "id" | "lastLoginA
 export async function updateMember(member: SystemMember): Promise<SystemMember> {
   const data = (await apiRequest<ApiMember>(`/api/users/${member.id}`, {
     method: "PATCH",
-    body: { name: member.name, email: member.email, phone: member.phone, department: member.department },
+    body: { name: member.name, email: member.email.trim() || null, phone: member.phone, department: member.department },
   })).data;
   return mapMember(data);
 }

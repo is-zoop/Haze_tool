@@ -64,6 +64,10 @@
 - 验证方式：pytest 15 项通过；前端 TypeScript 检查通过。
 - 更新时间：2026-06-23
 
+- 2026-06-30 change: `POST /api/users` now requires a caller-supplied `member_no` and accepts optional `initial_password`; omitted passwords remain auto-generated. Verification: `backend/tests/test_auth_users.py`.
+
+- 2026-06-30 change: member create/edit forms use paired responsive fields and required markers. User email is optional in API and database; non-empty emails retain existing uniqueness and format validation. Migration: `20260630_0013_nullable_user_email.py`.
+
 ### Developer center capability asset tables
 
 - 所属模块：capabilities / developer center
@@ -245,7 +249,7 @@
 - APIs: `GET /api/auth/personal-credential/me`
 - Tables: `users`, `user_mcp_credentials`
 - Main files: `backend/app/modules/auth/router.py`, `backend/app/core/security.py`, `backend/tests/test_auth_users.py`
-- Summary: Adds a personal-service-credential-only endpoint that returns the existing authenticated user profile shape. Invalid, reset, disabled-user, or deleted-user credentials return HTTP 401 with `message=invalid or expired personal service credential`.
+- Summary: Adds a personal-service-credential-only endpoint that returns member number, name, phone, email, department, role, and status without exposing avatar_url or permissions. Invalid, reset, disabled-user, or deleted-user credentials return HTTP 401 with `message=invalid or expired personal service credential`.
 - Impact: Existing JWT `/api/auth/me` behavior and response shape are unchanged. The shared personal credential validator now reports invalid credentials as invalid or expired.
 - Verification: Targeted authentication test and Python syntax check.
 - Updated: 2026-06-30

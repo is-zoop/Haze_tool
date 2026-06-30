@@ -20,6 +20,7 @@ from app.modules.auth.schemas import (
     McpCredentialSecretData,
     PasswordResetData,
     PasswordResetRequest,
+    PersonalCredentialUser,
     ProfileUpdate,
 )
 from app.modules.users.models import User, UserMcpCredential
@@ -101,6 +102,20 @@ def serialize_auth_user(user: User) -> AuthUser:
     )
 
 
+def serialize_personal_credential_user(user: User) -> PersonalCredentialUser:
+    role = user.roles[0]
+    return PersonalCredentialUser(
+        member_no=user.member_no,
+        name=user.name,
+        phone=user.phone,
+        email=user.email,
+        department=user.department.name,
+        role_code=role.code,
+        role_name=role.name,
+        status=user.status,
+    )
+
+
 @router.post("/login", response_model=ApiResponse[LoginData])
 def login(payload: LoginRequest, request: Request, db: Annotated[Session, Depends(get_db)]) -> ApiResponse[LoginData]:
     user = db.scalar(select(User).where(User.phone == payload.phone, User.deleted == 0))
@@ -137,9 +152,9 @@ def me(request: Request, user: Annotated[User, Depends(get_current_user)]) -> Ap
     return success_response(request, serialize_auth_user(user))
 
 
-@router.get("/personal-credential/me", response_model=ApiResponse[AuthUser])
-def personal_credential_me(request: Request, user: Annotated[User, Depends(get_personal_credential_user)]) -> ApiResponse[AuthUser]:
-    return success_response(request, serialize_auth_user(user))
+@router.get("/personal-credential/me", response_model=ApiResponse[PersonalCredentialUser])
+def personal_credential_me(request: Request, user: Annotated[User, Depends(get_personal_credential_user)]) -> ApiResponse[PersonalCredentialUser]:
+    return success_response(request, serialize_personal_credential_user(user))
 
 
 @router.patch("/me/profile", response_model=ApiResponse[AuthUser])
