@@ -29,6 +29,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSecondaryText,
 } from "@/components/ui/table";
 import {
   DropdownMenu,
@@ -41,12 +42,14 @@ import { DeveloperAsset } from "../../types/developer-center";
 import { StatusBadge } from "../common/StatusBadge";
 import { getI18n } from "../../i18n";
 
+const tableStatusClassName = "flex items-center gap-1.5 text-xs font-semibold";
+
 function renderTestStatusBadge(asset: DeveloperAsset, lang: string = "ZH") {
   const t = getI18n(lang);
   // Skill 无需测试
   if (asset.type === "Skill") {
     return (
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
+      <div className={`${tableStatusClassName} text-slate-400`}>
         <span className="h-2 w-2 rounded-full bg-slate-200 shrink-0" />
         <span>{t.statusNoTestRequired}</span>
       </div>
@@ -55,7 +58,7 @@ function renderTestStatusBadge(asset: DeveloperAsset, lang: string = "ZH") {
   // 从生命周期状态推导测试结果（MCP 到达 published/offline 必然经过 debug_passed）
   if (["debug_passed", "published", "offline"].includes(asset.status)) {
     return (
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+      <div className={`${tableStatusClassName} text-slate-700`}>
         <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
         <span>{lang === "ZH" ? "测试通过" : lang === "JA" ? "テスト合格" : lang === "ES" ? "Prueba aprobada" : "Test Passed"}</span>
       </div>
@@ -63,7 +66,7 @@ function renderTestStatusBadge(asset: DeveloperAsset, lang: string = "ZH") {
   }
   if (asset.status === "debug_failed") {
     return (
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+      <div className={`${tableStatusClassName} text-slate-700`}>
         <X className="h-4 w-4 bg-rose-500 text-white rounded-full p-0.5 shrink-0" />
         <span>{lang === "ZH" ? "测试失败" : lang === "JA" ? "テスト失敗" : lang === "ES" ? "Prueba fallida" : "Test Failed"}</span>
       </div>
@@ -72,7 +75,7 @@ function renderTestStatusBadge(asset: DeveloperAsset, lang: string = "ZH") {
   const status = asset.recentTestStatus;
   if (status === "pass") {
     return (
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+      <div className={`${tableStatusClassName} text-slate-700`}>
         <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
         <span>{t.statusPass}</span>
       </div>
@@ -80,7 +83,7 @@ function renderTestStatusBadge(asset: DeveloperAsset, lang: string = "ZH") {
   }
   if (status === "fail") {
     return (
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+      <div className={`${tableStatusClassName} text-slate-700`}>
         <X className="h-4 w-4 bg-rose-500 text-white rounded-full p-0.5 shrink-0" />
         <span>{t.statusFail}</span>
       </div>
@@ -88,14 +91,14 @@ function renderTestStatusBadge(asset: DeveloperAsset, lang: string = "ZH") {
   }
   if (status === "testing") {
     return (
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+      <div className={`${tableStatusClassName} text-slate-700`}>
         <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
         <span>{t.statusTesting}</span>
       </div>
     );
   }
   return (
-    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+    <div className={`${tableStatusClassName} text-slate-700`}>
       <span className="h-2 w-2 rounded-full bg-slate-300 shrink-0" />
       <span>{t.statusNotTested}</span>
     </div>
@@ -116,7 +119,7 @@ function renderDeployStatusBadge(asset: DeveloperAsset, lang: string = "ZH") {
   // Skill 与 STDIO MCP 无需部署
   if (!isHttp) {
     return (
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
+      <div className={`${tableStatusClassName} text-slate-400`}>
         <span className="h-2 w-2 rounded-full bg-slate-200 shrink-0" />
         <span>{lang === "ZH" ? "无需部署" : lang === "JA" ? "デプロイ不要" : lang === "ES" ? "Sin despliegue" : "No Deploy"}</span>
       </div>
@@ -125,7 +128,7 @@ function renderDeployStatusBadge(asset: DeveloperAsset, lang: string = "ZH") {
   const s = asset.status;
   if (s === "deploy_failed") {
     return (
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+      <div className={`${tableStatusClassName} text-slate-700`}>
         <X className="h-4 w-4 bg-rose-500 text-white rounded-full p-0.5 shrink-0" />
         <span>{lang === "ZH" ? "部署失败" : lang === "JA" ? "デプロイ失敗" : lang === "ES" ? "Despliegue fallido" : "Deploy Failed"}</span>
       </div>
@@ -133,14 +136,14 @@ function renderDeployStatusBadge(asset: DeveloperAsset, lang: string = "ZH") {
   }
   if (["deployed", "debug_passed", "debug_failed", "published", "offline"].includes(s)) {
     return (
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+      <div className={`${tableStatusClassName} text-slate-700`}>
         <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
         <span>{lang === "ZH" ? "部署完成" : lang === "JA" ? "デプロイ完了" : lang === "ES" ? "Desplegado" : "Deployed"}</span>
       </div>
     );
   }
   return (
-    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+    <div className={`${tableStatusClassName} text-slate-700`}>
       <span className="h-2 w-2 rounded-full bg-slate-300 shrink-0" />
       <span>{lang === "ZH" ? "未部署" : lang === "JA" ? "未デプロイ" : lang === "ES" ? "Sin desplegar" : "Not Deployed"}</span>
     </div>
@@ -272,35 +275,35 @@ export function DeveloperAssetTable({
   return (
     <div className="flex-grow flex-1 min-h-0 overflow-hidden rounded-xl border border-border/60 bg-white" id="haze-developer-table-container">
       <ScrollArea className="h-full w-full">
-        <div className="min-w-[980px]">
-          <Table>
-            <TableHeader className="border-b border-border bg-slate-50 sticky top-0 z-10 text-left">
-              <TableRow className="h-12 hover:bg-transparent bg-slate-50 text-left">
-                <TableHead className="px-4 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-10 text-left">{langCode === "ZH" ? "能力名称" : langCode === "JA" ? "機能名" : langCode === "ES" ? "Nombre de Capacidad" : "Capability Name"}</TableHead>
-                <TableHead className="w-[140px] px-4 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-10 text-left">{langCode === "ZH" ? "业务分类" : langCode === "JA" ? "カテゴリ" : langCode === "ES" ? "Categoría" : "Category"}</TableHead>
-                <TableHead className="w-[100px] px-4 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-10 text-left">{langCode === "ZH" ? "类型" : langCode === "JA" ? "种类" : langCode === "ES" ? "Tipo" : "Type"}</TableHead>
-                <TableHead className="w-[100px] px-4 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-10 text-left">{langCode === "ZH" ? "版本" : langCode === "JA" ? "バージョン" : langCode === "ES" ? "Versión" : "Version"}</TableHead>
-                <TableHead className="w-[130px] px-4 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-10 text-left">{langCode === "ZH" ? "状态" : langCode === "JA" ? "ステータス" : langCode === "ES" ? "Estado" : "Status"}</TableHead>
-                <TableHead className="w-[130px] px-4 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-10 text-left">{langCode === "ZH" ? "部署状态" : langCode === "JA" ? "デプロイ状態" : langCode === "ES" ? "Despliegue" : "Deploy"}</TableHead>
-                <TableHead className="w-[150px] px-4 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-10 text-left">{langCode === "ZH" ? "测试状态" : langCode === "JA" ? "テスト状態" : langCode === "ES" ? "Estado de prueba" : "Test Status"}</TableHead>
-                <TableHead className="w-[110px] px-4 text-xs font-bold text-muted-foreground text-right pr-6 bg-slate-50 sticky top-0 z-10">{langCode === "ZH" ? "调用" : langCode === "JA" ? "呼び出し" : langCode === "ES" ? "Llamadas" : "Calls"}</TableHead>
-                <TableHead className="w-[200px] px-4 text-right text-xs font-bold text-muted-foreground pr-6 bg-slate-50 sticky top-0 z-10">{langCode === "ZH" ? "操作" : langCode === "JA" ? "操作" : langCode === "ES" ? "Acciones" : "Actions"}</TableHead>
+        <div className="min-w-[1300px]">
+          <Table className="table-fixed">
+            <TableHeader className="sticky top-0 z-10">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-[240px]">{langCode === "ZH" ? "能力名称" : langCode === "JA" ? "機能名" : langCode === "ES" ? "Nombre de Capacidad" : "Capability Name"}</TableHead>
+                <TableHead className="w-[140px]">{langCode === "ZH" ? "业务分类" : langCode === "JA" ? "カテゴリ" : langCode === "ES" ? "Categoría" : "Category"}</TableHead>
+                <TableHead className="w-[100px]">{langCode === "ZH" ? "类型" : langCode === "JA" ? "种类" : langCode === "ES" ? "Tipo" : "Type"}</TableHead>
+                <TableHead className="w-[100px]">{langCode === "ZH" ? "版本" : langCode === "JA" ? "バージョン" : langCode === "ES" ? "Versión" : "Version"}</TableHead>
+                <TableHead className="w-[130px]">{langCode === "ZH" ? "状态" : langCode === "JA" ? "ステータス" : langCode === "ES" ? "Estado" : "Status"}</TableHead>
+                <TableHead className="w-[130px]">{langCode === "ZH" ? "部署状态" : langCode === "JA" ? "デプロイ状態" : langCode === "ES" ? "Despliegue" : "Deploy"}</TableHead>
+                <TableHead className="w-[150px]">{langCode === "ZH" ? "测试状态" : langCode === "JA" ? "テスト状態" : langCode === "ES" ? "Estado de prueba" : "Test Status"}</TableHead>
+                <TableHead className="w-[110px] text-right">{langCode === "ZH" ? "调用" : langCode === "JA" ? "呼び出し" : langCode === "ES" ? "Llamadas" : "Calls"}</TableHead>
+                <TableHead className="w-[200px]" data-table-action="true">{langCode === "ZH" ? "操作" : langCode === "JA" ? "操作" : langCode === "ES" ? "Acciones" : "Actions"}</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody className="divide-y divide-border text-sm text-left">
+            <TableBody>
               {paginatedAssets.map((asset) => {
                 const cleanProject = asset.project.split(" (")[0];
                 const flow = getFlowActions(asset);
                 return (
-                  <TableRow key={asset.id} className="h-[72px] text-foreground transition-colors hover:bg-slate-50/35 text-left">
-                    <TableCell className="px-4 py-3 text-left">
+                  <TableRow key={asset.id}>
+                    <TableCell className="w-[240px] text-left">
                       <div className="flex items-center gap-3 text-left">
                         {getAssetIcon(asset.code, asset.type, asset.icon)}
                         <div className="space-y-0.5 text-left">
-                          <p className="font-semibold text-sm text-foreground text-left">{asset.name}</p>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground text-left">
+                          <p className="font-semibold text-foreground text-left">{asset.name}</p>
+                          <TableSecondaryText className="flex items-center gap-1 text-left">
                             <span className="font-mono text-left">{asset.code}</span>
-                          </div>
+                          </TableSecondaryText>
                         </div>
                       </div>
                     </TableCell>
@@ -309,11 +312,11 @@ export function DeveloperAssetTable({
                     </TableCell>
                     <TableCell className="px-4 py-3 text-left">
                       {asset.type === "Skill" ? (
-                        <span className="inline-flex items-center text-xs font-bold px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-600 border-none text-left">
+                        <span className="inline-flex items-center rounded-md bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-600">
                           Skill
                         </span>
                       ) : (
-                        <span className="inline-flex items-center text-xs font-bold px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border-none text-left">
+                        <span className="inline-flex items-center rounded-md bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-600">
                           MCP
                         </span>
                       )}
@@ -325,7 +328,7 @@ export function DeveloperAssetTable({
                     <TableCell className="px-4 py-3 font-mono font-bold text-right text-foreground tabular-nums pr-6">
                       {formatCalls(asset.calls)}
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-right pr-6">
+                    <TableCell className="text-right" data-table-action="true">
                       <div className="flex items-center justify-end gap-1.5">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

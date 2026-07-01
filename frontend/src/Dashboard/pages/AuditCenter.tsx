@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Search,
-  Check,
   X,
   Sparkles,
   Clock,
@@ -15,6 +14,7 @@ import {
   Cpu,
   Calendar,
 } from "lucide-react";
+import { FloatingAlert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,8 @@ import {
   TableBody,
   TableRow,
   TableHead,
-  TableCell
+  TableCell,
+  TableSecondaryText
 } from "@/components/ui/table";
 import { getI18n } from "../../i18n";
 import {
@@ -211,7 +212,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
       const d = await fetchAuditDetail(id);
       setDetail(d);
     } catch {
-      triggerAlert(_langCode === "ZH" ? "加载详情失败" : "Failed to load detail");
+      triggerAlert(t.auditDetailLoadFailed);
     } finally {
       setDetailLoading(false);
     }
@@ -220,7 +221,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
   const handleSubmitReview = async (action: "approved" | "rejected") => {
     if (!selectedId) return;
     if (action === "rejected" && !comment.trim()) {
-      triggerAlert(_langCode === "ZH" ? "驳回必须填写原因" : "Rejection reason is required");
+      triggerAlert(t.auditRejectReasonRequired);
       return;
     }
     setSubmitting(true);
@@ -235,7 +236,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
       setComment("");
       await Promise.all([loadStats(), loadItems()]);
     } catch {
-      triggerAlert(_langCode === "ZH" ? "操作失败，请重试" : "Action failed, please retry");
+      triggerAlert(t.auditActionFailed);
     } finally {
       setSubmitting(false);
     }
@@ -490,28 +491,25 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
 
         {/* Alert toast */}
         {alertMsg && (
-          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-lg font-bold border border-slate-800/50 animate-bounce">
-            <Check size={14} className="text-emerald-400 stroke-[2.5]" />
-            <span>{alertMsg}</span>
-          </div>
+          <FloatingAlert message={alertMsg} />
         )}
 
         {/* Table */}
         <div className="flex-grow flex-1 min-h-0 flex flex-col gap-2">
           <div className="flex-grow flex-1 min-h-0 overflow-x-auto overflow-y-auto bg-white rounded-xl border border-border/70 shadow-2xs">
             <Table className="w-full min-w-[900px] table-fixed">
-              <TableHeader className="bg-muted/10">
-                <TableRow className="h-12 hover:bg-transparent border-b border-border/60">
-                  <TableHead className="text-xs font-semibold text-slate-500 px-4" style={{ width: "28%" }}>{_langCode === "ZH" ? "能力信息" : "Capability Info"}</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 px-4" style={{ width: "8%" }}>{_langCode === "ZH" ? "类型" : "Type"}</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 px-4" style={{ width: "8%" }}>{_langCode === "ZH" ? "版本" : "Version"}</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 px-4" style={{ width: "18%" }}>{_langCode === "ZH" ? "开发者 / 部门" : "Developer / Dept"}</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 px-4" style={{ width: "16%" }}>{_langCode === "ZH" ? "提交审核时间" : "Submitted At"}</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 px-4" style={{ width: "8%" }}>{_langCode === "ZH" ? "状态" : "Status"}</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-500 px-4 text-right" style={{ width: "14%" }}>{_langCode === "ZH" ? "操作" : "Action"}</TableHead>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead style={{ width: "28%" }}>{_langCode === "ZH" ? "能力信息" : "Capability Info"}</TableHead>
+                  <TableHead style={{ width: "8%" }}>{_langCode === "ZH" ? "类型" : "Type"}</TableHead>
+                  <TableHead style={{ width: "8%" }}>{_langCode === "ZH" ? "版本" : "Version"}</TableHead>
+                  <TableHead style={{ width: "18%" }}>{_langCode === "ZH" ? "开发者 / 部门" : "Developer / Dept"}</TableHead>
+                  <TableHead style={{ width: "16%" }}>{_langCode === "ZH" ? "提交审核时间" : "Submitted At"}</TableHead>
+                  <TableHead style={{ width: "8%" }}>{_langCode === "ZH" ? "状态" : "Status"}</TableHead>
+                  <TableHead style={{ width: "14%" }} data-table-action="true">{_langCode === "ZH" ? "操作" : "Action"}</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody className="text-sm divide-y divide-border/40">
+              <TableBody>
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-12 text-slate-400">
@@ -525,8 +523,8 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
                     </TableCell>
                   </TableRow>
                 ) : filteredItems.map((item) => (
-                  <TableRow key={item.id} className="h-[72px] hover:bg-slate-50/40 text-slate-600 transition-colors border-b border-border/40">
-                    <TableCell className="px-4 py-3">
+                  <TableRow key={item.id}>
+                    <TableCell>
                       <div className="flex items-center gap-3">
                         {item.icon ? (
                           <img src={item.icon} alt="" className="size-9 rounded-lg object-cover shrink-0" />
@@ -536,38 +534,38 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
                           </div>
                         )}
                         <div className="flex flex-col gap-0.5 min-w-0">
-                          <p className="font-semibold text-slate-900 text-sm leading-tight truncate">{item.name}</p>
-                          <p className="font-mono text-xs text-slate-400 font-semibold leading-none">{item.code}</p>
+                          <p className="font-semibold text-slate-900 leading-tight truncate">{item.name}</p>
+                          <TableSecondaryText className="font-mono leading-none">{item.code}</TableSecondaryText>
                         </div>
                       </div>
                     </TableCell>
 
-                    <TableCell className="px-4 py-3">
+                    <TableCell>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${item.type === "Skill" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"}`}>
                         {item.type}
                       </span>
                     </TableCell>
 
-                    <TableCell className="px-4 py-3 font-mono text-slate-500 text-sm font-medium">
+                    <TableCell className="font-mono text-slate-500">
                       {item.version}
                     </TableCell>
 
-                    <TableCell className="px-4 py-3">
+                    <TableCell>
                       <div className="flex flex-col gap-0.5">
-                        <p className="font-semibold text-slate-800 text-sm leading-tight">{item.author || "—"}</p>
-                        <p className="text-xs text-slate-400 font-medium leading-none">{item.department || "—"}</p>
+                        <p className="font-semibold text-slate-800 leading-tight">{item.author || "—"}</p>
+                        <TableSecondaryText className="leading-none">{item.department || "—"}</TableSecondaryText>
                       </div>
                     </TableCell>
 
-                    <TableCell className="px-4 py-3 font-mono text-slate-500 text-xs">
+                    <TableCell className="font-mono text-slate-500">
                       {item.submitted_at ?? "—"}
                     </TableCell>
 
-                    <TableCell className="px-4 py-3">
+                    <TableCell>
                       <StatusBadge status={item.status} labels={statusLabels} className="rounded px-2 py-0.5" />
                     </TableCell>
 
-                    <TableCell className="px-4 py-3 text-right">
+                    <TableCell className="text-right" data-table-action="true">
                       {item.status === "reviewing" ? (
                         <Button
                           onClick={() => openDetail(item.id)}

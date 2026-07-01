@@ -70,6 +70,8 @@ function deploymentLogsToTerminal(logs: string, task: McpDeployTask | null): Arr
 }
 export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
   const t = getI18n(langCode);
+  const formatAlert = (template: string, values: Record<string, string>) =>
+    Object.entries(values).reduce((message, [key, value]) => message.replace(`{${key}}`, value), template);
   const [assets, setAssets] = useState<DeveloperAsset[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({ all: 0, skill: 0, mcp: 0 });
   const [totalItems, setTotalItems] = useState(0);
@@ -342,7 +344,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
       if (isEditing) await updateCapability(currentAsset);
       else await createCapability(currentAsset);
       setShowEditModal(false);
-      triggerFlashAlert(isEditing ? `能力 [${currentAsset.name}] 更新成功` : `新建能力 [${currentAsset.name}] 成功并保存为草稿`);
+      triggerFlashAlert(formatAlert(isEditing ? t.developerAssetUpdated : t.developerAssetCreated, { name: currentAsset.name ?? "" }));
       refresh();
     } catch (error) {
       const message = errorMessage(error);
@@ -354,7 +356,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
   const handleSubmitReview = async (asset: DeveloperAsset) => {
     try {
       await submitReviewCapability(asset.id);
-      triggerFlashAlert(`能力 [${asset.name}] 已提交审核`);
+      triggerFlashAlert(formatAlert(t.developerAssetSubmitted, { name: asset.name }));
       refresh();
     } catch (error) {
       triggerFlashAlert(errorMessage(error));
@@ -404,17 +406,20 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
   const handlePublishAsset = async (asset: DeveloperAsset) => {
     try {
       await publishCapability(asset.id);
-      triggerFlashAlert(`能力 [${asset.name}] 已发布到能力市场`);
+      triggerFlashAlert(formatAlert(t.developerAssetPublished, { name: asset.name }));
       refresh();
     } catch (error) {
-      triggerFlashAlert(errorMessage(error));
+      const message = error instanceof ApiError && (error.code === 40911 || error.message === "Capability is not ready to be published")
+        ? t.developerPublishNotReady
+        : errorMessage(error);
+      triggerFlashAlert(message);
     }
   };
 
   const handleOfflineAsset = async (asset: DeveloperAsset) => {
     try {
       await offlineCapability(asset.id);
-      triggerFlashAlert(`能力 [${asset.name}] 已下线`);
+      triggerFlashAlert(formatAlert(t.developerAssetOffline, { name: asset.name }));
       refresh();
     } catch (error) {
       triggerFlashAlert(errorMessage(error));
@@ -464,7 +469,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     try {
       await createCapabilityVersion(newVersionAsset.id, newVersionNum, newVersionDesc, newVersionPackageToken);
       setShowNewVersionModal(false);
-      triggerFlashAlert(`已成功创建新版本 [${newVersionAsset.name}] v${newVersionNum}`);
+      triggerFlashAlert(formatAlert(t.developerVersionCreated, { name: newVersionAsset.name, version: newVersionNum }));
       refresh();
     } catch (error) {
       triggerFlashAlert(errorMessage(error));
@@ -475,7 +480,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     try {
       await deleteCapability(asset.id);
       setDeleteTarget(null);
-      triggerFlashAlert(`资产能力 [${asset.name}] 已从工作区移除`);
+      triggerFlashAlert(formatAlert(t.developerAssetDeleted, { name: asset.name }));
       refresh();
     } catch (error) {
       triggerFlashAlert(errorMessage(error));
@@ -485,7 +490,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
   const handleCopyAssetCode = (asset: DeveloperAsset) => {
     const text = asset.type === "Skill" ? `${asset.name} (Slug: ${asset.code}):\n${asset.description || ""}` : asset.code;
     navigator.clipboard.writeText(text);
-    triggerFlashAlert("已复制 Prompt 到剪贴板");
+    triggerFlashAlert(t.developerPromptCopied);
   };
 
   const handleOpenDebug = (asset: DeveloperAsset) => {
@@ -568,7 +573,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
             } else if (event.type === "done") {
               const status = event.status as "pass" | "fail";
               setDebugStatus(status);
-              triggerFlashAlert(status === "pass" ? "MCP 测试通过" : "MCP 测试失败，请查看日志");
+              triggerFlashAlert(status === "pass" ? t.developerMcpTestPassed : t.developerMcpTestFailed);
               // Refresh capability to pick up updated test status
               setRefreshVersion((v) => v + 1);
             }

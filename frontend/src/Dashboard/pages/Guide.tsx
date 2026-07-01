@@ -17,7 +17,6 @@ import {
   Sparkles,
   ShieldCheck,
   Database,
-  AlertCircle,
   Clock3,
   Search,
 } from "lucide-react";
@@ -25,10 +24,13 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { Button } from "@/components/ui/button";
+import { BasicAlert, FloatingAlert, WarningAlert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { getI18n } from "@/i18n";
 
 // Eagerly import Markdown content using Vite's raw loading
 import quickStartRaw from "../../content/developer-guide/quick-start.md?raw";
@@ -479,9 +481,17 @@ function FaqSection({ faqs, langCode = "ZH" }: { faqs?: Array<{ q: string; a: st
 // MAIN EXPORTABLE GUIDE PAGE
 // ----------------------------------------------------------------------
 export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps) {
+  const t = getI18n(_langCode);
   const [activeSection, setActiveSection] = useState<SectionId>("quick-start");
   const [activeHeadingId, setActiveHeadingId] = useState<string>("");
   const [docSearchQuery, setDocSearchQuery] = useState("");
+  const [guideAlert, setGuideAlert] = useState<string | null>(null);
+  const formatAlert = (template: string, values: Record<string, string>) =>
+    Object.entries(values).reduce((message, [key, value]) => message.replace(`{${key}}`, value), template);
+  const showGuideAlert = (message: string) => {
+    setGuideAlert(message);
+    window.setTimeout(() => setGuideAlert(null), 3000);
+  };
 
   const filteredSections = useMemo(() => {
     if (!docSearchQuery.trim()) return GUIDE_SECTIONS;
@@ -606,12 +616,8 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
 
   const handleActionClick = (menu: string) => {
     if (!setActiveMenu) {
-      alert(
-        _langCode === "ZH" ? `能力发布入口 [${menu}]。请前往对应板块创建或上传您的能力文件。`
-         : _langCode === "JA" ? `配信エントリー [${menu}]。対応セクションへ進み、作成またはアップロードしてください。`
-         : _langCode === "ES" ? `Entrada de publicación [${menu}]. Vaya a la sección correspondiente para crearlo.`
-         : `Publish entryway [${menu}]. Please head over to the corresponding module to upload your assets.`
-      );
+      showGuideAlert(formatAlert(t.guidePublishEntryAlert, { menu }));
+
       return;
     }
     
@@ -666,47 +672,36 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
         const isTip = text.startsWith("提示") || text.includes("提示");
         const isWarning = text.startsWith("警告") || text.startsWith("注意") || text.includes("注意");
 
+        const AlertComponent = isWarning ? WarningAlert : BasicAlert;
+
         return (
-          <div className={cn(
-            "my-5 flex gap-3.5 rounded-lg border px-4 py-3.5 text-xs leading-5 shadow-sm",
-            isWarning
-              ? "bg-amber-50/40 border-amber-100/70 text-amber-900"
-              : isTip
-              ? "bg-blue-50/30 border-blue-100/60 text-blue-900"
-              : "bg-slate-50 border-slate-100 text-slate-700"
-          )}>
-            {isWarning ? (
-              <AlertCircle className="h-4.5 w-4.5 shrink-0 text-amber-500 mt-0.5" />
-            ) : isTip ? (
-              <Clock3 className="h-4.5 w-4.5 shrink-0 text-blue-500 mt-0.5" />
-            ) : (
-              <FileText className="h-4.5 w-4.5 shrink-0 text-slate-400 mt-0.5" />
-            )}
-            <div className="font-medium">{children}</div>
-          </div>
+          <AlertComponent
+            description={<div className="font-medium">{children}</div>}
+            className={cn("my-5 text-xs leading-5 shadow-sm", !isWarning && !isTip && "border-slate-100 bg-slate-50 text-slate-700")}
+          />
         );
       },
       table: ({ children }: any) => {
         return (
           <div className="my-6 overflow-x-auto rounded-lg border border-slate-100 shadow-sm">
-            <table className="min-w-full divide-y divide-slate-100 text-left text-xs">{children}</table>
+            <Table>{children}</Table>
           </div>
         );
       },
       thead: ({ children }: any) => {
-        return <thead className="bg-slate-50/80 text-slate-700 font-bold border-b border-slate-100">{children}</thead>;
+        return <TableHeader>{children}</TableHeader>;
       },
       tbody: ({ children }: any) => {
-        return <tbody className="divide-y divide-slate-50 bg-white">{children}</tbody>;
+        return <TableBody>{children}</TableBody>;
       },
       tr: ({ children }: any) => {
-        return <tr className="hover:bg-slate-50/40 transition-colors">{children}</tr>;
+        return <TableRow>{children}</TableRow>;
       },
       th: ({ children }: any) => {
-        return <th className="p-3.5 font-bold text-slate-800 text-xs uppercase tracking-wide">{children}</th>;
+        return <TableHead>{children}</TableHead>;
       },
       td: ({ children }: any) => {
-        return <td className="p-3.5 align-middle text-slate-600 text-xs leading-relaxed font-medium">{children}</td>;
+        return <TableCell>{children}</TableCell>;
       },
       code: ({ children, className }: any) => {
         const isBlock = String(children).includes("\n") || className;
@@ -720,10 +715,11 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
         );
       },
     };
-  }, []);
+  }, [showGuideAlert, t]);
 
   return (
     <div className="dashboard-page-stack h-full overflow-hidden" id="haze-unified-guide-page">
+      {guideAlert && <FloatingAlert message={guideAlert} />}
       <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-xl border border-border/70 bg-white lg:grid-cols-[250px_1fr]">
         
         {/* Left Column: Fixed Navigation Sidebar */}
@@ -824,19 +820,18 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
                       </p>
                       
                       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-1.5 text-xs text-slate-400 font-semibold uppercase tracking-wider">
-                        <span className="flex items-center gap-1.5">
-                          <Clock3 className="h-3.5 w-3.5 text-slate-400" />
-                          {_langCode === "ZH" ? "最后更新" : _langCode === "JA" ? "最終更新" : _langCode === "ES" ? "Última actualización" : "Last updated"}: {meta.updatedAt || "2026-06-16"}
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <BookOpen className="h-3.5 w-3.5 text-slate-400" />
-                          {_langCode === "ZH" ? "预计阅读" : _langCode === "JA" ? "読了目安" : _langCode === "ES" ? "Lectura aproximada" : "Estimated reading"}: {
-                            _langCode === "ZH" ? (meta.readingTime || "5 分钟")
-                             : _langCode === "JA" ? "5分" 
-                             : _langCode === "ES" ? "5 minutos"
-                             : "5 mins"
-                          }
-                        </span>
+                        {meta.updatedAt && (
+                          <span className="flex items-center gap-1.5">
+                            <Clock3 className="h-3.5 w-3.5 text-slate-400" />
+                            {t.lastUpdated}: {meta.updatedAt}
+                          </span>
+                        )}
+                        {meta.readingTime && (
+                          <span className="flex items-center gap-1.5">
+                            <BookOpen className="h-3.5 w-3.5 text-slate-400" />
+                            {t.estimatedReading}: {meta.readingTime}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -847,7 +842,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
                           variant="outline"
                           className="h-9 px-3.5 rounded-lg bg-white hover:bg-slate-50 text-xs border border-slate-200 text-slate-700 font-bold flex items-center justify-center gap-1.5 shadow-sm shrink-0 cursor-pointer w-full md:w-auto"
                           onClick={() => {
-                            alert(`正在开始下载示例包 "${meta.downloadLabel}" 到本地目录...\n源地址: ${meta.downloadUrl}`);
+                            showGuideAlert(formatAlert(t.guideDownloadAlert, { label: meta.downloadLabel ?? "", url: meta.downloadUrl ?? "" }));
                           }}
                         >
                           <Download className="h-3.5 w-3.5 text-slate-400" />

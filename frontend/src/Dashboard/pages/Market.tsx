@@ -758,23 +758,23 @@ export function Market({
                   <div className="inline-block min-w-full align-middle">
                     <div className="overflow-hidden border border-slate-100 rounded-xl bg-white shadow-3xs">
                       <Table>
-                        <TableHeader className="bg-slate-50/70">
-                          <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                            <TableHead className="h-9 px-4 text-xs font-semibold text-slate-600">名称</TableHead>
-                            <TableHead className="h-9 px-4 text-xs font-semibold text-slate-600">类型</TableHead>
-                            <TableHead className="h-9 px-4 text-xs font-semibold text-slate-600">描述</TableHead>
-                            <TableHead className="h-9 px-4 text-xs font-semibold text-slate-600">标签</TableHead>
-                            <TableHead className="h-9 px-4 text-xs font-semibold text-slate-600">开发者</TableHead>
-                            <TableHead className="h-9 px-4 text-xs font-semibold text-slate-600">调用次数</TableHead>
-                            <TableHead className="h-9 px-4 text-xs font-semibold text-slate-600">版本</TableHead>
-                            <TableHead className="h-9 px-4 text-right text-xs font-semibold text-slate-600">操作</TableHead>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent">
+                            <TableHead>名称</TableHead>
+                            <TableHead>类型</TableHead>
+                            <TableHead>描述</TableHead>
+                            <TableHead>标签</TableHead>
+                            <TableHead>开发者</TableHead>
+                            <TableHead>调用次数</TableHead>
+                            <TableHead>版本</TableHead>
+                            <TableHead data-table-action="true">操作</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {paginatedItems.map((item) => {
                             const display = getCopy(item);
                             return (
-                              <TableRow key={item.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50/40">
+                              <TableRow key={item.id}>
                                 <TableCell className="min-w-[200px] whitespace-nowrap px-4 py-2.5 text-left">
                                   <div className="flex items-center gap-2">
                                     <button className="flex h-6 w-6 shrink-0 items-center justify-center text-slate-400 transition-colors hover:text-amber-500" onClick={() => toggleFavorite(item.id, item.isMcp)} aria-label={item.isFavorite ? "取消收藏" : "收藏"}>
@@ -801,7 +801,7 @@ export function Market({
                                 <TableCell className="whitespace-nowrap px-4 py-2.5 text-left text-xs text-slate-600">{display.author}</TableCell>
                                 <TableCell className="whitespace-nowrap px-4 py-2.5 font-mono text-xs font-semibold text-slate-600">{formatCalls(item.calls)}</TableCell>
                                 <TableCell className="whitespace-nowrap px-4 py-2.5 font-mono text-xs text-slate-500">{item.version}</TableCell>
-                                <TableCell className="whitespace-nowrap px-4 py-2.5 text-right">
+                                <TableCell className="whitespace-nowrap text-right" data-table-action="true">
                                   <div className="flex items-center justify-end gap-1.5">
                                     <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => openCapabilitySheet(item, "details")}><Eye className="h-3.5 w-3.5" />查看详情</Button>
                                     <Button size="sm" className="h-7 px-2 text-xs" onClick={() => openCapabilitySheet(item, "quickStart")}><Rocket className="h-3.5 w-3.5" />快速开始</Button>

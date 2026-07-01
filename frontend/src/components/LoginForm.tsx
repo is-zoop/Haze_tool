@@ -1,18 +1,22 @@
 import React, { useState } from "react";
-import { Mail, User, Lock, Eye, EyeOff, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2, ArrowLeft, Smartphone } from "lucide-react";
 import { GoogleIcon } from "./GoogleIcon";
 import { motion, AnimatePresence } from "motion/react";
 import { Input } from "@/components/ui/input";
+import { BasicAlert, DestructiveAlert } from "@/components/ui/alert";
 import { ApiError } from "@/lib/api";
 import { AuthUser, login } from "@/lib/auth";
+import { getI18n } from "@/i18n";
 
 interface LoginFormProps {
   onLoginSuccess: (user: AuthUser) => void;
+  langCode?: string;
 }
 
 type AuthMode = "signin" | "signup" | "forgot";
 
-export function LoginForm({ onLoginSuccess }: LoginFormProps) {
+export function LoginForm({ onLoginSuccess, langCode = "ZH" }: LoginFormProps) {
+  const t = getI18n(langCode);
   const [authMode, setAuthMode] = useState<AuthMode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,7 +30,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
   const handleModeChange = (mode: AuthMode) => {
     if (mode !== "signin") {
-      setErrorMsg(mode === "signup" ? "注册功能尚未开放." : "密码重置功能尚未开放.");
+      setErrorMsg(mode === "signup" ? t.alertSignupUnavailable : t.alertPasswordResetUnavailable);
       return;
     }
     setAuthMode(mode);
@@ -38,7 +42,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
   };
 
   const handleGoogleLogin = () => {
-    setErrorMsg("功能尚未开放.");
+    setErrorMsg(t.alertFeatureUnavailable);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,15 +51,15 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
     setSuccessMsg("");
 
     if (authMode !== "signin") {
-      setErrorMsg(authMode === "signup" ? "注册功能尚未开放." : "密码重置功能尚未开放.");
+      setErrorMsg(authMode === "signup" ? t.alertSignupUnavailable : t.alertPasswordResetUnavailable);
       return;
     }
     if (!/^1\d{10}$/.test(email.trim())) {
-      setErrorMsg("请输入有效的11位手机号码.");
+      setErrorMsg(t.alertLoginPhoneInvalid);
       return;
     }
     if (!password) {
-      setErrorMsg("请输入密码.");
+      setErrorMsg(t.alertLoginPasswordRequired);
       return;
     }
 
@@ -64,7 +68,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
       const data = await login(email.trim(), password);
       onLoginSuccess(data.user);
     } catch (error) {
-      setErrorMsg(error instanceof ApiError ? error.message : "登录失败，请重试！");
+      setErrorMsg(error instanceof ApiError ? error.message : t.alertLoginFailed);
     } finally {
       setIsLoading(false);
     }
@@ -135,16 +139,10 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
             {/* Error & Success Feeds */}
             {errorMsg && (
-              <div className="p-3 mb-4 rounded-xl bg-destructive/10 text-destructive text-xs font-semibold border border-destructive/20 flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
+              <DestructiveAlert title={errorMsg} className="mb-4" />
             )}
             {successMsg && (
-              <div className="p-3 mb-4 rounded-xl bg-emerald-500/10 text-emerald-700 text-xs font-semibold border border-emerald-500/20 flex items-center gap-2">
-                <CheckCircle size={14} className="text-emerald-500 shrink-0" />
-                <span>{successMsg}</span>
-              </div>
+              <BasicAlert title={successMsg} className="mb-4" />
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -173,10 +171,10 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
               {/* Username field */}
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5 rounded-xl border border-input focus-within:border-ring bg-card px-3.5 py-3 shadow-2xs focus-within:ring-1 focus-within:ring-ring transition-all">
-                  <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <Smartphone className="h-4 w-4 text-muted-foreground shrink-0" />
                   <Input
                     type="text"
-                    placeholder="手机号码"
+                    placeholder="Phone number"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}

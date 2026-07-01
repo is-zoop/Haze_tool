@@ -1,20 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { apiRequest } from "@/lib/api";
 import { motion, AnimatePresence } from "motion/react";
-import { Play, Square, RotateCcw, Copy, Activity, ClipboardList, ChevronDown, Check, X } from "lucide-react";
+import { Play, Square, RotateCcw, Copy, Activity, ClipboardList, ChevronDown } from "lucide-react";
+import { FloatingAlert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableSecondaryText,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { DataTableFooter } from "@/components/common/DataTableFooter";
+import { getI18n } from "@/i18n";
 import {
   McpDeployment, McpDeployTask, McpCallLog, McpCallLogListData,
   listMcpDeployments, listMcpDeployTasks, listMcpCallLogs,
@@ -85,6 +87,7 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 }
 
 export function McpRuntime({ langCode = "ZH" }: PageProps) {
+  const t = getI18n(langCode);
   const [deployments, setDeployments] = useState<McpDeployment[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [callLogs, setCallLogs] = useState<McpCallLog[]>([]);
@@ -125,9 +128,9 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
         } catch { /* K8s sync 失败时静默降级，仍刷新 DB 数据 */ }
       }
       setDeployments(await listMcpDeployments());
-      showFlash(synced ? "已从 K8s 同步最新状态" : "数据已刷新", true);
+      showFlash(synced ? t.mcpRefreshSynced : t.mcpRefreshSuccess, true);
     } catch {
-      showFlash("刷新失败，请稍后重试", false);
+      showFlash(t.mcpRefreshFailed, false);
     } finally {
       setLoading(false);
     }
@@ -170,8 +173,8 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
       await loadDeployments();
       showFlash(successMsg, true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "未知错误";
-      showFlash(`操作失败：${msg}`, false);
+      const msg = err instanceof Error ? err.message : t.mcpUnknownError;
+      showFlash(t.mcpOperationFailed.replace("{message}", msg), false);
     } finally {
       setOpLoading(null);
     }
@@ -199,19 +202,11 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
         {flash && (
           <motion.div
             key="flash"
-            initial={{ opacity: 0, y: 35, scale: 0.95 }}
+            initial={{ opacity: 0, y: -18, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 30, scale: 0.95 }}
-            className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-bold text-white shadow-xl/90 ${
-              flash.ok
-                ? "bg-slate-900 border border-blue-100"
-                : "bg-rose-600 border border-rose-400"
-            }`}
+            exit={{ opacity: 0, y: -18, scale: 0.95 }}
           >
-            {flash.ok
-              ? <Check size={14} className="text-emerald-400 shrink-0" />
-              : <X size={14} className="text-white shrink-0" />}
-            <span>{flash.text}</span>
+            <FloatingAlert type={flash.ok ? "basic" : "destructive"} message={flash.text} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -256,11 +251,10 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
               <ScrollArea className="h-full w-full">
                 <div className="min-w-[900px]">
                   <Table>
-                    <TableHeader className="border-b border-border bg-slate-50">
-                      <TableRow className="h-11 hover:bg-transparent bg-slate-50">
+                    <TableHeader className="sticky top-0 z-10">
+                      <TableRow className="hover:bg-transparent">
                         {["能力名称", "创建人", "部署状态", "运行状态", "健康", "副本", "更新时间", "操作"].map(h => (
-                          <TableHead key={h}
-                            className="sticky top-0 z-10 px-4 text-xs font-bold text-muted-foreground bg-slate-50">
+                          <TableHead key={h} data-table-action={h === "操作" ? "true" : undefined}>
                             {h}
                           </TableHead>
                         ))}
@@ -282,16 +276,15 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                         const ab = actualBadge(dep.actual_status);
                         const hb = healthBadge(dep.health_status);
                         return (
-                          <TableRow key={dep.id}
-                            className="h-[68px] border-b border-border/50 hover:bg-slate-50/50">
-                            <TableCell className="px-4 py-3">
-                              <div className="font-semibold text-sm text-foreground leading-tight">
+                          <TableRow key={dep.id}>
+                            <TableCell>
+                              <div className="font-semibold text-foreground leading-tight">
                                 {dep.capability_name ?? dep.deployment_name}
                               </div>
                               {dep.capability_code && (
-                                <div className="text-xs text-muted-foreground mt-0.5 font-medium">
+                                <TableSecondaryText>
                                   {dep.capability_code}
-                                </div>
+                                </TableSecondaryText>
                               )}
                             </TableCell>
                             <TableCell className="px-4 py-3 text-xs text-muted-foreground">{dep.creator_name ?? "—"}</TableCell>
@@ -310,7 +303,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                             <TableCell className="px-4 py-3 text-xs text-muted-foreground">
                               {fmtTime(dep.updated_at)}
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell data-table-action="true">
                               <div className="flex items-center gap-1.5">
                                 {/* 启动 / 重启 */}
                                 <Button variant="outline" size="sm"
@@ -398,11 +391,10 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                   <ScrollArea className="h-full w-full">
                     <div className="min-w-[700px]">
                       <Table>
-                        <TableHeader className="border-b border-border bg-slate-50">
-                          <TableRow className="h-11 hover:bg-transparent bg-slate-50">
+                        <TableHeader className="sticky top-0 z-10">
+                          <TableRow className="hover:bg-transparent">
                             {["时间", "调用人", "方法", "工具名", "状态码", "耗时(ms)", "结果", "来源 IP"].map(h => (
-                              <TableHead key={h}
-                                className="sticky top-0 z-10 px-4 text-xs font-bold text-muted-foreground bg-slate-50">
+                              <TableHead key={h}>
                                 {h}
                               </TableHead>
                             ))}
@@ -417,8 +409,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                               </TableCell>
                             </TableRow>
                           ) : callLogs.map(log => (
-                            <TableRow key={log.id}
-                              className="h-12 border-b border-border/50 hover:bg-slate-50/50">
+                            <TableRow key={log.id}>
                               <TableCell className="px-4 py-3 text-xs text-muted-foreground">{fmtTime(log.created_at)}</TableCell>
                               <TableCell className="px-4 py-3 text-xs text-muted-foreground">{log.caller_name ?? "—"}</TableCell>
                               <TableCell className="px-4 py-3 text-xs font-semibold">{log.method ?? "—"}</TableCell>
@@ -454,11 +445,10 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                 <ScrollArea className="h-full w-full">
                   <div className="min-w-[700px]">
                     <Table>
-                      <TableHeader className="border-b border-border bg-slate-50">
-                        <TableRow className="h-11 hover:bg-transparent bg-slate-50">
+                      <TableHeader className="sticky top-0 z-10">
+                        <TableRow className="hover:bg-transparent">
                           {["任务类型", "版本号", "任务状态", "创建时间", "开始时间", "完成时间", "错误信息"].map(h => (
-                            <TableHead key={h}
-                              className="sticky top-0 z-10 px-4 text-xs font-bold text-muted-foreground bg-slate-50">
+                            <TableHead key={h}>
                               {h}
                             </TableHead>
                           ))}
@@ -476,8 +466,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                           const tb = taskTypeBadge(task.task_type);
                           const sb = taskStatusBadge(task.task_status);
                           return (
-                            <TableRow key={task.id}
-                              className="h-12 border-b border-border/50 hover:bg-slate-50/50">
+                            <TableRow key={task.id}>
                               <TableCell className="px-4 py-3">
                                 <StatusBadge status={tb.k} labels={{ [tb.k]: tb.l }} />
                               </TableCell>

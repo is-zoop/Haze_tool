@@ -10,13 +10,16 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BasicAlert, DestructiveAlert } from "@/components/ui/alert";
 import { AuthUser } from "@/lib/auth";
+import { getI18n } from "@/i18n";
 import { getMcpCredential, McpCredentialSecret, resetMcpCredential, resetOwnPassword, updateProfileAvatar } from "@/lib/profile";
 
 interface PersonalCenterProps {
   user: AuthUser;
   onLogout: () => void;
   onUserChange?: (user: AuthUser) => void;
+  langCode?: string;
 }
 
 const AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -78,7 +81,8 @@ async function normalizeAvatar(file: File): Promise<string> {
   return canvas.toDataURL("image/jpeg", 0.9);
 }
 
-export function PersonalCenter({ user, onLogout, onUserChange }: PersonalCenterProps) {
+export function PersonalCenter({ user, onLogout, onUserChange, langCode = "ZH" }: PersonalCenterProps) {
+  const t = getI18n(langCode);
   const [profile, setProfile] = useState<AuthUser>(user);
   const [avatarUrl, setAvatarUrl] = useState(user.avatar_url ?? "");
   const [profileMessage, setProfileMessage] = useState("");
@@ -134,9 +138,9 @@ export function PersonalCenter({ user, onLogout, onUserChange }: PersonalCenterP
     try {
       const nextAvatar = await normalizeAvatar(file);
       setAvatarUrl(nextAvatar);
-      setProfileMessage("头像已选择，点击保存头像生效");
+      setProfileMessage(t.profileAvatarSelected);
     } catch (err: unknown) {
-      setProfileMessage(err instanceof Error ? err.message : "头像处理失败");
+      setProfileMessage(err instanceof Error ? err.message : t.profileAvatarProcessFailed);
     }
   }
 
@@ -148,9 +152,9 @@ export function PersonalCenter({ user, onLogout, onUserChange }: PersonalCenterP
       setProfile(updated);
       setAvatarUrl(updated.avatar_url ?? "");
       onUserChange?.(updated);
-      setProfileMessage("头像已更新");
+      setProfileMessage(t.profileAvatarUpdated);
     } catch (err: unknown) {
-      setProfileMessage(err instanceof Error ? err.message : "头像更新失败");
+      setProfileMessage(err instanceof Error ? err.message : t.profileAvatarUpdateFailed);
     } finally {
       setProfileSaving(false);
     }
@@ -159,15 +163,15 @@ export function PersonalCenter({ user, onLogout, onUserChange }: PersonalCenterP
   async function handlePasswordReset() {
     setPasswordError("");
     if (!currentPassword) {
-      setPasswordError("请输入当前密码");
+      setPasswordError(t.profilePasswordCurrentRequired);
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordError("新密码至少 6 位");
+      setPasswordError(t.profilePasswordTooShort);
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError("两次输入的新密码不一致");
+      setPasswordError(t.profilePasswordMismatch);
       return;
     }
     setPasswordSaving(true);
@@ -176,7 +180,7 @@ export function PersonalCenter({ user, onLogout, onUserChange }: PersonalCenterP
       setPasswordOpen(false);
       onLogout();
     } catch (err: unknown) {
-      setPasswordError(err instanceof Error ? err.message : "密码重置失败");
+      setPasswordError(err instanceof Error ? err.message : t.profilePasswordResetFailed);
     } finally {
       setPasswordSaving(false);
     }
@@ -244,7 +248,7 @@ export function PersonalCenter({ user, onLogout, onUserChange }: PersonalCenterP
                       <div className="mt-1 text-xs text-muted-foreground">点击头像上传 JPG/PNG/WebP，保存为 256x256</div>
                     </div>
                   </div>
-                  {profileMessage && <div className="text-xs font-semibold text-muted-foreground">{profileMessage}</div>}
+                  {profileMessage && <BasicAlert title={profileMessage} />}
                   <div className="flex flex-wrap gap-2">
                     <Button onClick={handleAvatarSave} disabled={profileSaving} className="h-8 gap-1.5 rounded-lg text-xs font-semibold">
                       <Save size={13} /> 保存头像
@@ -350,7 +354,7 @@ export function PersonalCenter({ user, onLogout, onUserChange }: PersonalCenterP
                 </Button>
               </div>
             </div>
-            {passwordError && <div className="text-xs font-semibold text-destructive">{passwordError}</div>}
+            {passwordError && <DestructiveAlert title={passwordError} />}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPasswordOpen(false)} className="h-8 rounded-lg text-xs">取消</Button>

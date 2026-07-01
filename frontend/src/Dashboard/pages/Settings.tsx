@@ -5,9 +5,10 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
+import { FloatingAlert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell, TableSecondaryText } from "@/components/ui/table";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuSeparator,
@@ -320,7 +321,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
   const triggerConfirmAction = (action: "disable" | "enable" | "remove", member: SystemMember) => {
     if ((action === "disable" || action === "enable") && isSelfMember(member)) {
-      showFlash(_langCode === "ZH" ? "不能修改自己的启用状态" : "You cannot change your own account status");
+      showFlash(t.settingsSelfStatusForbidden);
       return;
     }
     setConfirmAction(action); setConfirmMember(member); setShowConfirmDialog(true);
@@ -329,7 +330,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
   const executeConfirmAction = async () => {
     if (!confirmMember || !confirmAction) return;
     if ((confirmAction === "disable" || confirmAction === "enable") && isSelfMember(confirmMember)) {
-      showFlash(_langCode === "ZH" ? "不能修改自己的启用状态" : "You cannot change your own account status");
+      showFlash(t.settingsSelfStatusForbidden);
       setShowConfirmDialog(false);
       return;
     }
@@ -351,7 +352,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
   const handleOpenChangeRole = (member: SystemMember) => {
     if (isSelfMember(member)) {
-      showFlash(_langCode === "ZH" ? "不能修改自己的角色" : "You cannot change your own role");
+      showFlash(t.settingsSelfRoleForbidden);
       return;
     }
     setTargetMemberForRole(member); setSelectedNewRole(member.role); setShowRoleModal(true);
@@ -360,7 +361,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
   const saveRoleChange = async () => {
     if (!targetMemberForRole) return;
     if (isSelfMember(targetMemberForRole)) {
-      showFlash(_langCode === "ZH" ? "不能修改自己的角色" : "You cannot change your own role");
+      showFlash(t.settingsSelfRoleForbidden);
       setShowRoleModal(false);
       return;
     }
@@ -562,72 +563,72 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
         {/* 4. Main Data Table */}
         <div className="flex-grow flex-1 min-h-0 flex flex-col justify-between gap-2" id="haze-member-table-container">
           <div className="flex-grow flex-1 min-h-0 overflow-auto rounded-xl border border-border/70 bg-white">
-            <table className="w-full min-w-[1100px] table-fixed text-xs caption-bottom border-collapse">
-              <thead className="bg-slate-50 border-b border-border/50 sticky top-0 z-30 shadow-[0_1px_0_0_rgba(0,0,0,0.05)] animate-none">
-                <TableRow className="h-12 hover:bg-transparent">
-                  <TableHead className="w-[16%] px-4 py-3 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-30 shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+            <Table className="min-w-[1100px] table-fixed">
+              <TableHeader className="sticky top-0 z-30">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[16%]">
                     {t.memberMgmt_colMember}
                   </TableHead>
-                  <TableHead className="w-[18%] px-4 py-3 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-30 shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                  <TableHead className="w-[18%]">
                     {t.memberMgmt_colEmail}
                   </TableHead>
-                  <TableHead className="w-[12%] px-4 py-3 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-30 shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                  <TableHead className="w-[12%]">
                     {t.memberMgmt_colPhone}
                   </TableHead>
-                  <TableHead className="w-[14%] px-4 py-3 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-30 shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                  <TableHead className="w-[14%]">
                     {t.memberMgmt_colDept}
                   </TableHead>
-                  <TableHead className="w-[10%] px-4 py-3 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-30 shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                  <TableHead className="w-[10%]">
                     {t.memberMgmt_colRole}
                   </TableHead>
-                  <TableHead className="w-[10%] px-4 py-3 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-30 shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                  <TableHead className="w-[10%]">
                     {t.memberMgmt_colStatus}
                   </TableHead>
-                  <TableHead className="w-[12%] px-4 py-3 text-xs font-bold text-muted-foreground bg-slate-50 sticky top-0 z-30 shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                  <TableHead className="w-[12%]">
                     {t.memberMgmt_colLogin}
                   </TableHead>
-                  <TableHead className="w-[8%] px-4 py-3 text-xs font-bold text-muted-foreground text-right bg-slate-50 sticky top-0 z-30 shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
+                  <TableHead className="w-[8%]" data-table-action="true">
                     {t.memberMgmt_colAction}
                   </TableHead>
                 </TableRow>
-              </thead>
-              <TableBody className="divide-y divide-border/40">
+              </TableHeader>
+              <TableBody>
                 {paginatedMembers.map((member) => (
-                  <TableRow key={member.id} className="h-[68px] hover:bg-slate-50/40 text-muted-foreground transition-colors">
+                  <TableRow key={member.id}>
                     {/* Member (16%) */}
-                    <TableCell className="w-[16%] px-4 py-3 min-w-0">
+                    <TableCell className="w-[16%] min-w-0">
                       <div className="flex items-center gap-3">
                         <div className={`h-10 w-10 shrink-0 font-bold text-xs rounded-full flex items-center justify-center ${getAvatarBgClass(member.id)}`}>
                           {(member.name).charAt(0)}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="font-bold text-sm text-foreground truncate">
+                          <span className="font-medium text-foreground truncate">
                             {member.name}
                           </span>
-                          <span className="text-xs text-muted-foreground/80 font-medium truncate mt-0.5 animate-none">
+                          <TableSecondaryText className="truncate animate-none">
                             {member.id}
-                          </span>
+                          </TableSecondaryText>
                         </div>
                       </div>
                     </TableCell>
 
                     {/* Email (18%) */}
-                    <TableCell className="w-[18%] px-4 py-3 text-xs font-medium text-foreground/85 truncate">
+                    <TableCell className="w-[18%] text-foreground truncate">
                       {member.email}
                     </TableCell>
 
                     {/* Phone (12%) */}
-                    <TableCell className="w-[12%] px-4 py-3 text-xs font-medium text-foreground/85 truncate">
+                    <TableCell className="w-[12%] text-foreground truncate">
                       {member.phone || "-"}
                     </TableCell>
 
                     {/* Department (14%) */}
-                    <TableCell className="w-[14%] px-4 py-3 text-sm font-semibold text-foreground/80 truncate">
+                    <TableCell className="w-[14%] text-foreground truncate">
                       {member.department}
                     </TableCell>
 
                     {/* Role (10%) */}
-                    <TableCell className="w-[10%] px-4 py-3">
+                    <TableCell className="w-[10%]">
                       {member.role === "Admin" ? (
                         <Badge variant="outline" className="border-none bg-blue-50 text-blue-600 hover:bg-blue-50/80 font-bold text-xs py-0.5 px-2.5 rounded-md">
                           {t.memberMgmt_roleAdmin}
@@ -640,7 +641,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                     </TableCell>
 
                     {/* Status (10%) */}
-                    <TableCell className="w-[10%] px-4 py-3">
+                    <TableCell className="w-[10%]">
                       {member.status === "active" ? (
                         <Badge variant="outline" className="border-none bg-emerald-50 text-emerald-600 hover:bg-emerald-50 font-black text-xs py-0.5 px-2.5 rounded-md">
                           {t.memberMgmt_tabActive}
@@ -653,17 +654,17 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                     </TableCell>
 
                     {/* Recent login (12%) */}
-                    <TableCell className="w-[12%] px-4 py-3 text-sm font-medium text-muted-foreground">
+                    <TableCell className="w-[12%] text-muted-foreground">
                       {getRecentLogin(member.id)}
                     </TableCell>
 
                     {/* Actions (8% - 右对齐) */}
-                    <TableCell className="w-[8%] px-4 py-3 text-right">
+                    <TableCell className="w-[8%] text-right" data-table-action="true">
                       <div className="flex items-center justify-end gap-1.5">
                         <Button
                           variant="ghost"
                           onClick={() => handleOpenEdit(member)}
-                          className="h-8 px-2.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg flex items-center gap-1 cursor-pointer font-bold transition-all"
+                          className="h-8 px-2.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg flex items-center gap-1 cursor-pointer font-medium transition-all"
                         >
                           <Edit3 size={12} />
                           <span>{t.memberMgmt_edit}</span>
@@ -748,7 +749,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                   </TableRow>
                 )}
               </TableBody>
-            </table>
+            </Table>
           </div>
 
           {/* 5. Pagination controls */}
@@ -1319,13 +1320,11 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
       <AnimatePresence>
         {flashMessage && (
           <motion.div
-            initial={{ opacity: 0, y: 35, scale: 0.95 }}
+            initial={{ opacity: 0, y: -18, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 30, scale: 0.95 }}
-            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl border border-blue-105 bg-blue-900 px-4 py-3 text-xs font-bold text-white shadow-xl/90"
+            exit={{ opacity: 0, y: -18, scale: 0.95 }}
           >
-            <Check size={14} className="text-emerald-400 shrink-0" />
-            <span>{flashMessage}</span>
+            <FloatingAlert message={flashMessage} />
           </motion.div>
         )}
       </AnimatePresence>

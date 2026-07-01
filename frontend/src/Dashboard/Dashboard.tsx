@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -45,17 +45,8 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { GuidelineSheet } from "@/components/GuidelineSheet";
-import { PublishCapabilityDialog } from "@/components/PublishCapabilityDialog";
 import { AuthUser } from "@/lib/auth";
-
-// Import real, typed mock data from homeData
-import {
-  MOCK_DASHBOARD_NOTIFICATIONS,
-  MOCK_DASHBOARD_SKILLS,
-  MOCK_DASHBOARD_LOGS,
-  MOCK_DASHBOARD_METRICS,
-  MOCK_DASHBOARD_TODOS
-} from "@/temp/homeData";
+import { getI18n } from "@/i18n";
 
 interface DashboardProps {
   user: AuthUser;
@@ -182,6 +173,8 @@ const i18n = {
   }
 };
 
+void i18n;
+
 type MenuKey =
   | "workbench"
   | "market"
@@ -193,20 +186,9 @@ type MenuKey =
   | "profile"
   | "guide";
 
-interface SkillItem {
-  id: string;
-  name: string;
-  type: "Skill" | "MCP" | "Tool";
-  description: string;
-  calls: string;
-  status: "active" | "warning" | "maintenance";
-  author: string;
-  time: string;
-}
-
 export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
-  const langCode = (currentLang?.code || "ZH") as keyof typeof i18n;
-  const t = i18n[langCode] || i18n.ZH;
+  const langCode = (currentLang?.code || "ZH") as "ZH" | "EN" | "JA" | "ES";
+  const t = getI18n(langCode);
   const [sessionUser, setSessionUser] = useState<AuthUser>(user);
 
   useEffect(() => {
@@ -223,59 +205,7 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
   // Global Search Term
   const searchQuery = "";
   
-  // Custom states initialized from migrated mock data
-  const [notifications, setNotifications] = useState(MOCK_DASHBOARD_NOTIFICATIONS);
-  const [skillsList, setSkillsList] = useState<SkillItem[]>(MOCK_DASHBOARD_SKILLS);
-  const [recentLogs] = useState(MOCK_DASHBOARD_LOGS);
-  const [metrics, setMetrics] = useState(MOCK_DASHBOARD_METRICS);
-  const [todos] = useState(MOCK_DASHBOARD_TODOS);
-  
-  // Dialog & Sheet States
-  const [showPublishModal, setShowPublishModal] = useState(false);
   const [showDocDrawer, setShowDocDrawer] = useState(false);
-  const [prefilledPublishType, setPrefilledPublishType] = useState<"Skill" | "MCP" | "Tool">("Skill");
-
-  // Form state for publishing new capability
-  const [newCapName, setNewCapName] = useState("");
-  const [newCapDesc, setNewCapDesc] = useState("");
-  const [newCapType, setNewCapType] = useState<"Skill" | "MCP" | "Tool">("Skill");
-  const [newCapAuthor, setNewCapAuthor] = useState("我");
-
-  // Synchronize newCapType with prefilledPublishType when the prefilled type changes
-  useEffect(() => {
-    setNewCapType(prefilledPublishType);
-  }, [prefilledPublishType]);
-
-  const handlePublishSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCapName.trim() || !newCapDesc.trim()) return;
-
-    const newItem: SkillItem = {
-      id: String(Date.now()),
-      name: newCapName,
-      type: newCapType,
-      description: newCapDesc,
-      calls: "0",
-      status: "active",
-      author: newCapAuthor,
-      time: "鍒氬垰"
-    };
-
-    const updatedList = [newItem, ...skillsList];
-    setSkillsList(updatedList);
-    
-    // Simulate updating call stats
-    setMetrics(prev => ({
-      ...prev,
-      skillsCount: prev.skillsCount + (newCapType === "Skill" ? 1 : 0),
-      mcpCount: prev.mcpCount + (newCapType === "MCP" ? 1 : 0),
-      toolsCount: prev.toolsCount + (newCapType === "Tool" ? 1 : 0),
-    }));
-
-    setNewCapName("");
-    setNewCapDesc("");
-    setShowPublishModal(false);
-  };
 
   const menuItemsGroup1 = useMemo(() => {
     const permissionMap: Partial<Record<MenuKey, string>> = {
@@ -286,21 +216,21 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
       { key: "workbench" as const, label: t.workbench, icon: LayoutDashboard },
       { key: "market" as const, label: t.market, icon: ShoppingBag },
       { key: "developer" as const, label: t.developer, icon: Code },
-      { key: "mcpRuntime" as const, label: langCode === "ZH" ? "MCP 运行监控" : langCode === "JA" ? "MCP 運用監視" : langCode === "ES" ? "Monitor de Ejecución MCP" : "MCP Runtime", icon: Activity },
-      { key: "guide" as const, label: langCode === "ZH" ? "开发者指南" : langCode === "JA" ? "開発者ガイド" : langCode === "ES" ? "Guía de Desarrolladores" : "Developer Guide", icon: BookOpen }
+      { key: "mcpRuntime" as const, label: t.mcpRuntime, icon: Activity },
+      { key: "guide" as const, label: t.developerGuide, icon: BookOpen }
     ].filter(item => sessionUser.permissions.includes(permissionMap[item.key]!));
   }, [t, langCode, sessionUser.permissions]);
 
   const menuItemsGroup2 = useMemo(() => {
     const permissionMap: Partial<Record<MenuKey, string>> = { audit: "page.audit", settings: "page.members", systemManagement: "page.system" };
     return [
-      { key: "audit" as const, label: langCode === "ZH" ? "发布审核" : langCode === "JA" ? "リリース監査" : langCode === "ES" ? "Control de Auditoría" : "Audit Center", icon: ShieldCheck },
-      { key: "settings" as const, label: langCode === "ZH" ? "成员管理" : langCode === "JA" ? "メンバー管理" : langCode === "ES" ? "Gestión de Miembros" : "Member Management", icon: Settings },
-      { key: "systemManagement" as const, label: langCode === "ZH" ? "系统管理" : "System Management", icon: Settings }
+      { key: "audit" as const, label: t.releaseAudit, icon: ShieldCheck },
+      { key: "settings" as const, label: t.memberManagement, icon: Settings },
+      { key: "systemManagement" as const, label: t.systemManagement, icon: Settings }
     ].filter(item => item.key === "systemManagement"
       ? sessionUser.role_code === "SYSTEM_ADMIN" || sessionUser.role_code === "ADMIN"
       : sessionUser.permissions.includes(permissionMap[item.key]!));
-  }, [langCode, sessionUser.permissions, sessionUser.role_code]);
+  }, [t, sessionUser.permissions, sessionUser.role_code]);
 
   const menuItems = useMemo(() => {
     return [...menuItemsGroup1, ...menuItemsGroup2];
@@ -314,17 +244,6 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
 
   const currentMenuLabel = activeMenu === "profile" ? t.personalCenter : menuItems.find(item => item.key === activeMenu)?.label || t.workbench;
   const userName = sessionUser.name || "Enterprise Member";
-
-  const handleMarkAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
-  };
-
-  // Filter skills based on search
-  const filteredSkills = skillsList.filter(sk => 
-    sk.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    sk.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    sk.type.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const renderMenuItem = (item: { key: MenuKey; label: string; icon: any }) => {
     const IconComp = item.icon;
@@ -399,7 +318,7 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
                     <div className="border-t border-black/[0.04] mx-1 my-2" />
                     {!isSidebarCollapsed && (
                       <div className="px-3 py-1 text-xs font-bold text-muted-foreground/50 tracking-wider uppercase text-left">
-                        {langCode === "ZH" ? "安全与管理" : langCode === "JA" ? "セキュリティと管理" : langCode === "ES" ? "Seguridad y Gestión" : "Security & Admin"}
+                        {t.securityAndAdmin}
                       </div>
                     )}
                     <div className="space-y-1">
@@ -544,7 +463,7 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
                           <div className="space-y-1.5 pt-1">
                             <div className="border-t border-black/[0.04] mx-1 my-2" />
                             <div className="px-2.5 py-1 text-xs font-bold text-muted-foreground/50 tracking-wider uppercase text-left">
-                        {langCode === "ZH" ? "安全与管理" : langCode === "JA" ? "セキュリティと管理" : langCode === "ES" ? "Seguridad y Gestión" : "Security & Admin"}
+                        {t.securityAndAdmin}
                             </div>
                             <div className="space-y-1">
                               {menuItemsGroup2.map((item) => {
@@ -610,36 +529,15 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:bg-muted rounded-xl relative">
                     <Bell size={16} />
-                    {notifications.some(n => n.unread) && (
-                      <span className="absolute top-2.5 right-2 a-1.5 h-1.5 rounded-full bg-rose-500" />
-                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-80 p-0 overflow-hidden border border-border shadow-md rounded-xl">
                   <div className="p-3 border-b border-black/[0.04] flex items-center justify-between bg-muted/40 animate-none">
                     <span className="font-semibold text-xs text-foreground">{t.notifCenter}</span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={handleMarkAllRead} 
-                      className="text-xs text-foreground p-0 h-6 hover:bg-transparent"
-                    >
-                      {t.markAllRead}
-                    </Button>
                   </div>
                   <ScrollArea className="h-60">
-                    <div className="py-1">
-                      {notifications.map(n => (
-                        <div key={n.id} className="p-3 border-b border-black/[0.04] text-left items-start gap-2 block hover:bg-muted/30 transition-colors cursor-default">
-                          <div className="flex gap-2">
-                            {n.unread && <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />}
-                            <div className="flex-1 leading-tight">
-                              <p className="text-foreground leading-normal text-xs">{n.text}</p>
-                              <p className="text-xs text-muted-foreground mt-1">{n.time}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex h-full min-h-60 items-center justify-center px-4 text-xs text-muted-foreground">
+                      {t.noNotifications}
                     </div>
                   </ScrollArea>
                 </DropdownMenuContent>
@@ -654,14 +552,6 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
               {activeMenu === "workbench" && (
                 <Home
                   userName={userName}
-                  metrics={metrics}
-                  filteredSkills={filteredSkills}
-                  recentLogs={recentLogs}
-                  todos={todos}
-                  setPrefilledPublishType={setPrefilledPublishType}
-                  setNewCapType={setNewCapType}
-                  setShowPublishModal={setShowPublishModal}
-                  setShowDocDrawer={setShowDocDrawer}
                   setActiveMenu={setActiveMenu}
                   searchQuery={searchQuery}
                   langCode={langCode}
@@ -672,29 +562,14 @@ export function Dashboard({ user, onLogout, currentLang }: DashboardProps) {
               {activeMenu === "mcpRuntime" && <McpRuntime langCode={langCode} />}
               {activeMenu === "audit" && <AuditCenter onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
               {activeMenu === "settings" && <SettingsPage onBackToHome={() => setActiveMenu("workbench")} langCode={langCode} />}
-              {activeMenu === "systemManagement" && <SystemManagement />}
-              {activeMenu === "profile" && <PersonalCenter user={sessionUser} onLogout={onLogout} onUserChange={setSessionUser} />}
-              {activeMenu === "guide" && <Guide onBackToHome={() => setActiveMenu("workbench")} setActiveMenu={(menu) => setActiveMenu(menu as MenuKey)} />}
+              {activeMenu === "systemManagement" && <SystemManagement langCode={langCode} />}
+              {activeMenu === "profile" && <PersonalCenter user={sessionUser} onLogout={onLogout} onUserChange={setSessionUser} langCode={langCode} />}
+              {activeMenu === "guide" && <Guide langCode={langCode} onBackToHome={() => setActiveMenu("workbench")} setActiveMenu={(menu) => setActiveMenu(menu as MenuKey)} />}
             </div>
           </main>
 
           {/* Custom Sheet: Helper Developer Guidelines Drawer mapping to shadcn Sheet */}
           <GuidelineSheet open={showDocDrawer} onOpenChange={setShowDocDrawer} />
-
-          {/* Custom Dialog: Publish New Capability mapping to shadcn Dialog */}
-          <PublishCapabilityDialog
-            open={showPublishModal}
-            onOpenChange={setShowPublishModal}
-            newCapName={newCapName}
-            setNewCapName={setNewCapName}
-            newCapType={newCapType}
-            setNewCapType={setNewCapType}
-            newCapDesc={newCapDesc}
-            setNewCapDesc={setNewCapDesc}
-            newCapAuthor={newCapAuthor}
-            setNewCapAuthor={setNewCapAuthor}
-            onSubmit={handlePublishSubmit}
-          />
 
         </div>
 

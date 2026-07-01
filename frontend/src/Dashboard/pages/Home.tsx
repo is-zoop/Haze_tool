@@ -16,16 +16,8 @@ import { getI18n } from "../../i18n";
 
 interface HomeProps {
   userName: string;
-  setPrefilledPublishType: (type: "Skill" | "MCP" | "Tool") => void;
-  setNewCapType: (type: "Skill" | "MCP" | "Tool") => void;
-  setShowPublishModal: (show: boolean) => void;
-  setShowDocDrawer: (show: boolean) => void;
   setActiveMenu: (menu: any) => void;
   searchQuery?: string;
-  metrics?: any;
-  filteredSkills?: any;
-  recentLogs?: any;
-  todos?: any;
   langCode?: string;
 }
 
@@ -53,11 +45,6 @@ export function Home({
       setLocalSearch(searchQuery);
     }
   }, [searchQuery]);
-
-  // Hot Search click handler
-  const handleHotSearchClick = (keyword: string) => {
-    setLocalSearch(keyword);
-  };
 
   // Capabilities Mock datasets formatted beautifully to display in tabs list
   const tabCapabilities = useMemo(() => {
@@ -122,7 +109,7 @@ export function Home({
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
               <div className="space-y-1 text-left">
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-1.5 leading-normal">
-                  {langCode === "ZH" ? "欢迎回来，" : langCode === "JA" ? "お帰りなさい、" : langCode === "ES" ? "Bienvenido de nuevo, " : "Welcome back, "}<span>{userName}</span>
+                  {t.welcomeBack}<span>{userName}</span>
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-600/90 leading-relaxed font-normal">
                   {t.homeDesc}
@@ -151,22 +138,6 @@ export function Home({
                   </button>
                 )}
               </div>
-
-              {/* Hot searches */}
-              <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-                <span className="text-xs text-slate-500 font-medium">
-                  {langCode === "ZH" ? "热门搜索:" : langCode === "JA" ? "急上昇検索:" : langCode === "ES" ? "Búsquedas populares:" : "Hot Searches:"}
-                </span>
-                {["财务分析", "合同审核", "数据库", "文件处理", "风险控制"].map((kw) => (
-                  <button
-                    key={kw}
-                    onClick={() => handleHotSearchClick(kw)}
-                    className="text-xs text-slate-600/90 hover:text-blue-600 hover:bg-blue-100/50 bg-white/40 border border-slate-200/50 px-2 py-0.5 rounded-md cursor-pointer transition-all"
-                  >
-                    {kw}
-                  </button>
-                ))}
-              </div>
             </div>
 
           </div>
@@ -191,7 +162,7 @@ export function Home({
               <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="text-left">
                   <h3 className="text-sm sm:text-base font-bold text-slate-800">
-                    {langCode === "ZH" ? "热门能力" : langCode === "JA" ? "おすすめと最新能力" : langCode === "ES" ? "Capacidades recomendadas y recientes" : "Recommended & Latest"}
+                    {t.featuredCapabilities}
                   </h3>
                 </div>
                 <button
@@ -199,7 +170,7 @@ export function Home({
                   className="text-xs text-blue-600 hover:text-blue-700 font-black flex items-center gap-1 cursor-pointer hover:underline transition-all group"
 
                 >
-                  <span>{langCode === "ZH" ? "查看全部" : langCode === "JA" ? "すべて表示" : langCode === "ES" ? "Ver todo" : "View All"}</span>
+                  <span>{t.viewAll}</span>
                   <span className="font-bold font-mono transition-transform group-hover:translate-x-0.5">&gt;</span>
                 </button>
               </div>
@@ -210,7 +181,7 @@ export function Home({
                   onClick={() => setActiveTab("recommend")}
                   className={`text-xs font-semibold pb-1.5 pt-0.5 relative transition-colors cursor-pointer ${activeTab === "recommend" ? "text-blue-600" : "text-slate-500 hover:text-slate-700"}`}
                 >
-                  <span>{langCode === "ZH" ? "推荐" : langCode === "JA" ? "おすすめ" : langCode === "ES" ? "Recomendado" : "Recommended"}</span>
+                  <span>{t.recommended}</span>
                   {activeTab === "recommend" && (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
                   )}
@@ -219,7 +190,7 @@ export function Home({
                   onClick={() => setActiveTab("latest")}
                   className={`text-xs font-semibold pb-1.5 pt-0.5 relative transition-colors cursor-pointer ${activeTab === "latest" ? "text-blue-600" : "text-slate-500 hover:text-slate-700"}`}
                 >
-                  <span>{langCode === "ZH" ? "最新" : langCode === "JA" ? "最新の追加" : langCode === "ES" ? "Novedades" : "Latest"}</span>
+                  <span>{t.latest}</span>
                   {activeTab === "latest" && (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
                   )}
@@ -228,7 +199,7 @@ export function Home({
                   onClick={() => setActiveTab("popular")}
                   className={`text-xs font-semibold pb-1.5 pt-0.5 relative transition-colors cursor-pointer ${activeTab === "popular" ? "text-blue-600" : "text-slate-500 hover:text-slate-700"}`}
                 >
-                  <span>{langCode === "ZH" ? "热门" : langCode === "JA" ? "人気急上昇" : langCode === "ES" ? "Popular" : "Popular"}</span>
+                  <span>{t.popular}</span>
                   {activeTab === "popular" && (
                     <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
                   )}
@@ -239,7 +210,7 @@ export function Home({
               <div className="p-1">
                 {tabCapabilities.length === 0 ? (
                   <div className="text-center py-16 text-xs text-slate-400 font-normal">
-                    {langCode === "ZH" ? "暂无满足条件的能力" : langCode === "JA" ? "一致する能力はありません" : langCode === "ES" ? "No hay capacidades que coincidan" : "No matching capabilities"}
+                    {t.noMatchingCapabilities}
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-100">
@@ -269,11 +240,11 @@ export function Home({
                               </p>
                               {/* Metadata indicators below description */}
                               <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap pt-0.5 font-normal">
-                                <span className="flex items-center gap-1">{langCode === "ZH" ? "上传者" : langCode === "JA" ? "開発者" : langCode === "ES" ? "Autor" : "Author"}: <b className="text-slate-600 font-medium">{item.author}</b></span>
+                                <span className="flex items-center gap-1">{t.uploader}: <b className="text-slate-600 font-medium">{item.author}</b></span>
                                 <span className="text-slate-200">|</span>
-                                <span>{langCode === "ZH" ? "更新于" : langCode === "JA" ? "更新日時" : langCode === "ES" ? "Actualizado" : "Updated"}: {item.time}</span>
+                                <span>{t.updated}: {item.time}</span>
                                 <span className="text-slate-200">|</span>
-                                <span>{langCode === "ZH" ? "调用" : langCode === "JA" ? "呼び出し" : langCode === "ES" ? "Llamadas" : "Calls"} {item.calls} {langCode === "ZH" ? "次" : langCode === "JA" ? "回" : langCode === "ES" ? "veces" : "times"}</span>
+                                <span>{t.calls} {item.calls} {t.times}</span>
                               </div>
                             </div>
                           </div>

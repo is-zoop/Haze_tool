@@ -1,0 +1,21 @@
+name: haze-user-sync
+
+services:
+  user-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: haze-user-sync:${HAZE_VERSION:-latest}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      HAZE_API_BASE_URL: "http://backend:8000"
+      HAZE_SYNC_INTERVAL_SECONDS: "1800"
+    networks:
+      - haze-network
+
+networks:
+  haze-network:
+    external: true
+    name: haze_default

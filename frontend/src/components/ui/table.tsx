@@ -6,10 +6,13 @@ const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
+  <div className="relative max-h-full w-full overflow-auto">
     <table
       ref={ref}
-      className={cn("w-full caption-bottom text-xs", className)}
+      className={cn(
+        "w-full caption-bottom text-xs [&_th]:!text-left [&_th]:!text-xs [&_th]:!font-bold [&_td]:!text-xs [&_td]:!font-normal [&_tbody_tr]:!bg-white [&_tbody_td]:!bg-white [&_tbody_td_*]:!text-xs [&_td[data-table-action=true]]:!text-left [&_td[data-table-action=true]>div]:!justify-start [&_[data-slot=badge]]:!text-xs [&_[data-slot=badge]]:!font-semibold",
+        className
+      )}
       {...props}
     />
   </div>
@@ -20,7 +23,11 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("[&_tr]:border-b bg-muted/30", className)} {...props} />
+  <thead
+    ref={ref}
+    className={cn("sticky top-0 z-20 bg-slate-50 [&_tr]:border-b", className)}
+    {...props}
+  />
 ))
 TableHeader.displayName = "TableHeader"
 
@@ -43,7 +50,7 @@ const TableFooter = React.forwardRef<
   <tfoot
     ref={ref}
     className={cn(
-      "border-t bg-muted/30 font-medium [&>tr]:last:border-b-0",
+      "border-t bg-muted/50 font-medium [&>tr]:last:border-b-0",
       className
     )}
     {...props}
@@ -58,7 +65,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b border-border transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+      "border-b border-border",
       className
     )}
     {...props}
@@ -73,7 +80,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "py-2.5 px-4 text-left align-middle text-xs font-semibold text-muted-foreground [&:has([role=checkbox])]:pr-0",
+      "h-10 min-w-32 bg-slate-50 px-2 text-left align-middle font-bold text-foreground [&:has([role=checkbox])]:pr-0 data-[table-action=true]:sticky data-[table-action=true]:right-0 data-[table-action=true]:z-30 data-[table-action=true]:bg-slate-50 data-[table-action=true]:shadow-[-1px_0_0_0_rgba(15,23,42,0.08)]",
       className
     )}
     {...props}
@@ -88,7 +95,7 @@ const TableCell = React.forwardRef<
   <td
     ref={ref}
     className={cn(
-      "py-2.5 px-4 align-middle [&:has([role=checkbox])]:pr-0",
+      "min-w-32 bg-white p-2 align-middle [&:has([role=checkbox])]:pr-0 data-[table-action=true]:sticky data-[table-action=true]:right-0 data-[table-action=true]:z-10 data-[table-action=true]:bg-white data-[table-action=true]:shadow-[-1px_0_0_0_rgba(15,23,42,0.08)]",
       className
     )}
     {...props}
@@ -108,6 +115,18 @@ const TableCaption = React.forwardRef<
 ))
 TableCaption.displayName = "TableCaption"
 
+const TableSecondaryText = React.forwardRef<
+  HTMLSpanElement,
+  React.HTMLAttributes<HTMLSpanElement>
+>(({ className, ...props }, ref) => (
+  <span
+    ref={ref}
+    className={cn("mt-0.5 block text-xs font-normal text-muted-foreground", className)}
+    {...props}
+  />
+))
+TableSecondaryText.displayName = "TableSecondaryText"
+
 export {
   Table,
   TableHeader,
@@ -117,4 +136,5 @@ export {
   TableRow,
   TableCell,
   TableCaption,
+  TableSecondaryText,
 }

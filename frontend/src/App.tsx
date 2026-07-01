@@ -101,7 +101,7 @@ export default function App() {
 
                 {/* Actual Login/Form Content */}
                 <div className="flex-1 flex flex-col justify-center my-auto">
-                  <LoginForm onLoginSuccess={handleLoginSuccess} />
+                  <LoginForm onLoginSuccess={handleLoginSuccess} langCode={currentLang.code} />
                 </div>
               </div>
 

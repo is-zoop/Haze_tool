@@ -8,6 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/common/PageHeader";
+import { DestructiveAlert, FloatingAlert } from "@/components/ui/alert";
+import { getI18n } from "@/i18n";
 import { ApiError } from "@/lib/api";
 import { BusinessCategory, createBusinessCategory, deleteBusinessCategory, listBusinessCategories, updateBusinessCategory } from "@/lib/businessCategories";
 
@@ -19,7 +21,9 @@ const L = {
 };
 const formatTime = (value: string) => new Date(value).toLocaleString("zh-CN", { hour12: false });
 
-export function SystemManagement() {
+export function SystemManagement({ langCode = "ZH" }: { langCode?: "ZH" | "EN" | "JA" | "ES" }) {
+  const t = getI18n(langCode);
+  const [flash, setFlash] = useState<string | null>(null);
   const [items, setItems] = useState<BusinessCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -28,7 +32,7 @@ export function SystemManagement() {
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const load = async () => { setLoading(true); try { setItems(await listBusinessCategories()); } catch (cause) { setError(cause instanceof Error ? cause.message : "Load failed"); } finally { setLoading(false); } };
+  const load = async () => { setLoading(true); try { setItems(await listBusinessCategories()); } catch (cause) { setError(cause instanceof Error ? cause.message : t.systemLoadFailed); } finally { setLoading(false); } };
   useEffect(() => { void load(); }, []);
   const openCreate = () => { setEditing(null); setName(""); setDescription(""); setError(""); setDialogOpen(true); };
   const openEdit = (item: BusinessCategory) => { setEditing(item); setName(item.name); setDescription(item.description ?? ""); setError(""); setDialogOpen(true); };
@@ -36,21 +40,22 @@ export function SystemManagement() {
     const cleanName = name.trim(); if (!cleanName) { setError(L.required); return; }
     setSaving(true); setError("");
     try { const payload = { name: cleanName, description: description.trim() || null }; if (editing) await updateBusinessCategory(editing.id, payload); else await createBusinessCategory(payload); setDialogOpen(false); await load(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Save failed"); } finally { setSaving(false); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : t.systemSaveFailed); } finally { setSaving(false); }
   };
   const remove = async (item: BusinessCategory) => {
     if (!window.confirm(`\u786e\u5b9a\u5220\u9664\u4e1a\u52a1\u5206\u7c7b\u201c${item.name}\u201d\u5417\uff1f`)) return;
-    try { await deleteBusinessCategory(item.id); await load(); } catch (cause) { window.alert(cause instanceof ApiError ? cause.message : "Delete failed"); }
+    try { await deleteBusinessCategory(item.id); await load(); } catch (cause) { setFlash(cause instanceof ApiError ? cause.message : t.systemDeleteFailed); window.setTimeout(() => setFlash(null), 3000); }
   };
   return <div className="dashboard-page-stack h-full overflow-hidden text-left font-sans flex flex-col gap-3 animate-in fade-in duration-300">
+    {flash && <FloatingAlert type="destructive" message={flash} />}
     <PageHeader title={L.title} description={L.description} />
     <Tabs defaultValue="categories" className="flex min-h-0 flex-1 flex-col rounded-xl border border-border/70 bg-white shadow-xs p-4 pt-2.5">
       <div className="flex items-center justify-between border-b border-border/70"><TabsList className="h-10 bg-transparent p-0"><TabsTrigger value="categories" className="h-10 rounded-none border-b-2 border-transparent px-4 text-xs font-bold data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:shadow-none">{L.tab}</TabsTrigger></TabsList><Button size="sm" onClick={openCreate} className="h-9 bg-slate-900 px-4 font-bold text-white hover:bg-slate-800"><Plus size={16} />{L.add}</Button></div>
-      <TabsContent value="categories" className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-border/70"><Table><TableHeader className="sticky top-0 bg-slate-50"><TableRow><TableHead>{L.category}</TableHead><TableHead>{L.detail}</TableHead><TableHead>{L.creator}</TableHead><TableHead>{L.created}</TableHead><TableHead>{L.updater}</TableHead><TableHead>{L.updated}</TableHead><TableHead className="w-28 text-right">{L.action}</TableHead></TableRow></TableHeader>
-        <TableBody>{items.map((item) => <TableRow key={item.id}><TableCell className="font-medium text-slate-900">{item.name}</TableCell><TableCell className="max-w-64 truncate text-muted-foreground">{item.description || "-"}</TableCell><TableCell>{item.created_by || "-"}</TableCell><TableCell>{formatTime(item.created_at)}</TableCell><TableCell>{item.updated_by || "-"}</TableCell><TableCell>{formatTime(item.updated_at)}</TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-8">{L.edit}<ChevronDown size={14} /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => openEdit(item)}>{L.edit}</DropdownMenuItem><DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => void remove(item)}>{L.remove}</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>)}
+      <TabsContent value="categories" className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-border/70"><Table><TableHeader><TableRow><TableHead>{L.category}</TableHead><TableHead>{L.detail}</TableHead><TableHead>{L.creator}</TableHead><TableHead>{L.created}</TableHead><TableHead>{L.updater}</TableHead><TableHead>{L.updated}</TableHead><TableHead className="w-28" data-table-action="true">{L.action}</TableHead></TableRow></TableHeader>
+        <TableBody>{items.map((item) => <TableRow key={item.id}><TableCell className="font-medium text-slate-900">{item.name}</TableCell><TableCell className="max-w-64 truncate text-muted-foreground">{item.description || "-"}</TableCell><TableCell>{item.created_by || "-"}</TableCell><TableCell>{formatTime(item.created_at)}</TableCell><TableCell>{item.updated_by || "-"}</TableCell><TableCell>{formatTime(item.updated_at)}</TableCell><TableCell className="text-right" data-table-action="true"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-8">{L.edit}<ChevronDown size={14} /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => openEdit(item)}>{L.edit}</DropdownMenuItem><DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => void remove(item)}>{L.remove}</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>)}
         {!loading && items.length === 0 && <TableRow><TableCell colSpan={7} className="h-32 text-center text-muted-foreground">{L.empty}</TableCell></TableRow>}{loading && <TableRow><TableCell colSpan={7} className="h-32 text-center text-muted-foreground">{L.loading}</TableCell></TableRow>}</TableBody>
       </Table></TabsContent>
     </Tabs>
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{editing ? `${L.edit}${L.category}` : L.add}</DialogTitle></DialogHeader><div className="space-y-4 py-2"><div className="space-y-2"><label className="text-sm font-medium">{L.category} <span className="text-destructive">*</span></label><Input value={name} maxLength={100} onChange={(event) => setName(event.target.value)} placeholder={L.required} /></div><div className="space-y-2"><label className="text-sm font-medium">{L.detail}</label><Textarea value={description} maxLength={500} onChange={(event) => setDescription(event.target.value)} rows={4} /></div>{error && <p className="text-sm text-destructive">{error}</p>}</div><DialogFooter><Button variant="outline" onClick={() => setDialogOpen(false)}>{L.cancel}</Button><Button disabled={saving} onClick={() => void save()}>{saving ? L.saving : L.save}</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{editing ? `${L.edit}${L.category}` : L.add}</DialogTitle></DialogHeader><div className="space-y-4 py-2"><div className="space-y-2"><label className="text-sm font-medium">{L.category} <span className="text-destructive">*</span></label><Input value={name} maxLength={100} onChange={(event) => setName(event.target.value)} placeholder={L.required} /></div><div className="space-y-2"><label className="text-sm font-medium">{L.detail}</label><Textarea value={description} maxLength={500} onChange={(event) => setDescription(event.target.value)} rows={4} /></div>{error && <DestructiveAlert title={error} />}</div><DialogFooter><Button variant="outline" onClick={() => setDialogOpen(false)}>{L.cancel}</Button><Button disabled={saving} onClick={() => void save()}>{saving ? L.saving : L.save}</Button></DialogFooter></DialogContent></Dialog>
   </div>;
 }

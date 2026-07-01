@@ -2,7 +2,6 @@ import {
   Plus,
   RotateCcw,
   Search,
-  Check,
   Code,
   Cpu,
 } from "lucide-react";
@@ -33,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { FloatingAlert } from "@/components/ui/alert";
 
 import { PageHeader } from "../../components/common/PageHeader";
 import { DataTableFooter } from "../../components/common/DataTableFooter";
@@ -101,13 +101,11 @@ export function DeveloperCenter({
       <AnimatePresence>
         {flashMessage && (
           <motion.div
-            initial={{ opacity: 0, y: 35, scale: 0.95 }}
+            initial={{ opacity: 0, y: -18, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 30, scale: 0.95 }}
-            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-900 px-4 py-3 text-xs font-bold text-white shadow-xl/90"
+            exit={{ opacity: 0, y: -18, scale: 0.95 }}
           >
-            <Check size={14} className="text-emerald-400 shrink-0" />
-            <span>{flashMessage}</span>
+            <FloatingAlert message={flashMessage} />
           </motion.div>
         )}
       </AnimatePresence>
