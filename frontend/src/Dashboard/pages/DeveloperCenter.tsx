@@ -5,7 +5,6 @@ import {
   Code,
   Cpu,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -97,18 +96,7 @@ export function DeveloperCenter({
   ];
   return (
     <div className="dashboard-page-stack h-full overflow-hidden text-left font-sans flex flex-col gap-3 animate-in fade-in duration-300" id="haze-developer-center-container">
-      {/* Dynamic Animated Toast */}
-      <AnimatePresence>
-        {flashMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -18, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -18, scale: 0.95 }}
-          >
-            <FloatingAlert message={flashMessage} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {flashMessage && <FloatingAlert {...flashMessage} />}
 
       <PageHeader
         title={_langCode === "ZH" ? "开发者中心" : _langCode === "JA" ? "開発者センター" : _langCode === "ES" ? "Centro de Desarrolladores" : "Developer Center"}
@@ -117,7 +105,11 @@ export function DeveloperCenter({
         actions={(
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="w-full sm:w-auto font-bold bg-slate-900 hover:bg-slate-800 text-white h-10 px-4 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors">
+              <Button
+                variant="default"
+                size="default"
+                className="w-full sm:w-auto"
+              >
                 <Plus size={16} />
                 <span>{_langCode === "ZH" ? "注册能力" : _langCode === "JA" ? "新規追加" : _langCode === "ES" ? "Registrar" : "Add Capability"}</span>
               </Button>

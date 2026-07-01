@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const alertVariants = cva(
-  "relative grid w-full grid-cols-[auto_1fr] items-start gap-x-3 gap-y-1 rounded-lg border px-4 py-3 text-sm shadow-xs [&>svg]:mt-0.5 [&>svg]:size-4 [&>svg]:shrink-0",
+  "relative grid w-full grid-cols-[auto_1fr] items-start gap-x-3 gap-y-1 rounded-lg border px-4 py-3 text-sm [&>svg]:mt-0.5 [&>svg]:size-4 [&>svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "border-border bg-background text-foreground",
-        destructive: "border-destructive/30 bg-destructive/10 text-destructive dark:border-destructive/50 dark:bg-destructive/20",
+        default: "border-border bg-white text-foreground dark:bg-background",
+        destructive: "border-border bg-white text-destructive dark:bg-background",
       },
     },
     defaultVariants: {
@@ -40,7 +40,7 @@ function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="alert-title"
-      className={cn("col-start-2 text-sm font-semibold leading-none tracking-normal", className)}
+      className={cn("col-start-2 text-sm font-medium leading-none tracking-tight", className)}
       {...props}
     />
   );
@@ -50,7 +50,7 @@ function AlertDescription({ className, ...props }: React.ComponentProps<"div">) 
   return (
     <div
       data-slot="alert-description"
-      className={cn("col-start-2 text-xs leading-5 text-current/80", className)}
+      className={cn("col-start-2 text-sm leading-relaxed text-current/75", className)}
       {...props}
     />
   );
@@ -97,7 +97,7 @@ function WarningAlert({ title, description, children, className, ...props }: App
   return (
     <Alert
       className={cn(
-        "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50",
+        "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100",
         className
       )}
       {...props}
@@ -134,29 +134,27 @@ function ActionAlert({
   );
 }
 
+export type FlashMessage = {
+  type: "success" | "warning" | "error";
+  title: React.ReactNode;
+  description: React.ReactNode;
+};
+
 function FloatingAlert({
-  type = "basic",
+  type,
   title,
   description,
-  message,
   className,
-}: {
-  type?: "basic" | "destructive" | "warning";
-  title?: React.ReactNode;
-  description?: React.ReactNode;
-  message?: React.ReactNode;
-  className?: string;
-}) {
+}: FlashMessage & { className?: string }) {
   const alertClassName = cn(
-    "fixed left-1/2 top-6 z-[2147483647] w-[min(calc(100vw-2rem),28rem)] -translate-x-1/2 shadow-lg",
+    "fixed left-1/2 top-6 z-[2147483647] w-[min(calc(100vw-2rem),28rem)] -translate-x-1/2",
     className
   );
-  const alertTitle = title ?? message;
-  const content = type === "destructive"
-    ? <DestructiveAlert title={alertTitle} description={description} className={alertClassName} />
+  const content = type === "error"
+    ? <DestructiveAlert title={title} description={description} className={alertClassName} />
     : type === "warning"
-    ? <WarningAlert title={alertTitle} description={description} className={alertClassName} />
-    : <BasicAlert title={alertTitle} description={description} className={alertClassName} />;
+    ? <WarningAlert title={title} description={description} className={alertClassName} />
+    : <BasicAlert title={title} description={description} className={alertClassName} />;
 
   if (typeof document === "undefined") return content;
   return createPortal(content, document.body);

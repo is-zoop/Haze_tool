@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { apiRequest } from "@/lib/api";
-import { motion, AnimatePresence } from "motion/react";
 import { Play, Square, RotateCcw, Copy, Activity, ClipboardList, ChevronDown } from "lucide-react";
-import { FloatingAlert } from "@/components/ui/alert";
+import { FloatingAlert, type FlashMessage } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -97,7 +96,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
   const [loading, setLoading] = useState(false);
   const [opLoading, setOpLoading] = useState<number | null>(null);
   const [copyTip, setCopyTip] = useState<number | null>(null);
-  const [flash, setFlash] = useState<{ text: string; ok: boolean } | null>(null);
+  const [flash, setFlash] = useState<FlashMessage | null>(null);
   const lastK8sSyncRef = useRef<number>(0);
 
   // 分页
@@ -128,9 +127,9 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
         } catch { /* K8s sync 失败时静默降级，仍刷新 DB 数据 */ }
       }
       setDeployments(await listMcpDeployments());
-      showFlash(synced ? t.mcpRefreshSynced : t.mcpRefreshSuccess, true);
+      showFlash({ type: "success", title: t.alertRefreshSuccessTitle, description: synced ? t.mcpRefreshSynced : t.mcpRefreshSuccess });
     } catch {
-      showFlash(t.mcpRefreshFailed, false);
+      showFlash({ type: "error", title: t.alertRefreshFailedTitle, description: t.mcpRefreshFailed });
     } finally {
       setLoading(false);
     }
@@ -157,8 +156,8 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
     try { setTasks(await listMcpDeployTasks(id)); } catch { setTasks([]); }
   }
 
-  function showFlash(text: string, ok: boolean) {
-    setFlash({ text, ok });
+  function showFlash(message: FlashMessage) {
+    setFlash(message);
     window.setTimeout(() => setFlash(null), 2800);
   }
 
@@ -171,10 +170,10 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
     try {
       await op(id);
       await loadDeployments();
-      showFlash(successMsg, true);
+      showFlash({ type: "success", title: t.alertOperationSuccessTitle, description: successMsg });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : t.mcpUnknownError;
-      showFlash(t.mcpOperationFailed.replace("{message}", msg), false);
+      showFlash({ type: "error", title: t.alertOperationFailedTitle, description: t.mcpOperationFailed.replace("{message}", msg) });
     } finally {
       setOpLoading(null);
     }
@@ -197,19 +196,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
 
   return (
     <div className="dashboard-page-stack h-full overflow-hidden text-left font-sans flex flex-col gap-3 animate-in fade-in duration-300">
-      {/* 操作结果 Toast */}
-      <AnimatePresence>
-        {flash && (
-          <motion.div
-            key="flash"
-            initial={{ opacity: 0, y: -18, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -18, scale: 0.95 }}
-          >
-            <FloatingAlert type={flash.ok ? "basic" : "destructive"} message={flash.text} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {flash && <FloatingAlert {...flash} />}
 
       <PageHeader
         title="MCP 运行监控"

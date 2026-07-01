@@ -1,6 +1,5 @@
 import {
   ArrowUpCircle,
-  ChevronDown,
   Code,
   Copy,
   Cpu,
@@ -10,7 +9,6 @@ import {
   Folder,
   MinusCircle,
   MoreHorizontal,
-  Play,
   Rocket,
   Send,
   Shield,
@@ -21,6 +19,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
@@ -275,7 +274,7 @@ export function DeveloperAssetTable({
   return (
     <div className="flex-grow flex-1 min-h-0 overflow-hidden rounded-xl border border-border/60 bg-white" id="haze-developer-table-container">
       <ScrollArea className="h-full w-full">
-        <div className="min-w-[1300px]">
+        <div className="min-w-[1520px]">
           <Table className="table-fixed">
             <TableHeader className="sticky top-0 z-10">
               <TableRow className="hover:bg-transparent">
@@ -287,7 +286,7 @@ export function DeveloperAssetTable({
                 <TableHead className="w-[130px]">{langCode === "ZH" ? "部署状态" : langCode === "JA" ? "デプロイ状態" : langCode === "ES" ? "Despliegue" : "Deploy"}</TableHead>
                 <TableHead className="w-[150px]">{langCode === "ZH" ? "测试状态" : langCode === "JA" ? "テスト状態" : langCode === "ES" ? "Estado de prueba" : "Test Status"}</TableHead>
                 <TableHead className="w-[110px] text-right">{langCode === "ZH" ? "调用" : langCode === "JA" ? "呼び出し" : langCode === "ES" ? "Llamadas" : "Calls"}</TableHead>
-                <TableHead className="w-[200px]" data-table-action="true">{langCode === "ZH" ? "操作" : langCode === "JA" ? "操作" : langCode === "ES" ? "Acciones" : "Actions"}</TableHead>
+                <TableHead className="w-[420px]" data-table-action="true">{langCode === "ZH" ? "操作" : langCode === "JA" ? "操作" : langCode === "ES" ? "Acciones" : "Actions"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -329,58 +328,34 @@ export function DeveloperAssetTable({
                       {formatCalls(asset.calls)}
                     </TableCell>
                     <TableCell className="text-right" data-table-action="true">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              size="sm"
-                              disabled={asset.type === "Skill"}
-                              className={`h-8 px-2.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer ${
-                                asset.type === "Skill"
-                                  ? "bg-slate-100 text-slate-400 border-none cursor-not-allowed opacity-50"
-                                  : "bg-slate-900 hover:bg-slate-800 text-white border-transparent"
-                              }`}
-                            >
-                              <Play size={12} className={asset.type === "Skill" ? "text-slate-400" : "text-white"} />
-                              <span>{langCode === "ZH" ? "部署测试" : langCode === "JA" ? "デプロイ/テスト" : langCode === "ES" ? "Desplegar/Probar" : "Deploy/Test"}</span>
-                              <ChevronDown size={12} className={asset.type === "Skill" ? "text-slate-400" : "text-white"} />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="end"
-                            collisionPadding={12}
-                            className="z-50 w-auto min-w-40 rounded-xl border border-slate-100 bg-white p-1 text-xs text-slate-700 shadow-md"
-                          >
-                            {flow.showDeploy && (
-                              <DropdownMenuItem
-                                disabled={!flow.canDeploy}
-                                onClick={() => onDeployAsset(asset)}
-                                className="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg p-2 font-bold hover:bg-slate-50 focus:bg-slate-50"
-                              >
-                                <Rocket size={12} className="text-slate-400" />
-                                <span>{langCode === "ZH" ? "服务部署" : langCode === "JA" ? "サービスデプロイ" : langCode === "ES" ? "Desplegar servicio" : "Deploy Service"}</span>
-                              </DropdownMenuItem>
-                            )}
-                            {asset.type !== "Skill" && (
-                              <DropdownMenuItem
-                                disabled={!flow.canDebug}
-                                onClick={() => onDebugComplete(asset)}
-                                className="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg p-2 font-bold hover:bg-slate-50 focus:bg-slate-50"
-                              >
-                                <TerminalSquare size={12} className="text-slate-400" />
-                                <span>{langCode === "ZH" ? "连接测试" : langCode === "JA" ? "接続テスト" : langCode === "ES" ? "Prueba de conexión" : "Connection Test"}</span>
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        
+                      <ButtonGroup>
+                         <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onOpenEditAsset(asset)}
+                        >
+                          <Edit3 />
+                          <span>{t.edit}</span>
+                        </Button>
+
                         <Button
                           variant="outline"
-                          size="icon"
-                          onClick={() => onOpenEditAsset(asset)}
-                          className="h-8 w-8 text-slate-500 hover:text-slate-900 rounded-lg border border-input cursor-pointer"
+                          size="sm"
+                          disabled={!flow.showDeploy || !flow.canDeploy}
+                          onClick={() => onDeployAsset(asset)}
                         >
-                          <Edit3 size={14} />
+                          <Rocket />
+                          <span>{langCode === "ZH" ? "服务部署" : langCode === "JA" ? "サービスデプロイ" : langCode === "ES" ? "Desplegar servicio" : "Deploy Service"}</span>
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={asset.type === "Skill" || !flow.canDebug}
+                          onClick={() => onDebugComplete(asset)}
+                        >
+                          <TerminalSquare />
+                          <span>{langCode === "ZH" ? "连接测试" : langCode === "JA" ? "接続テスト" : langCode === "ES" ? "Prueba de conexión" : "Connection Test"}</span>
                         </Button>
 
                         <DropdownMenu>
@@ -388,7 +363,8 @@ export function DeveloperAssetTable({
                             <Button
                               variant="outline"
                               size="icon"
-                              className="h-8 w-8 text-slate-500 hover:text-slate-900 rounded-lg border border-input cursor-pointer"
+                              className="h-8 w-8"
+                              aria-label={langCode === "ZH" ? "更多操作" : "More actions"}
                             >
                               <MoreHorizontal size={14} />
                             </Button>
@@ -453,7 +429,7 @@ export function DeveloperAssetTable({
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </div>
+                      </ButtonGroup>
                     </TableCell>
                   </TableRow>
                 );

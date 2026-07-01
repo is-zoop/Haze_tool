@@ -14,7 +14,7 @@ import {
   Cpu,
   Calendar,
 } from "lucide-react";
-import { FloatingAlert } from "@/components/ui/alert";
+import { FloatingAlert, type FlashMessage } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -92,11 +92,11 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const [alertMsg, setAlertMsg] = useState<string | null>(null);
+  const [alertMsg, setAlertMsg] = useState<FlashMessage | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const triggerAlert = (msg: string) => {
-    setAlertMsg(msg);
+  const triggerAlert = (message: FlashMessage) => {
+    setAlertMsg(message);
     setTimeout(() => setAlertMsg(null), 3000);
   };
 
@@ -200,7 +200,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
     setIsRefreshing(true);
     await Promise.all([loadStats(), loadItems()]);
     setIsRefreshing(false);
-    triggerAlert(t.auditRefreshSuccess);
+    triggerAlert({ type: "success", title: t.alertRefreshSuccessTitle, description: t.auditRefreshSuccess });
   };
 
   const openDetail = async (id: string) => {
@@ -212,7 +212,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
       const d = await fetchAuditDetail(id);
       setDetail(d);
     } catch {
-      triggerAlert(t.auditDetailLoadFailed);
+      triggerAlert({ type: "error", title: t.alertLoadFailedTitle, description: t.auditDetailLoadFailed });
     } finally {
       setDetailLoading(false);
     }
@@ -221,7 +221,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
   const handleSubmitReview = async (action: "approved" | "rejected") => {
     if (!selectedId) return;
     if (action === "rejected" && !comment.trim()) {
-      triggerAlert(t.auditRejectReasonRequired);
+      triggerAlert({ type: "warning", title: t.alertActionRequiredTitle, description: t.auditRejectReasonRequired });
       return;
     }
     setSubmitting(true);
@@ -230,13 +230,13 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
       const actionLabel = action === "approved"
         ? (_langCode === "ZH" ? "已通过" : "Approved")
         : (_langCode === "ZH" ? "已驳回" : "Rejected");
-      triggerAlert(`${actionLabel}: ${detail?.capability.name ?? ""}`);
+      triggerAlert({ type: "success", title: t.alertOperationSuccessTitle, description: `${actionLabel}: ${detail?.capability.name ?? ""}` });
       setSelectedId(null);
       setDetail(null);
       setComment("");
       await Promise.all([loadStats(), loadItems()]);
     } catch {
-      triggerAlert(t.auditActionFailed);
+      triggerAlert({ type: "error", title: t.alertOperationFailedTitle, description: t.auditActionFailed });
     } finally {
       setSubmitting(false);
     }
@@ -491,7 +491,7 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
 
         {/* Alert toast */}
         {alertMsg && (
-          <FloatingAlert message={alertMsg} />
+          <FloatingAlert {...alertMsg} />
         )}
 
         {/* Table */}

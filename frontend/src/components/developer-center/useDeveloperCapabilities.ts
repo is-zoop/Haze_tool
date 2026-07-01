@@ -24,6 +24,7 @@ import {
 import { getI18n } from "../../i18n";
 import { AssetStatus, DeveloperAsset } from "../../types/developer-center";
 import { DEFAULT_ASSET } from "./config";
+import type { FlashMessage } from "../ui/alert";
 
 const AUTH_TOKEN_KEY = "haze_access_token";
 
@@ -119,11 +120,11 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
   const deploySessionRef = useRef(0);
 
   const [deleteTarget, setDeleteTarget] = useState<DeveloperAsset | null>(null);
-  const [flashMessage, setFlashMessage] = useState<string | null>(null);
+  const [flashMessage, setFlashMessage] = useState<FlashMessage | null>(null);
   const iconUrlsRef = useRef<string[]>([]);
   const requestIdRef = useRef(0);
 
-  const triggerFlashAlert = useCallback((message: string) => {
+  const triggerFlashAlert = useCallback((message: FlashMessage) => {
     setFlashMessage(message);
     window.setTimeout(() => setFlashMessage(null), 3000);
   }, []);
@@ -161,7 +162,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
         if (requestId === requestIdRef.current) {
           setAssets([]);
           setTotalItems(0);
-          triggerFlashAlert(errorMessage(error));
+          triggerFlashAlert({ type: "error", title: t.alertLoadFailedTitle, description: errorMessage(error) });
         }
       }
     }, 250);
@@ -344,22 +345,22 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
       if (isEditing) await updateCapability(currentAsset);
       else await createCapability(currentAsset);
       setShowEditModal(false);
-      triggerFlashAlert(formatAlert(isEditing ? t.developerAssetUpdated : t.developerAssetCreated, { name: currentAsset.name ?? "" }));
+      triggerFlashAlert({ type: "success", title: t.alertSaveSuccessTitle, description: formatAlert(isEditing ? t.developerAssetUpdated : t.developerAssetCreated, { name: currentAsset.name ?? "" }) });
       refresh();
     } catch (error) {
       const message = errorMessage(error);
       if (error instanceof ApiError && error.status === 409) setFormErrors((previous) => ({ ...previous, code: message }));
-      triggerFlashAlert(message);
+      triggerFlashAlert({ type: "error", title: t.alertOperationFailedTitle, description: message });
     }
   };
 
   const handleSubmitReview = async (asset: DeveloperAsset) => {
     try {
       await submitReviewCapability(asset.id);
-      triggerFlashAlert(formatAlert(t.developerAssetSubmitted, { name: asset.name }));
+      triggerFlashAlert({ type: "success", title: t.alertSubmitSuccessTitle, description: formatAlert(t.developerAssetSubmitted, { name: asset.name }) });
       refresh();
     } catch (error) {
-      triggerFlashAlert(errorMessage(error));
+      triggerFlashAlert({ type: "error", title: t.alertOperationFailedTitle, description: errorMessage(error) });
     }
   };
 
@@ -397,7 +398,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
       setDeployErrorMessage(message);
       setDeployStepStatuses({ 0: "fail" });
       setDeployTerminalLogs((previous) => previous.concat({ time: formatDeployLogTime(), type: "ERROR", text: message }));
-      triggerFlashAlert(message);
+      triggerFlashAlert({ type: "error", title: t.alertOperationFailedTitle, description: message });
     }
   };
   const handleDebugComplete = (asset: DeveloperAsset) => {
@@ -406,23 +407,23 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
   const handlePublishAsset = async (asset: DeveloperAsset) => {
     try {
       await publishCapability(asset.id);
-      triggerFlashAlert(formatAlert(t.developerAssetPublished, { name: asset.name }));
+      triggerFlashAlert({ type: "success", title: t.alertPublishSuccessTitle, description: formatAlert(t.developerAssetPublished, { name: asset.name }) });
       refresh();
     } catch (error) {
       const message = error instanceof ApiError && (error.code === 40911 || error.message === "Capability is not ready to be published")
         ? t.developerPublishNotReady
         : errorMessage(error);
-      triggerFlashAlert(message);
+      triggerFlashAlert({ type: error instanceof ApiError && error.status === 409 ? "warning" : "error", title: error instanceof ApiError && error.status === 409 ? t.alertActionRequiredTitle : t.alertOperationFailedTitle, description: message });
     }
   };
 
   const handleOfflineAsset = async (asset: DeveloperAsset) => {
     try {
       await offlineCapability(asset.id);
-      triggerFlashAlert(formatAlert(t.developerAssetOffline, { name: asset.name }));
+      triggerFlashAlert({ type: "success", title: t.alertOperationSuccessTitle, description: formatAlert(t.developerAssetOffline, { name: asset.name }) });
       refresh();
     } catch (error) {
-      triggerFlashAlert(errorMessage(error));
+      triggerFlashAlert({ type: "error", title: t.alertOperationFailedTitle, description: errorMessage(error) });
     }
   };
 
@@ -469,10 +470,10 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     try {
       await createCapabilityVersion(newVersionAsset.id, newVersionNum, newVersionDesc, newVersionPackageToken);
       setShowNewVersionModal(false);
-      triggerFlashAlert(formatAlert(t.developerVersionCreated, { name: newVersionAsset.name, version: newVersionNum }));
+      triggerFlashAlert({ type: "success", title: t.alertSaveSuccessTitle, description: formatAlert(t.developerVersionCreated, { name: newVersionAsset.name, version: newVersionNum }) });
       refresh();
     } catch (error) {
-      triggerFlashAlert(errorMessage(error));
+      triggerFlashAlert({ type: "error", title: t.alertOperationFailedTitle, description: errorMessage(error) });
     }
   };
 
@@ -480,17 +481,17 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     try {
       await deleteCapability(asset.id);
       setDeleteTarget(null);
-      triggerFlashAlert(formatAlert(t.developerAssetDeleted, { name: asset.name }));
+      triggerFlashAlert({ type: "success", title: t.alertDeleteSuccessTitle, description: formatAlert(t.developerAssetDeleted, { name: asset.name }) });
       refresh();
     } catch (error) {
-      triggerFlashAlert(errorMessage(error));
+      triggerFlashAlert({ type: "error", title: t.alertOperationFailedTitle, description: errorMessage(error) });
     }
   };
 
   const handleCopyAssetCode = (asset: DeveloperAsset) => {
     const text = asset.type === "Skill" ? `${asset.name} (Slug: ${asset.code}):\n${asset.description || ""}` : asset.code;
     navigator.clipboard.writeText(text);
-    triggerFlashAlert(t.developerPromptCopied);
+    triggerFlashAlert({ type: "success", title: t.alertCopySuccessTitle, description: t.developerPromptCopied });
   };
 
   const handleOpenDebug = (asset: DeveloperAsset) => {
@@ -573,7 +574,11 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
             } else if (event.type === "done") {
               const status = event.status as "pass" | "fail";
               setDebugStatus(status);
-              triggerFlashAlert(status === "pass" ? t.developerMcpTestPassed : t.developerMcpTestFailed);
+              triggerFlashAlert({
+                type: status === "pass" ? "success" : "error",
+                title: status === "pass" ? t.alertTestSuccessTitle : t.alertTestFailedTitle,
+                description: status === "pass" ? t.developerMcpTestPassed : t.developerMcpTestFailed,
+              });
               // Refresh capability to pick up updated test status
               setRefreshVersion((v) => v + 1);
             }

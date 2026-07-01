@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
-import { FloatingAlert } from "@/components/ui/alert";
+import { FloatingAlert, type FlashMessage } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell, TableSecondaryText } from "@/components/ui/table";
@@ -118,12 +118,12 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"disable" | "enable" | "remove" | null>(null);
   const [confirmMember, setConfirmMember] = useState<SystemMember | null>(null);
-  const [flashMessage, setFlashMessage] = useState<string | null>(null);
+  const [flashMessage, setFlashMessage] = useState<FlashMessage | null>(null);
   const [currentAuthUser, setCurrentAuthUser] = useState<StoredAuthUser | null>(null);
   const [temporaryPasswordDialog, setTemporaryPasswordDialog] = useState<TemporaryPasswordDialog | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
 
-  const showFlash = (message: string) => {
+  const showFlash = (message: FlashMessage) => {
     setFlashMessage(message);
     window.setTimeout(() => setFlashMessage(value => value === message ? null : value), 6000);
   };
@@ -207,7 +207,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
       setCopySuccess(true);
       window.setTimeout(() => setCopySuccess(false), 1800);
     } catch {
-      showFlash(temporaryPasswordDialog.temporaryPassword);
+      showFlash({ type: "warning", title: t.alertActionRequiredTitle, description: temporaryPasswordDialog.temporaryPassword });
     }
   };
 
@@ -220,7 +220,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
       setCounts(result.counts);
       setTotalItems(result.total);
     } catch (error) {
-      showFlash(getErrorMessage(error));
+      showFlash({ type: "error", title: t.alertLoadFailedTitle, description: getErrorMessage(error) });
     }
   }, [currentPage, pageSize, searchQuery, roleFilter, statusTab]);
 
@@ -234,7 +234,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
   }, []);
 
   useEffect(() => {
-    void listDepartments().then(setDepartments).catch(error => showFlash(getErrorMessage(error)));
+    void listDepartments().then(setDepartments).catch(error => showFlash({ type: "error", title: t.alertLoadFailedTitle, description: getErrorMessage(error) }));
   }, []);
 
   const getRecentLogin = (id: string) => {
@@ -266,7 +266,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
   const handleResetFilters = () => {
     setSearchQuery(""); setRoleFilter("All"); setStatusTab("All"); setCurrentPage(1);
-    showFlash(t.memberMgmt_msgResetFilters);
+    showFlash({ type: "success", title: t.alertOperationSuccessTitle, description: t.memberMgmt_msgResetFilters });
   };
 
   const handleOpenAdd = () => {
@@ -302,7 +302,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
         }
 
         await updateMember(payload);
-        showFlash(`${t.memberMgmt_msgSaveSuccess}: ${currentMember.name}`);
+        showFlash({ type: "success", title: t.alertSaveSuccessTitle, description: `${t.memberMgmt_msgSaveSuccess}: ${currentMember.name}` });
       } else {
         const result = await createMember(currentMember as Omit<SystemMember, "id" | "lastLoginAt">);
         openTemporaryPasswordDialog({
@@ -321,7 +321,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
   const triggerConfirmAction = (action: "disable" | "enable" | "remove", member: SystemMember) => {
     if ((action === "disable" || action === "enable") && isSelfMember(member)) {
-      showFlash(t.settingsSelfStatusForbidden);
+      showFlash({ type: "warning", title: t.alertActionRequiredTitle, description: t.settingsSelfStatusForbidden });
       return;
     }
     setConfirmAction(action); setConfirmMember(member); setShowConfirmDialog(true);
@@ -330,21 +330,21 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
   const executeConfirmAction = async () => {
     if (!confirmMember || !confirmAction) return;
     if ((confirmAction === "disable" || confirmAction === "enable") && isSelfMember(confirmMember)) {
-      showFlash(t.settingsSelfStatusForbidden);
+      showFlash({ type: "warning", title: t.alertActionRequiredTitle, description: t.settingsSelfStatusForbidden });
       setShowConfirmDialog(false);
       return;
     }
     try {
       if (confirmAction === "remove") {
         await removeMember(confirmMember.id);
-        showFlash(`${t.memberMgmt_msgRemoveSuccess}: ${confirmMember.name}`);
+        showFlash({ type: "success", title: t.alertDeleteSuccessTitle, description: `${t.memberMgmt_msgRemoveSuccess}: ${confirmMember.name}` });
       } else {
         await changeMemberStatus(confirmMember.id, confirmAction === "disable" ? "disabled" : "active");
-        showFlash(`${confirmAction === "disable" ? t.memberMgmt_msgDisableSuccess : t.memberMgmt_msgEnableSuccess}: ${confirmMember.name}`);
+        showFlash({ type: "success", title: t.alertOperationSuccessTitle, description: `${confirmAction === "disable" ? t.memberMgmt_msgDisableSuccess : t.memberMgmt_msgEnableSuccess}: ${confirmMember.name}` });
       }
       await loadMembers();
     } catch (error) {
-      showFlash(getErrorMessage(error));
+      showFlash({ type: "error", title: t.alertOperationFailedTitle, description: getErrorMessage(error) });
     } finally {
       setShowConfirmDialog(false); setConfirmAction(null); setConfirmMember(null);
     }
@@ -352,7 +352,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
 
   const handleOpenChangeRole = (member: SystemMember) => {
     if (isSelfMember(member)) {
-      showFlash(t.settingsSelfRoleForbidden);
+      showFlash({ type: "warning", title: t.alertActionRequiredTitle, description: t.settingsSelfRoleForbidden });
       return;
     }
     setTargetMemberForRole(member); setSelectedNewRole(member.role); setShowRoleModal(true);
@@ -361,17 +361,17 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
   const saveRoleChange = async () => {
     if (!targetMemberForRole) return;
     if (isSelfMember(targetMemberForRole)) {
-      showFlash(t.settingsSelfRoleForbidden);
+      showFlash({ type: "warning", title: t.alertActionRequiredTitle, description: t.settingsSelfRoleForbidden });
       setShowRoleModal(false);
       return;
     }
     try {
       await changeMemberRole(targetMemberForRole.id, selectedNewRole);
-      showFlash(`${t.memberMgmt_msgRoleSuccess}: ${targetMemberForRole.name} -> ${getRoleLabel(selectedNewRole)}`);
+      showFlash({ type: "success", title: t.alertOperationSuccessTitle, description: `${t.memberMgmt_msgRoleSuccess}: ${targetMemberForRole.name} -> ${getRoleLabel(selectedNewRole)}` });
       setShowRoleModal(false);
       await loadMembers();
     } catch (error) {
-      showFlash(getErrorMessage(error));
+      showFlash({ type: "error", title: t.alertOperationFailedTitle, description: getErrorMessage(error) });
     }
   };
 
@@ -385,7 +385,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
         temporaryPassword: password,
       });
     } catch (error) {
-      showFlash(getErrorMessage(error));
+      showFlash({ type: "error", title: t.alertOperationFailedTitle, description: getErrorMessage(error) });
     }
   };
 
@@ -1316,18 +1316,7 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 11. Dynamic Floating Interactive Success Toast notifications */}
-      <AnimatePresence>
-        {flashMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -18, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -18, scale: 0.95 }}
-          >
-            <FloatingAlert message={flashMessage} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {flashMessage && <FloatingAlert {...flashMessage} />}
     </div>
   );
 }

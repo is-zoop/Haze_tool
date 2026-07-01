@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/common/PageHeader";
-import { DestructiveAlert, FloatingAlert } from "@/components/ui/alert";
+import { DestructiveAlert, FloatingAlert, type FlashMessage } from "@/components/ui/alert";
 import { getI18n } from "@/i18n";
 import { ApiError } from "@/lib/api";
 import { BusinessCategory, createBusinessCategory, deleteBusinessCategory, listBusinessCategories, updateBusinessCategory } from "@/lib/businessCategories";
@@ -23,7 +23,7 @@ const formatTime = (value: string) => new Date(value).toLocaleString("zh-CN", { 
 
 export function SystemManagement({ langCode = "ZH" }: { langCode?: "ZH" | "EN" | "JA" | "ES" }) {
   const t = getI18n(langCode);
-  const [flash, setFlash] = useState<string | null>(null);
+  const [flash, setFlash] = useState<FlashMessage | null>(null);
   const [items, setItems] = useState<BusinessCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -44,10 +44,10 @@ export function SystemManagement({ langCode = "ZH" }: { langCode?: "ZH" | "EN" |
   };
   const remove = async (item: BusinessCategory) => {
     if (!window.confirm(`\u786e\u5b9a\u5220\u9664\u4e1a\u52a1\u5206\u7c7b\u201c${item.name}\u201d\u5417\uff1f`)) return;
-    try { await deleteBusinessCategory(item.id); await load(); } catch (cause) { setFlash(cause instanceof ApiError ? cause.message : t.systemDeleteFailed); window.setTimeout(() => setFlash(null), 3000); }
+    try { await deleteBusinessCategory(item.id); await load(); } catch (cause) { setFlash({ type: "error", title: t.alertOperationFailedTitle, description: cause instanceof ApiError ? cause.message : t.systemDeleteFailed }); window.setTimeout(() => setFlash(null), 3000); }
   };
   return <div className="dashboard-page-stack h-full overflow-hidden text-left font-sans flex flex-col gap-3 animate-in fade-in duration-300">
-    {flash && <FloatingAlert type="destructive" message={flash} />}
+    {flash && <FloatingAlert {...flash} />}
     <PageHeader title={L.title} description={L.description} />
     <Tabs defaultValue="categories" className="flex min-h-0 flex-1 flex-col rounded-xl border border-border/70 bg-white shadow-xs p-4 pt-2.5">
       <div className="flex items-center justify-between border-b border-border/70"><TabsList className="h-10 bg-transparent p-0"><TabsTrigger value="categories" className="h-10 rounded-none border-b-2 border-transparent px-4 text-xs font-bold data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:shadow-none">{L.tab}</TabsTrigger></TabsList><Button size="sm" onClick={openCreate} className="h-9 bg-slate-900 px-4 font-bold text-white hover:bg-slate-800"><Plus size={16} />{L.add}</Button></div>

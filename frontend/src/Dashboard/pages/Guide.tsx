@@ -24,7 +24,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { Button } from "@/components/ui/button";
-import { BasicAlert, FloatingAlert, WarningAlert } from "@/components/ui/alert";
+import { BasicAlert, FloatingAlert, WarningAlert, type FlashMessage } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -485,10 +485,10 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
   const [activeSection, setActiveSection] = useState<SectionId>("quick-start");
   const [activeHeadingId, setActiveHeadingId] = useState<string>("");
   const [docSearchQuery, setDocSearchQuery] = useState("");
-  const [guideAlert, setGuideAlert] = useState<string | null>(null);
+  const [guideAlert, setGuideAlert] = useState<FlashMessage | null>(null);
   const formatAlert = (template: string, values: Record<string, string>) =>
     Object.entries(values).reduce((message, [key, value]) => message.replace(`{${key}}`, value), template);
-  const showGuideAlert = (message: string) => {
+  const showGuideAlert = (message: FlashMessage) => {
     setGuideAlert(message);
     window.setTimeout(() => setGuideAlert(null), 3000);
   };
@@ -616,7 +616,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
 
   const handleActionClick = (menu: string) => {
     if (!setActiveMenu) {
-      showGuideAlert(formatAlert(t.guidePublishEntryAlert, { menu }));
+      showGuideAlert({ type: "warning", title: t.alertActionRequiredTitle, description: formatAlert(t.guidePublishEntryAlert, { menu }) });
 
       return;
     }
@@ -719,7 +719,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
 
   return (
     <div className="dashboard-page-stack h-full overflow-hidden" id="haze-unified-guide-page">
-      {guideAlert && <FloatingAlert message={guideAlert} />}
+      {guideAlert && <FloatingAlert {...guideAlert} />}
       <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-xl border border-border/70 bg-white lg:grid-cols-[250px_1fr]">
         
         {/* Left Column: Fixed Navigation Sidebar */}
@@ -842,7 +842,7 @@ export function Guide({ langCode: _langCode = "ZH", setActiveMenu }: GuideProps)
                           variant="outline"
                           className="h-9 px-3.5 rounded-lg bg-white hover:bg-slate-50 text-xs border border-slate-200 text-slate-700 font-bold flex items-center justify-center gap-1.5 shadow-sm shrink-0 cursor-pointer w-full md:w-auto"
                           onClick={() => {
-                            showGuideAlert(formatAlert(t.guideDownloadAlert, { label: meta.downloadLabel ?? "", url: meta.downloadUrl ?? "" }));
+                            showGuideAlert({ type: "success", title: t.alertDownloadStartedTitle, description: formatAlert(t.guideDownloadAlert, { label: meta.downloadLabel ?? "", url: meta.downloadUrl ?? "" }) });
                           }}
                         >
                           <Download className="h-3.5 w-3.5 text-slate-400" />
