@@ -96,6 +96,9 @@
 - 2026-06-28 change: Added independent documentation ZIP upload tokens and storage metadata for Skill/MCP. Documentation ZIP can be replaced through capability edit in every lifecycle status without replacing the capability ZIP.
 - 2026-06-28 APIs: `POST /api/developer/uploads/documentation`; create/update capability payloads accept `documentation_upload_token`.
 - 2026-06-28 verification: Python compile for storage, schemas, router, and service.
+- 2026-07-01 change: Capability responses now include the creator name. Developer Center editing preserves the existing capability package when no replacement is selected and waits for an in-flight icon upload before submitting the update, so updated icons are persisted and reused by MCP Runtime.
+- 2026-07-01 fix: Authenticated capability icon requests include a cache-busting version parameter so Developer Center and MCP Runtime immediately display newly uploaded icon files instead of reusing the previous URL cache.
+- 2026-07-01 verification: capability schema/service compile check and frontend production build.
 
 ### Developer center frontend API integration
 
@@ -219,6 +222,9 @@
 - 是否影响已有功能：仅扩展 MCP Runtime 响应字段和修正部署任务类型，不改变运行操作权限、路由或状态机。
 - 验证方式：前端 TypeScript no-emit 检查、后端 Python 语法检查、迁移语法检查。
 - 更新时间：2026-06-28
+
+- 2026-07-01 change: `GET /api/mcp-runtime/deployments` now includes the associated capability icon URL. The runtime table loads authenticated icon blobs and uses the shared `ButtonGroup` plus `DropdownMenu` components for instance actions. Runtime visibility remains unchanged: system administrators and administrators see all instances, developers see only instances for capabilities they created, and users have neither the page permission nor `mcp_runtime.read`.
+- 2026-07-01 verification: backend schema/service compile check and frontend production build.
 
 ### System management business categories
 

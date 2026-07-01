@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, Plus } from "lucide-react";
+import { Edit3, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,11 +48,11 @@ export function SystemManagement({ langCode = "ZH" }: { langCode?: "ZH" | "EN" |
   };
   return <div className="dashboard-page-stack h-full overflow-hidden text-left font-sans flex flex-col gap-3 animate-in fade-in duration-300">
     {flash && <FloatingAlert {...flash} />}
-    <PageHeader title={L.title} description={L.description} />
+    <PageHeader title={L.title} description={L.description} actions={<Button onClick={openCreate}><Plus />{L.add}</Button>} />
     <Tabs defaultValue="categories" className="flex min-h-0 flex-1 flex-col rounded-xl border border-border/70 bg-white shadow-xs p-4 pt-2.5">
-      <div className="flex items-center justify-between border-b border-border/70"><TabsList className="h-10 bg-transparent p-0"><TabsTrigger value="categories" className="h-10 rounded-none border-b-2 border-transparent px-4 text-xs font-bold data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:shadow-none">{L.tab}</TabsTrigger></TabsList><Button size="sm" onClick={openCreate} className="h-9 bg-slate-900 px-4 font-bold text-white hover:bg-slate-800"><Plus size={16} />{L.add}</Button></div>
-      <TabsContent value="categories" className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-border/70"><Table><TableHeader><TableRow><TableHead>{L.category}</TableHead><TableHead>{L.detail}</TableHead><TableHead>{L.creator}</TableHead><TableHead>{L.created}</TableHead><TableHead>{L.updater}</TableHead><TableHead>{L.updated}</TableHead><TableHead className="w-28" data-table-action="true">{L.action}</TableHead></TableRow></TableHeader>
-        <TableBody>{items.map((item) => <TableRow key={item.id}><TableCell className="font-medium text-slate-900">{item.name}</TableCell><TableCell className="max-w-64 truncate text-muted-foreground">{item.description || "-"}</TableCell><TableCell>{item.created_by || "-"}</TableCell><TableCell>{formatTime(item.created_at)}</TableCell><TableCell>{item.updated_by || "-"}</TableCell><TableCell>{formatTime(item.updated_at)}</TableCell><TableCell className="text-right" data-table-action="true"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-8">{L.edit}<ChevronDown size={14} /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => openEdit(item)}>{L.edit}</DropdownMenuItem><DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => void remove(item)}>{L.remove}</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>)}
+      <div className="flex items-center border-b border-border/70"><TabsList className="h-10 bg-transparent p-0"><TabsTrigger value="categories" className="h-10 rounded-none border-b-2 border-transparent px-4 text-xs font-bold data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:shadow-none">{L.tab}</TabsTrigger></TabsList></div>
+      <TabsContent value="categories" className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-border/70"><Table><TableHeader><TableRow><TableHead>{L.category}</TableHead><TableHead>{L.detail}</TableHead><TableHead>{L.creator}</TableHead><TableHead>{L.created}</TableHead><TableHead>{L.updater}</TableHead><TableHead>{L.updated}</TableHead><TableHead className="w-44" data-table-action="true">{L.action}</TableHead></TableRow></TableHeader>
+        <TableBody>{items.map((item) => <TableRow key={item.id}><TableCell className="font-medium text-slate-900">{item.name}</TableCell><TableCell className="max-w-64 truncate text-muted-foreground">{item.description || "-"}</TableCell><TableCell>{item.created_by || "-"}</TableCell><TableCell>{formatTime(item.created_at)}</TableCell><TableCell>{item.updated_by || "-"}</TableCell><TableCell>{formatTime(item.updated_at)}</TableCell><TableCell className="text-left" data-table-action="true"><ButtonGroup><Button variant="outline" size="sm" onClick={() => openEdit(item)}><Edit3 />{L.edit}</Button><Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => void remove(item)}><Trash2 />{L.remove}</Button></ButtonGroup></TableCell></TableRow>)}
         {!loading && items.length === 0 && <TableRow><TableCell colSpan={7} className="h-32 text-center text-muted-foreground">{L.empty}</TableCell></TableRow>}{loading && <TableRow><TableCell colSpan={7} className="h-32 text-center text-muted-foreground">{L.loading}</TableCell></TableRow>}</TableBody>
       </Table></TabsContent>
     </Tabs>

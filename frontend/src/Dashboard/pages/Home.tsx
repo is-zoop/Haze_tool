@@ -68,11 +68,11 @@ export function Home({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -12 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="flex flex-col gap-5 h-full overflow-y-auto pr-1 select-text"
+        className="grid h-full min-h-0 grid-rows-[minmax(160px,1.2fr)_minmax(88px,0.7fr)_minmax(0,3fr)] gap-4 overflow-hidden select-text"
       >
 
         {/* 1. Welcoming Hero Banner / Blue-White Tech Art Jumbotron */}
-        <div className="relative w-full rounded-2xl p-6 sm:p-8 flex flex-col justify-between overflow-hidden shadow-xs min-h-[200px]">
+        <div className="relative flex h-full min-h-0 w-full flex-col justify-between overflow-hidden rounded-2xl p-6 shadow-xs">
           {/* Abstract Vector Backdrop Layer */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl select-none z-0 bg-gradient-to-r from-blue-50/95 via-sky-100/70 to-indigo-50/95">
             {/* Modern ambient geometric shapes and gradient orbs */}
@@ -144,7 +144,7 @@ export function Home({
         </div>
 
         {/* 2. Real overview metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+        <div className="grid min-h-0 w-full grid-cols-1 gap-4 overflow-auto sm:grid-cols-2 lg:grid-cols-4">
           <HomeMetric title="已发布能力" value={overview?.published.total} detail={`Skill ${overview?.published.skill ?? 0} / MCP ${overview?.published.mcp ?? 0}`} icon={<Sparkles size={18} />} tone="blue" onClick={() => setActiveMenu("market")} />
           <HomeMetric title="本周新增" value={overview?.weekly_added.current} detail={(overview?.weekly_added.difference ?? 0) === 0 ? "较上周持平" : `较上周 ${(overview?.weekly_added.difference ?? 0) > 0 ? "+" : ""}${overview?.weekly_added.difference ?? 0}`} icon={<TrendingUp size={18} />} tone="purple" onClick={() => setActiveMenu("market")} />
           <HomeMetric title="我的能力" value={overview?.my_capabilities.total} detail={overview?.my_capabilities.available ? `已发布 ${overview.my_capabilities.published ?? 0}` : "无开发权限"} icon={<Cpu size={18} />} tone="emerald" onClick={overview?.my_capabilities.available ? () => setActiveMenu("developer") : undefined} />
@@ -152,11 +152,11 @@ export function Home({
         </div>
 
         {/* 3. Split Layout: Recommended/Latest list (Left 2/3) vs. My Workbench (Right 1/3) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 w-full items-stretch">
+        <div className="grid min-h-0 w-full grid-cols-1 items-stretch gap-5 overflow-hidden lg:grid-cols-3">
 
           {/* LEFT 2/3 CAPABILITY PANELS */}
-          <div className="lg:col-span-2 flex flex-col gap-3 h-full">
-            <div className="bg-white border border-slate-200/60 shadow-[0_2px_12px_rgba(0,0,0,0.01)] rounded-xl overflow-hidden flex flex-col">
+          <div className="flex h-full min-h-0 flex-col gap-3 lg:col-span-2">
+            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200/60 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.01)]">
 
               {/* List Section Header */}
               <div className="p-4 border-b border-slate-100 flex items-center justify-between">
@@ -207,7 +207,7 @@ export function Home({
               </div>
 
               {/* Tabs Content - Capabilities rendering with flat list & dividers */}
-              <div className="p-1">
+              <div className="min-h-0 flex-1 overflow-auto p-1">
                 {tabCapabilities.length === 0 ? (
                   <div className="text-center py-16 text-xs text-slate-400 font-normal">
                     {t.noMatchingCapabilities}
@@ -289,7 +289,7 @@ export function Home({
 
 function HomeMetric({ title, value, detail, icon, tone, onClick }: { title: string; value?: number | null; detail: string; icon: React.ReactNode; tone: string; onClick?: () => void }) {
   const colors: Record<string,string> = { blue: "bg-blue-50 text-blue-600", purple: "bg-purple-50 text-purple-600", emerald: "bg-emerald-50 text-emerald-600", amber: "bg-amber-50 text-amber-600" };
-  return <button type="button" disabled={!onClick} onClick={onClick} className={`p-4 bg-white border border-slate-200/60 rounded-xl flex items-center justify-between text-left transition-all ${onClick ? "hover:bg-slate-50/50 hover:shadow-xs cursor-pointer group" : "opacity-60 cursor-not-allowed"}`}><div className="flex items-center gap-3.5"><div className={`w-11 h-11 rounded-lg flex items-center justify-center ${colors[tone]}`}>{icon}</div><div><p className="text-xs text-slate-400 font-medium">{title}</p><p className="text-2xl font-bold text-slate-800">{value ?? "–"}</p><p className="text-xs text-slate-400">{detail}</p></div></div>{onClick && <ChevronRight size={14} className="text-slate-400" />}</button>;
+  return <button type="button" disabled={!onClick} onClick={onClick} className={`flex h-full min-h-20 items-center justify-between rounded-xl border border-slate-200/60 bg-white p-4 text-left transition-all ${onClick ? "hover:bg-slate-50/50 hover:shadow-xs cursor-pointer group" : "opacity-60 cursor-not-allowed"}`}><div className="flex items-center gap-3.5"><div className={`w-11 h-11 rounded-lg flex items-center justify-center ${colors[tone]}`}>{icon}</div><div><p className="text-xs text-slate-400 font-medium">{title}</p><p className="text-2xl font-bold text-slate-800">{value ?? "–"}</p><p className="text-xs text-slate-400">{detail}</p></div></div>{onClick && <ChevronRight size={14} className="text-slate-400" />}</button>;
 }
 
 function HomeSideList({ title, items, emptyText, onView, usage = false }: { title: string; items: HomeCapabilityItem[]; emptyText: string; onView: () => void; usage?: boolean }) {

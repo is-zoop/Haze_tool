@@ -19,6 +19,7 @@ export interface McpDeployment {
   capability_id: number;
   capability_name: string | null;
   capability_code: string | null;
+  capability_icon: string | null;
   creator_name: string | null;
   version_id: number | null;
   deployment_name: string;
@@ -105,6 +106,7 @@ interface ApiCapability {
   status: CapabilityApiStatus;
   visibility: "internal";
   owner?: string | null;
+  creator?: string | null;
   department?: string | null;
   tags: string[];
   config: Record<string, unknown>;
@@ -156,6 +158,7 @@ function mapCapability(item: ApiCapability): DeveloperAsset {
     project: item.category ?? "",
     categoryId: item.category_id ?? undefined,
     owner: item.owner ?? "",
+    creator: item.creator ?? "",
     status: item.status,
     recentTestStatus: item.recent_test_status,
     updatedAt: item.updated_at,
@@ -346,7 +349,14 @@ export async function deployCapability(id: string): Promise<void> {
 
 export async function listMcpDeployments(): Promise<McpDeployment[]> {
   const data = (await apiRequest<McpDeploymentListData>("/api/mcp-runtime/deployments?page=1&page_size=100")).data;
-  return data.items;
+  return Promise.all(data.items.map(async (item) => {
+    if (!item.capability_icon) return item;
+    try {
+      return { ...item, capability_icon: await loadCapabilityIcon(item.capability_icon) };
+    } catch {
+      return { ...item, capability_icon: null };
+    }
+  }));
 }
 
 export async function listMcpDeployTasks(deploymentId: number): Promise<McpDeployTask[]> {
@@ -380,7 +390,8 @@ export async function deleteCapability(id: string): Promise<void> {
 }
 
 export async function loadCapabilityIcon(path: string): Promise<string> {
-  const blob = await apiBlobRequest(path);
+  const separator = path.includes("?") ? "&" : "?";
+  const blob = await apiBlobRequest(`${path}${separator}v=${Date.now()}`);
   return URL.createObjectURL(blob);
 }
 

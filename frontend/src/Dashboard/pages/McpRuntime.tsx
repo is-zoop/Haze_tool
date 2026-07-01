@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { apiRequest } from "@/lib/api";
-import { Play, Square, RotateCcw, Copy, Activity, ClipboardList, ChevronDown } from "lucide-react";
+import { Play, Square, RotateCcw, Copy, Activity, ClipboardList, MoreHorizontal, Cpu } from "lucide-react";
 import { FloatingAlert, type FlashMessage } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -265,14 +266,29 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                         return (
                           <TableRow key={dep.id}>
                             <TableCell>
-                              <div className="font-semibold text-foreground leading-tight">
-                                {dep.capability_name ?? dep.deployment_name}
+                              <div className="flex items-center gap-3">
+                                {dep.capability_icon ? (
+                                  <img
+                                    src={dep.capability_icon}
+                                    alt={dep.capability_name ?? dep.deployment_name}
+                                    className="h-10 w-10 shrink-0 rounded-lg border border-slate-200 object-cover shadow-xs"
+                                  />
+                                ) : (
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50 text-indigo-600 shadow-xs">
+                                    <Cpu size={18} />
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-foreground leading-tight">
+                                    {dep.capability_name ?? dep.deployment_name}
+                                  </div>
+                                  {dep.capability_code && (
+                                    <TableSecondaryText>
+                                      {dep.capability_code}
+                                    </TableSecondaryText>
+                                  )}
+                                </div>
                               </div>
-                              {dep.capability_code && (
-                                <TableSecondaryText>
-                                  {dep.capability_code}
-                                </TableSecondaryText>
-                              )}
                             </TableCell>
                             <TableCell className="px-4 py-3 text-xs text-muted-foreground">{dep.creator_name ?? "—"}</TableCell>
                             <TableCell className="px-4 py-3">
@@ -291,11 +307,11 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                               {fmtTime(dep.updated_at)}
                             </TableCell>
                             <TableCell data-table-action="true">
-                              <div className="flex items-center gap-1.5">
-                                {/* 启动 / 重启 */}
-                                <Button variant="outline" size="sm"
+                              <ButtonGroup>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
                                   disabled={busy || (!isRunning && !isStopped)}
-                                  className="h-7 text-xs gap-1 rounded-lg border-border/70 font-semibold cursor-pointer disabled:opacity-40"
                                   onClick={() => handleOp(
                                       dep.id,
                                       isRunning ? restartMcpDeployment : startMcpDeployment,
@@ -304,19 +320,22 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                                   {isRunning ? <RotateCcw size={11} /> : <Play size={11} />}
                                   {isRunning ? "重启" : "启动"}
                                 </Button>
-                                {/* 停止（始终显示） */}
-                                <Button variant="outline" size="sm"
+                                <Button
+                                  variant="outline"
+                                  size="sm"
                                   disabled={busy || !isRunning}
-                                  className="h-7 text-xs gap-1 rounded-lg border-border/70 font-semibold cursor-pointer disabled:opacity-40"
                                   onClick={() => handleOp(dep.id, stopMcpDeployment, "停止指令已下发，实例正在停止")}>
                                   <Square size={11} />停止
                                 </Button>
-                                {/* 更多下拉 */}
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm"
-                                      className="h-7 text-xs gap-1 rounded-lg text-muted-foreground font-semibold cursor-pointer">
-                                      更多<ChevronDown size={11} />
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      aria-label="更多操作"
+                                    >
+                                      <MoreHorizontal size={14} />
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end"
@@ -338,7 +357,7 @@ export function McpRuntime({ langCode = "ZH" }: PageProps) {
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
-                              </div>
+                              </ButtonGroup>
                             </TableCell>
                           </TableRow>
                         );

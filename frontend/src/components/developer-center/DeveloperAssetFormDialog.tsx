@@ -181,7 +181,7 @@ export function DeveloperAssetFormDialog({
           {/* ROW 2: 图标 | 业务分类 | 标签 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
             {/* 图标 (Requirement 5 / Image 3) */}
-            <FormField label="图标">
+            <FormField label="图标" error={formErrors.icon}>
               <div
                 onClick={() => document.getElementById("asset-icon-upload-input2")?.click()}
                 className="flex items-center gap-3 w-full border border-slate-200 rounded-lg bg-white px-3 py-2 h-9 cursor-pointer hover:bg-slate-50 transition-colors"

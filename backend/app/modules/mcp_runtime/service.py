@@ -39,6 +39,7 @@ def _serialize_deployment(row: McpDeployment, capability: Capability | None, cre
         capability_id=row.capability_id,
         capability_name=capability.name if capability else None,
         capability_code=capability.code if capability else None,
+        capability_icon=f"/api/developer/capabilities/{capability.id}/icon" if capability and capability.icon else None,
         creator_name=creator_name,
         version_id=row.version_id,
         deployment_name=row.deployment_name,

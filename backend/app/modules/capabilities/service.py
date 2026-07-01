@@ -72,6 +72,7 @@ def _serialize(
     if owner_name is None and capability.owner_id is not None:
         owner = db.get(User, capability.owner_id)
         owner_name = owner.name if owner else None
+    creator = db.get(User, capability.created_by) if capability.created_by is not None else None
     if department_name is None and capability.department_id is not None:
         department = db.get(Department, capability.department_id)
         department_name = department.name if department else None
@@ -89,6 +90,7 @@ def _serialize(
         visibility=capability.visibility,
         owner_id=capability.owner_id,
         owner=owner_name,
+        creator=creator.name if creator else None,
         department_id=capability.department_id,
         department=department_name,
         tags=extension.get("tags", []),

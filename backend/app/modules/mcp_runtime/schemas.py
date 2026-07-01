@@ -64,6 +64,8 @@ class McpDeploymentData(StrictModel):
     """能力名称（join 自 capabilities 表）"""
     capability_code: str | None
     """能力编码（join 自 capabilities 表）"""
+    capability_icon: str | None
+    """能力图标访问地址（join 自 capabilities 表）"""
     creator_name: str | None
     """能力创建人姓名"""
     version_id: int | None

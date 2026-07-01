@@ -5,7 +5,6 @@ import {
   Workflow,
   FileText,
   FolderGit,
-  CheckCircle2,
   PlayCircle,
   ChevronRight,
   ChevronLeft,
@@ -34,28 +33,28 @@ import { getI18n } from "@/i18n";
 
 // Eagerly import Markdown content using Vite's raw loading
 import quickStartRaw from "../../content/developer-guide/quick-start.md?raw";
-import skillUploadRaw from "../../content/developer-guide/skill-upload.md?raw";
+import capabilityCreationProcessRaw from "../../content/developer-guide/capability-creation-process.md?raw";
 import skillMdGuideRaw from "../../content/developer-guide/skill-md-guide.md?raw";
-import mcpRegisterRaw from "../../content/developer-guide/mcp-register.md?raw";
-import mcpDiscoveryRaw from "../../content/developer-guide/mcp-discovery.md?raw";
+import mcpMdGuideRaw from "../../content/developer-guide/mcp-md-guide.md?raw";
 import testingPublishRaw from "../../content/developer-guide/testing-publish.md?raw";
+import runtimeMonitorRaw from "../../content/developer-guide/runtime-monitor.md?raw";
 
 const DOCS_MAP: Record<string, string> = {
   "quick-start": quickStartRaw,
-  "skill-upload": skillUploadRaw,
+  "capability-creation-process": capabilityCreationProcessRaw,
   "skill-md-guide": skillMdGuideRaw,
-  "mcp-register": mcpRegisterRaw,
-  "mcp-discovery": mcpDiscoveryRaw,
+  "mcp-md-guide": mcpMdGuideRaw,
   "testing-publish": testingPublishRaw,
+  "runtime-monitor": runtimeMonitorRaw,
 };
 
 const GUIDE_SECTIONS = [
   { id: "quick-start", title: "快速开始", icon: Terminal },
-  { id: "skill-upload", title: "Skill 上传规范", icon: Workflow },
-  { id: "skill-md-guide", title: "SKILL.md 编写规范", icon: FileText },
-  { id: "mcp-register", title: "MCP Server 注册", icon: FolderGit },
-  { id: "mcp-discovery", title: "MCP 自动发现", icon: CheckCircle2 },
-  { id: "testing-publish", title: "测试与发布", icon: PlayCircle },
+  { id: "capability-creation-process", title: "能力创建流程", icon: Workflow },
+  { id: "skill-md-guide", title: "Skill 接入规范", icon: FileText },
+  { id: "mcp-md-guide", title: "MCP 接入规范", icon: FolderGit },
+  { id: "testing-publish", title: "调试与发布", icon: PlayCircle },
+  { id: "runtime-monitor", title: "运行监控", icon: Clock3 },
 ] as const;
 
 type SectionId = typeof GUIDE_SECTIONS[number]["id"];
@@ -203,16 +202,16 @@ function getSectionTitle(id: string, langCode: string): string {
   switch (id) {
     case "quick-start":
       return langCode === "ZH" ? "快速开始" : langCode === "JA" ? "クイックスタート" : langCode === "ES" ? "Inicio rápido" : "Quick Start";
-    case "skill-upload":
-      return langCode === "ZH" ? "Skill 上传规范" : langCode === "JA" ? "Skill アップロード仕様" : langCode === "ES" ? "Especificación de Skill" : "Skill Upload Spec";
+    case "capability-creation-process":
+      return langCode === "ZH" ? "能力创建流程" : langCode === "JA" ? "機能作成フロー" : langCode === "ES" ? "Proceso de creación de capacidades" : "Capability Creation Process";
     case "skill-md-guide":
-      return langCode === "ZH" ? "SKILL.md 编写规范" : langCode === "JA" ? "SKILL.md 記述ルール" : langCode === "ES" ? "Guía de SKILL.md" : "SKILL.md Writing Guide";
-    case "mcp-register":
-      return langCode === "ZH" ? "MCP Server 注册" : langCode === "JA" ? "MCP サーバー登録" : langCode === "ES" ? "Registro del servidor MCP" : "MCP Server Registration";
-    case "mcp-discovery":
-      return langCode === "ZH" ? "MCP 自动发现" : langCode === "JA" ? "MCP 自動検出" : langCode === "ES" ? "Autodescubrimiento MCP" : "MCP Auto-discovery";
+      return langCode === "ZH" ? "Skill 接入规范" : langCode === "JA" ? "Skill 接続仕様" : langCode === "ES" ? "Especificación de integración de Skill" : "Skill Integration Guide";
+    case "mcp-md-guide":
+      return langCode === "ZH" ? "MCP 接入规范" : langCode === "JA" ? "MCP 接続仕様" : langCode === "ES" ? "Especificación de integración MCP" : "MCP Integration Guide";
     case "testing-publish":
-      return langCode === "ZH" ? "测试与发布" : langCode === "JA" ? "テストとリリース" : langCode === "ES" ? "Pruebas y publicación" : "Testing & Publishing";
+      return langCode === "ZH" ? "调试与发布" : langCode === "JA" ? "デバッグと公開" : langCode === "ES" ? "Depuración y publicación" : "Debugging & Publishing";
+    case "runtime-monitor":
+      return langCode === "ZH" ? "运行监控" : langCode === "JA" ? "実行監視" : langCode === "ES" ? "Monitoreo de ejecución" : "Runtime Monitoring";
     default:
       return "";
   }

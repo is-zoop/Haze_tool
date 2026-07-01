@@ -25,6 +25,8 @@ import { getI18n } from "../../i18n";
 import { AssetStatus, DeveloperAsset } from "../../types/developer-center";
 import { DEFAULT_ASSET } from "./config";
 import type { FlashMessage } from "../ui/alert";
+import skillDefaultIcon from "../../assets/images/skill_icon.png";
+import mcpDefaultIcon from "../../assets/images/mcp_icon.png";
 
 const AUTH_TOKEN_KEY = "haze_access_token";
 
@@ -32,6 +34,16 @@ export type AssetTypeFilter = "all" | "Skill" | "MCP Server";
 
 function errorMessage(error: unknown): string {
   return error instanceof ApiError ? error.message : error instanceof Error ? error.message : "请求失败，请稍后重试";
+}
+
+async function uploadDefaultCapabilityIcon(type: "Skill" | "MCP Server"): Promise<string> {
+  const iconUrl = type === "MCP Server" ? mcpDefaultIcon : skillDefaultIcon;
+  const fileName = type === "MCP Server" ? "mcp_icon.png" : "skill_icon.png";
+  const response = await fetch(iconUrl);
+  if (!response.ok) throw new Error("默认图标读取失败");
+  const blob = await response.blob();
+  const upload = await uploadCapabilityIcon(new File([blob], fileName, { type: blob.type || "image/png" }));
+  return upload.uploadToken;
 }
 
 function formatDeployLogTime() {
@@ -122,6 +134,7 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
   const [deleteTarget, setDeleteTarget] = useState<DeveloperAsset | null>(null);
   const [flashMessage, setFlashMessage] = useState<FlashMessage | null>(null);
   const iconUrlsRef = useRef<string[]>([]);
+  const iconUploadPromiseRef = useRef<Promise<string | null> | null>(null);
   const requestIdRef = useRef(0);
 
   const triggerFlashAlert = useCallback((message: FlashMessage) => {
@@ -258,7 +271,15 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     setIsEditing(false);
     setFormErrors({});
     setTagsInputText("");
-    setCurrentAsset({ ...DEFAULT_ASSET, type, project: "企业办公", version: "v1.0.0", description: "" });
+    iconUploadPromiseRef.current = null;
+    setCurrentAsset({
+      ...DEFAULT_ASSET,
+      type,
+      icon: type === "MCP Server" ? mcpDefaultIcon : skillDefaultIcon,
+      project: "企业办公",
+      version: "v1.0.0",
+      description: "",
+    });
     setShowEditModal(true);
   };
 
@@ -266,19 +287,30 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     setIsEditing(true);
     setFormErrors({});
     setTagsInputText((asset.tags || []).join("，"));
+    iconUploadPromiseRef.current = null;
     setCurrentAsset({ ...asset, iconUploadToken: undefined, packageUploadToken: undefined, documentationUploadToken: undefined });
     setShowEditModal(true);
   };
 
   const handleIconFileUploaded = async (file: File, previewUrl: string) => {
     setCurrentAsset((previous) => ({ ...previous, icon: previewUrl, iconUploadToken: undefined }));
-    try {
-      const upload = await uploadCapabilityIcon(file);
-      setCurrentAsset((previous) => ({ ...previous, iconUploadToken: upload.uploadToken }));
-      setFormErrors((previous) => ({ ...previous, icon: "" }));
-    } catch (error) {
-      setFormErrors((previous) => ({ ...previous, icon: errorMessage(error) }));
-    }
+    let uploadPromise: Promise<string | null>;
+    uploadPromise = uploadCapabilityIcon(file)
+      .then((upload) => {
+        if (iconUploadPromiseRef.current === uploadPromise) {
+          setCurrentAsset((previous) => ({ ...previous, iconUploadToken: upload.uploadToken }));
+          setFormErrors((previous) => ({ ...previous, icon: "" }));
+        }
+        return upload.uploadToken;
+      })
+      .catch((error) => {
+        if (iconUploadPromiseRef.current === uploadPromise) {
+          setFormErrors((previous) => ({ ...previous, icon: errorMessage(error) }));
+        }
+        return null;
+      });
+    iconUploadPromiseRef.current = uploadPromise;
+    await uploadPromise;
   };
 
   const handleZipFileUploaded = async (file: File) => {
@@ -330,20 +362,35 @@ export function useDeveloperCapabilities(langCode: "ZH" | "EN" | "JA" | "ES") {
     if (!currentAsset.description?.trim()) errors.description = "能力描述不能为空";
     else if (currentAsset.description.length > 300) errors.description = "能力描述不能超过 300 个字符";
     const zipLocked = isEditing && ["deployed", "debug_passed", "debug_failed", "published", "offline"].includes(currentAsset.status ?? "");
-    if (!zipLocked && !currentAsset.packageUploadToken) errors.zipName = "能力 ZIP 文件必填";
+    const hasExistingPackage = isEditing && Boolean(currentAsset.zipName || currentAsset.zipFiles?.length);
+    if (!zipLocked && !currentAsset.packageUploadToken && !hasExistingPackage) errors.zipName = "能力 ZIP 文件必填";
     return errors;
   };
 
   const handleSaveAssetForm = async (event: React.FormEvent) => {
     event.preventDefault();
+    const uploadedIconToken = await iconUploadPromiseRef.current;
+    if (currentAsset.icon?.startsWith("data:") && !uploadedIconToken) {
+      setFormErrors((previous) => ({ ...previous, icon: previous.icon || "图标上传失败，请重新选择" }));
+      return;
+    }
     const errors = validateAsset();
     if (Object.keys(errors).length) {
       setFormErrors(errors);
       return;
     }
     try {
-      if (isEditing) await updateCapability(currentAsset);
-      else await createCapability(currentAsset);
+      let iconUploadToken = uploadedIconToken ?? currentAsset.iconUploadToken;
+      if (!isEditing && !iconUploadToken) {
+        iconUploadToken = await uploadDefaultCapabilityIcon(
+          currentAsset.type === "MCP Server" ? "MCP Server" : "Skill",
+        );
+      }
+      const assetToSave = iconUploadToken
+        ? { ...currentAsset, iconUploadToken }
+        : currentAsset;
+      if (isEditing) await updateCapability(assetToSave);
+      else await createCapability(assetToSave);
       setShowEditModal(false);
       triggerFlashAlert({ type: "success", title: t.alertSaveSuccessTitle, description: formatAlert(isEditing ? t.developerAssetUpdated : t.developerAssetCreated, { name: currentAsset.name ?? "" }) });
       refresh();

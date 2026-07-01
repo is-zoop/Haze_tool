@@ -94,6 +94,7 @@ class CapabilityData(StrictModel):
     visibility: str
     owner_id: int | None
     owner: str | None
+    creator: str | None
     department_id: int | None
     department: str | None
     tags: list[str]

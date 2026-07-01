@@ -274,12 +274,13 @@ export function DeveloperAssetTable({
   return (
     <div className="flex-grow flex-1 min-h-0 overflow-hidden rounded-xl border border-border/60 bg-white" id="haze-developer-table-container">
       <ScrollArea className="h-full w-full">
-        <div className="min-w-[1520px]">
+        <div className="min-w-[1640px]">
           <Table className="table-fixed">
             <TableHeader className="sticky top-0 z-10">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-[240px]">{langCode === "ZH" ? "能力名称" : langCode === "JA" ? "機能名" : langCode === "ES" ? "Nombre de Capacidad" : "Capability Name"}</TableHead>
                 <TableHead className="w-[140px]">{langCode === "ZH" ? "业务分类" : langCode === "JA" ? "カテゴリ" : langCode === "ES" ? "Categoría" : "Category"}</TableHead>
+                <TableHead className="w-[120px]">{langCode === "ZH" ? "创建人" : langCode === "JA" ? "作成者" : langCode === "ES" ? "Creador" : "Creator"}</TableHead>
                 <TableHead className="w-[100px]">{langCode === "ZH" ? "类型" : langCode === "JA" ? "种类" : langCode === "ES" ? "Tipo" : "Type"}</TableHead>
                 <TableHead className="w-[100px]">{langCode === "ZH" ? "版本" : langCode === "JA" ? "バージョン" : langCode === "ES" ? "Versión" : "Version"}</TableHead>
                 <TableHead className="w-[130px]">{langCode === "ZH" ? "状态" : langCode === "JA" ? "ステータス" : langCode === "ES" ? "Estado" : "Status"}</TableHead>
@@ -308,6 +309,9 @@ export function DeveloperAssetTable({
                     </TableCell>
                     <TableCell className="px-4 py-3 text-xs font-semibold text-slate-600 text-left">
                       {cleanProject}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-muted-foreground text-left">
+                      {asset.creator || "—"}
                     </TableCell>
                     <TableCell className="px-4 py-3 text-left">
                       {asset.type === "Skill" ? (

@@ -659,14 +659,14 @@ export function Settings({ onBackToHome: _onBackToHome, langCode: _langCode = "Z
                     </TableCell>
 
                     {/* Actions (8% - 右对齐) */}
-                    <TableCell className="w-[8%] text-right" data-table-action="true">
-                      <div className="flex items-center justify-end gap-1.5">
+                    <TableCell className="w-[8%] text-left" data-table-action="true">
+                      <div className="flex items-center justify-start gap-1.5">
                         <Button
-                          variant="ghost"
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleOpenEdit(member)}
-                          className="h-8 px-2.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg flex items-center gap-1 cursor-pointer font-medium transition-all"
                         >
-                          <Edit3 size={12} />
+                          <Edit3 />
                           <span>{t.memberMgmt_edit}</span>
                         </Button>
 

@@ -10,7 +10,6 @@ import {
   Percent,
   Timer,
   CheckCheck,
-  ShieldCheck,
   Cpu,
   Calendar,
 } from "lucide-react";
@@ -38,7 +37,6 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { UnifiedTabs, TabItem } from "@/components/UnifiedTabs";
 import { PageHeader } from "../../components/common/PageHeader";
@@ -253,45 +251,6 @@ export function AuditCenter({ onBackToHome: _onBackToHome, langCode: _langCode =
         breadcrumbs={[_langCode === "ZH" ? "首页" : "Home", t.auditTitle]}
         actions={(
           <div className="flex items-center gap-2">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="h-9 px-4 text-xs font-semibold border-border/70 bg-white hover:bg-slate-50 flex items-center gap-1.5 shadow-sm text-slate-700 cursor-pointer rounded-lg">
-                  <ShieldCheck size={14} className="text-blue-500" />
-                  <span>{_langCode === "ZH" ? "审核规则" : "Audit Rules"}</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md p-6 bg-white border border-zinc-200 rounded-xl shadow-xl">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 border-b pb-3 border-zinc-100">
-                    <ShieldCheck className="h-5 w-5 text-blue-600 shrink-0" />
-                    <h3 className="text-base font-bold text-slate-900">HAZE 平台发布合规守则</h3>
-                  </div>
-                  <div className="text-sm text-slate-600 space-y-3.5 pr-1 leading-relaxed">
-                    <p>所有内部开发者提交的 <strong>Skill</strong> 与 <strong>MCP Server</strong> 均须遵守 HAZE 系统安全性及通信高可用指标：</p>
-                    <div className="bg-zinc-50 p-3 rounded-lg space-y-1 border border-zinc-150/60">
-                      <p className="font-bold text-slate-800">1. 指令安全与数据隔离</p>
-                      <p className="text-slate-500 text-xs">Skill 中的 System Prompt 须进行严格过滤，禁止搭载、泄露生产环境数据库明细，且必须防范 Prompt 越权注入风险。</p>
-                    </div>
-                    <div className="bg-zinc-50 p-3 rounded-lg space-y-1 border border-zinc-150/60">
-                      <p className="font-bold text-slate-800">2. 协议与高可用延迟</p>
-                      <p className="text-slate-500 text-xs">提报 MCP Server 强制适配 standard SSE 通信协议骨干，API 远程执行耗时须稳定保持在 400ms 以内。</p>
-                    </div>
-                    <div className="bg-zinc-50 p-3 rounded-lg space-y-1 border border-zinc-150/60">
-                      <p className="font-bold text-slate-800">3. 异常监控与操作合规度</p>
-                      <p className="text-slate-500 text-xs">若检测到工具指令含有高危只写数据库操作，项目须提交安全部门主管双签审批认证。</p>
-                    </div>
-                  </div>
-                  <div className="pt-2 border-t border-zinc-100 flex justify-end">
-                    <DialogTrigger asChild>
-                      <Button variant="default" size="sm" className="h-9 px-4 font-semibold cursor-pointer bg-slate-900 text-white hover:bg-slate-800 rounded-lg">
-                        了解合规
-                      </Button>
-                    </DialogTrigger>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-
             <Button
               variant="outline"
               onClick={handleRefresh}
