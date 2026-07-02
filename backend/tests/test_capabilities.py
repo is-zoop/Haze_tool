@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from io import BytesIO
 from pathlib import Path
+from urllib.parse import urlsplit
 from zipfile import ZipFile
 
 import pytest
@@ -17,6 +18,8 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import create_app
 from app.modules.capabilities.models import Capability
+from app.modules.marketplace.models import CapabilityDownloadLog
+from app.modules.mcp_runtime.models import McpCallLog
 
 
 def _zip_bytes(files: dict[str, str]) -> bytes:
@@ -70,6 +73,7 @@ def capability_client(tmp_path: Path) -> Generator[tuple[TestClient, dict[str, d
                 headers=admin,
                 json={
                     "name": name,
+                    "member_no": f"DEV000{suffix}",
                     "phone": f"1380013800{suffix}",
                     "email": f"dev{suffix}@example.com",
                     "department": "Engineering",
@@ -326,3 +330,79 @@ def test_upload_validation_and_token_ownership(capability_client) -> None:
         },
     )
     assert stolen.status_code == 403
+
+
+def test_real_capability_call_counts(capability_client) -> None:
+    client, headers, session_factory = capability_client
+    skill = _create_capability(client, headers["dev1"], code="count_skill", capability_type="skill")
+    stdio = _create_stdio_mcp(client, headers["dev1"], code="count_stdio")
+    http = _create_capability(client, headers["dev1"], code="count_http", capability_type="mcp")
+
+    with session_factory() as session:
+        capabilities = [
+            session.get(Capability, int(skill["id"])),
+            session.get(Capability, int(stdio["id"])),
+            session.get(Capability, int(http["id"])),
+        ]
+        for capability in capabilities:
+            assert capability is not None
+            capability.status = "published"
+        session.add_all([
+            McpCallLog(capability_id=int(http["id"]), asset_code="count_http", method="tools/call", success=True),
+            McpCallLog(capability_id=int(http["id"]), asset_code="count_http", method="tools/call", success=False),
+            McpCallLog(capability_id=int(http["id"]), asset_code="count_http", method="tools/list", success=True),
+            McpCallLog(capability_id=int(http["id"]), asset_code="count_http", method="initialize", success=True),
+        ])
+        session.commit()
+
+    link_response = client.post(
+        f"/api/marketplace/capabilities/{skill['id']}/download-link",
+        headers=headers["dev1"],
+    )
+    assert link_response.status_code == 200, link_response.text
+    download_path = urlsplit(link_response.json()["data"]["download_url"]).path
+    with session_factory() as session:
+        assert session.query(CapabilityDownloadLog).count() == 0
+    assert client.get(download_path).status_code == 200
+    assert client.get(download_path).status_code == 200
+
+    credential_response = client.get("/api/auth/me/mcp-credential", headers=headers["dev1"])
+    assert credential_response.status_code == 200, credential_response.text
+    personal_key = credential_response.json()["data"]["key"]
+    direct_download = client.get(
+        f"/api/marketplace/capabilities/{stdio['id']}/download",
+        headers={"Authorization": f"Bearer {personal_key}"},
+    )
+    assert direct_download.status_code == 200, direct_download.text
+
+    with session_factory() as session:
+        skill_logs = session.query(CapabilityDownloadLog).filter_by(capability_id=int(skill["id"])).all()
+        stdio_logs = session.query(CapabilityDownloadLog).filter_by(capability_id=int(stdio["id"])).all()
+        assert len(skill_logs) == 2
+        assert len(stdio_logs) == 1
+        assert all(log.user_id is not None for log in skill_logs + stdio_logs)
+
+    skill_detail = client.get(f"/api/developer/capabilities/{skill['id']}", headers=headers["dev1"])
+    stdio_detail = client.get(f"/api/developer/capabilities/{stdio['id']}", headers=headers["dev1"])
+    http_detail = client.get(f"/api/developer/capabilities/{http['id']}", headers=headers["dev1"])
+    assert skill_detail.json()["data"]["calls"] == 2
+    assert stdio_detail.json()["data"]["calls"] == 1
+    assert http_detail.json()["data"]["calls"] == 1
+
+    market = client.get("/api/marketplace/capabilities?page=1&page_size=100", headers=headers["dev1"])
+    market_calls = {item["id"]: item["calls"] for item in market.json()["data"]["items"]}
+    assert market_calls[str(skill["id"])] == 2
+    assert market_calls[str(stdio["id"])] == 1
+    assert market_calls[str(http["id"])] == 1
+
+    overview = client.get("/api/home/overview", headers=headers["dev1"])
+    assert overview.status_code == 200, overview.text
+    home_items = (
+        overview.json()["data"]["recommended"]
+        + overview.json()["data"]["latest"]
+        + overview.json()["data"]["popular"]
+    )
+    home_calls = {item["id"]: item["calls"] for item in home_items}
+    assert home_calls[str(skill["id"])] == 2
+    assert home_calls[str(stdio["id"])] == 1
+    assert home_calls[str(http["id"])] == 1

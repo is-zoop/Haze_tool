@@ -226,6 +226,19 @@
 - 2026-07-01 change: `GET /api/mcp-runtime/deployments` now includes the associated capability icon URL. The runtime table loads authenticated icon blobs and uses the shared `ButtonGroup` plus `DropdownMenu` components for instance actions. Runtime visibility remains unchanged: system administrators and administrators see all instances, developers see only instances for capabilities they created, and users have neither the page permission nor `mcp_runtime.read`.
 - 2026-07-01 verification: backend schema/service compile check and frontend production build.
 
+### Capability real usage counts
+
+- 所属模块：capabilities / marketplace / home / mcp_runtime
+- 功能状态：新增
+- 涉及接口：`GET /api/developer/capabilities`、`GET /api/marketplace/capabilities`、`GET /api/home/overview`、两个能力 ZIP 下载接口
+- 涉及数据表：`capability_download_logs`、`mcp_call_logs`、`capabilities`
+- 涉及主要文件：`backend/app/modules/capabilities/metrics.py`、`backend/app/modules/marketplace/`、`backend/app/modules/home/router.py`、`backend/alembic/versions/20260702_0014_capability_download_logs.py`
+- 功能说明：Skill 与 STDIO MCP 的调用次数按实际 ZIP 下载请求累计；HTTP MCP 按成功的 `tools/call` 服务调用日志累计。
+- 本次改动说明：新增可追溯下载人、能力、版本、来源和 token 的下载日志；同一用户或版本重复下载不去重；链接生成及失败下载不计数；开发中心、能力市场、首页热门与推荐统一使用批量真实统计。
+- 是否影响已有功能：保持 API `calls` 字段及前端类型不变；原 `extension_json.calls` 不再作为展示和排序依据；HTTP MCP 统计依赖 Gateway 写入 `mcp_call_logs`。
+- 验证方式：目标 pytest、Python 编译、Alembic 0013→0014 离线 SQL 与唯一 head 检查、前端生产构建；完整能力模块测试另有 2 项既有状态流断言不一致。
+- 更新时间：2026-07-02
+
 ### System management business categories
 
 - Module: system management / business categories / capabilities / marketplace

@@ -19,9 +19,10 @@ from app.core.exceptions import AppException
 from app.core.response import ApiResponse, success_response
 from app.core.security import get_personal_credential_user, require_capabilities
 from app.db.session import get_db
+from app.modules.capabilities.metrics import capability_call_counts
 from app.modules.capabilities.models import Capability, CapabilityVersion
 from app.modules.capabilities.storage import resolve_stored_file
-from app.modules.marketplace.models import CapabilityDownloadToken, CapabilityFavorite
+from app.modules.marketplace.models import CapabilityDownloadLog, CapabilityDownloadToken, CapabilityFavorite
 from app.modules.mcp_runtime.models import McpDeployment
 from app.modules.marketplace.schemas import DownloadLinkData, FavoriteResult, MarketCapabilityData, MarketContentData, MarketListData, MarketVersionData
 from app.modules.users.models import Department, User
@@ -46,6 +47,7 @@ def _serialize_item(
     is_favorite: bool,
     version_history: list[MarketVersionData],
     deployment_public_url: str | None,
+    calls: int,
 ) -> MarketCapabilityData:
     extension = capability.extension_json or {}
     config = extension.get("config") or {}
@@ -66,7 +68,7 @@ def _serialize_item(
         if capability.type == "mcp" and transport != "STDIO" else None,
         version_history=version_history,
         tags=extension.get("tags", []),
-        calls=int(extension.get("calls", 0)),
+        calls=calls,
         is_favorite=is_favorite,
         icon=f"/api/developer/capabilities/{capability.id}/icon" if capability.icon else None,
         updated_at=capability.updated_at.strftime("%Y-%m-%d"),
@@ -155,6 +157,7 @@ def list_market_capabilities(
             .where(McpDeployment.capability_id.in_(capability_ids))
         ).all()
     )
+    call_counts = capability_call_counts(db, rows)
 
     items = [
         _serialize_item(
@@ -164,6 +167,7 @@ def list_market_capabilities(
             c.id in favorited,
             versions_by_capability.get(c.id, []),
             deployment_urls.get(c.id),
+            call_counts.get(c.id, 0),
         )
         for c in rows
     ]
@@ -245,6 +249,14 @@ def download_with_short_lived_token(
         package_file = resolve_stored_file(record.package_path)
     except AppException as exc:
         raise AppException(code=4045, message="能力 ZIP 文件不存在", status_code=404) from exc
+    db.add(CapabilityDownloadLog(
+        capability_id=capability.id,
+        version=record.version,
+        user_id=record.created_by,
+        source="short_link",
+        download_token_id=record.id,
+    ))
+    db.commit()
     return FileResponse(
         package_file,
         media_type="application/zip",
@@ -257,7 +269,7 @@ def download_with_short_lived_token(
 def download_capability_package(
     capability_id: int,
     db: Annotated[Session, Depends(get_db)],
-    _user: Annotated[User, Depends(get_personal_credential_user)],
+    user: Annotated[User, Depends(get_personal_credential_user)],
 ) -> FileResponse:
     capability = db.scalar(
         select(Capability).where(
@@ -277,7 +289,15 @@ def download_capability_package(
     if not package_path:
         raise AppException(code=4045, message="Capability package not found", status_code=404)
     file_name = str(package.get("name") or f"{capability.code}-{capability.version}.zip")
-    return FileResponse(resolve_stored_file(str(package_path)), media_type="application/zip", filename=file_name)
+    package_file = resolve_stored_file(str(package_path))
+    db.add(CapabilityDownloadLog(
+        capability_id=capability.id,
+        version=capability.version,
+        user_id=user.id,
+        source="personal_credential",
+    ))
+    db.commit()
+    return FileResponse(package_file, media_type="application/zip", filename=file_name)
 
 
 def _read_market_content(capability: Capability, file_name: str) -> tuple[str | None, str]:

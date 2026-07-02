@@ -14,6 +14,7 @@ from app.core.config import get_settings
 from app.core.exceptions import AppException
 from app.core.rbac import ADMIN, SYSTEM_ADMIN
 from app.modules.business_categories.models import BusinessCategory
+from app.modules.capabilities.metrics import capability_call_counts
 from app.modules.capabilities.models import Capability, CapabilityVersion
 from app.modules.capabilities.schemas import (
     CapabilityCreate,
@@ -67,6 +68,7 @@ def _serialize(
     *,
     owner_name: str | None = None,
     department_name: str | None = None,
+    calls: int | None = None,
 ) -> CapabilityData:
     extension = _extension(capability)
     if owner_name is None and capability.owner_id is not None:
@@ -95,7 +97,7 @@ def _serialize(
         department=department_name,
         tags=extension.get("tags", []),
         config=extension.get("config", {}),
-        calls=int(extension.get("calls", 0)),
+        calls=capability_call_counts(db, [capability]).get(capability.id, 0) if calls is None else calls,
         recent_test_status=extension.get("recent_test_status", "none"),
         package=extension.get("package"),
         documentation=extension.get("documentation"),
@@ -171,8 +173,18 @@ def list_capabilities(
         "skill": db.scalar(select(func.count(Capability.id)).where(*base_filters, Capability.type == "skill")) or 0,
         "mcp": db.scalar(select(func.count(Capability.id)).where(*base_filters, Capability.type == "mcp")) or 0,
     }
+    call_counts = capability_call_counts(db, [capability for capability, _, _ in rows])
     return CapabilityListData(
-        items=[_serialize(db, capability, owner_name=owner, department_name=department) for capability, owner, department in rows],
+        items=[
+            _serialize(
+                db,
+                capability,
+                owner_name=owner,
+                department_name=department,
+                calls=call_counts.get(capability.id, 0),
+            )
+            for capability, owner, department in rows
+        ],
         page=page,
         page_size=page_size,
         total=total,

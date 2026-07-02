@@ -7,6 +7,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
+BIGINT_PK = BigInteger().with_variant(Integer, "sqlite")
+
 
 class CapabilityDownloadToken(Base):
     __tablename__ = "capability_download_tokens"
@@ -25,6 +27,26 @@ class CapabilityDownloadToken(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+
+
+class CapabilityDownloadLog(Base):
+    __tablename__ = "capability_download_logs"
+
+    id: Mapped[int] = mapped_column(BIGINT_PK, primary_key=True, autoincrement=True)
+    capability_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("capabilities.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    version: Mapped[str] = mapped_column(String(50), nullable=False)
+    user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    source: Mapped[str] = mapped_column(String(30), nullable=False)
+    download_token_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("capability_download_tokens.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    downloaded_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=func.now(), index=True
+    )
 
 
 class CapabilityFavorite(Base):

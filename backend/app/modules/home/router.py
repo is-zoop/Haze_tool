@@ -12,6 +12,7 @@ from app.core.response import ApiResponse, success_response
 from app.core.security import get_user_permission_codes, require_capabilities
 from app.db.session import get_db
 from app.modules.audit.models import CapabilityAuditRecord
+from app.modules.capabilities.metrics import capability_call_counts
 from app.modules.capabilities.models import Capability
 from app.modules.home.models import CapabilityUserUsage
 from app.modules.home.schemas import AuditMetric, HomeCapabilityItem, HomeOverviewData, MyCapabilitiesMetric, PublishedMetric, UsageResult, WeeklyAddedMetric
@@ -23,10 +24,13 @@ router = APIRouter(prefix="/api/home", tags=["home"])
 def _now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
-def _calls(capability: Capability) -> int:
-    return int((capability.extension_json or {}).get("calls", 0))
-
-def _serialize(db: Session, user_id: int, capabilities: list[Capability], usage_map: dict[int, CapabilityUserUsage] | None = None) -> list[HomeCapabilityItem]:
+def _serialize(
+    db: Session,
+    user_id: int,
+    capabilities: list[Capability],
+    usage_map: dict[int, CapabilityUserUsage] | None = None,
+    call_counts: dict[int, int] | None = None,
+) -> list[HomeCapabilityItem]:
     if not capabilities:
         return []
     ids = [c.id for c in capabilities]
@@ -36,10 +40,11 @@ def _serialize(db: Session, user_id: int, capabilities: list[Capability], usage_
     departments = {d.id: d.name for d in db.scalars(select(Department).where(Department.id.in_(department_ids))).all()} if department_ids else {}
     favorites = set(db.scalars(select(CapabilityFavorite.capability_id).where(CapabilityFavorite.user_id == user_id, CapabilityFavorite.capability_id.in_(ids))).all())
     usage_map = usage_map or {}
+    call_counts = call_counts or capability_call_counts(db, capabilities)
     return [HomeCapabilityItem(
         id=str(c.id), name=c.name, type="Skill" if c.type == "skill" else "MCP",
         description=c.description, author=owners.get(c.owner_id, ""), department=departments.get(c.department_id),
-        category_id=c.category_id, category=c.category, calls=_calls(c), is_favorite=c.id in favorites,
+        category_id=c.category_id, category=c.category, calls=call_counts.get(c.id, 0), is_favorite=c.id in favorites,
         icon=f"/api/developer/capabilities/{c.id}/icon" if c.icon else None,
         updated_at=c.updated_at.strftime("%Y-%m-%d"),
         use_count=usage_map[c.id].use_count if c.id in usage_map else None,
@@ -57,6 +62,7 @@ def get_overview(request: Request, db: Annotated[Session, Depends(get_db)], acto
     previous_end = previous_start + (now - week_start)
     current_added = sum(week_start <= c.created_at <= now for c in published)
     previous_added = sum(previous_start <= c.created_at <= previous_end for c in published)
+    call_counts = capability_call_counts(db, published)
 
     can_develop = "page.developer" in permissions
     my_total = my_published = None
@@ -75,15 +81,15 @@ def get_overview(request: Request, db: Annotated[Session, Depends(get_db)], acto
         if valid:
             avg_hours = round(sum(d.total_seconds() for d in valid) / len(valid) / 3600, 1)
 
-    max_calls = max((_calls(c) for c in published), default=0)
+    max_calls = max(call_counts.values(), default=0)
     max_log = math.log1p(max_calls) if max_calls else 1.0
     def score(c: Capability) -> float:
-        call_score = math.log1p(_calls(c)) / max_log if max_calls else 0.0
+        call_score = math.log1p(call_counts.get(c.id, 0)) / max_log if max_calls else 0.0
         age = max(0.0, (now - c.created_at).total_seconds() / 86400)
         return call_score * .7 + max(0.0, 1 - age / 30) * .3
     recommended = sorted(published, key=lambda c: (score(c), c.id), reverse=True)[:6]
     latest = sorted(published, key=lambda c: (c.created_at, c.id), reverse=True)[:6]
-    popular = sorted(published, key=lambda c: (_calls(c), c.id), reverse=True)[:6]
+    popular = sorted(published, key=lambda c: (call_counts.get(c.id, 0), c.id), reverse=True)[:6]
 
     favorite_ids = list(db.scalars(select(CapabilityFavorite.capability_id).where(CapabilityFavorite.user_id == actor.id).order_by(CapabilityFavorite.created_at.desc()).limit(4)).all())
     favorite_order = {value: index for index, value in enumerate(favorite_ids)}
@@ -101,8 +107,11 @@ def get_overview(request: Request, db: Annotated[Session, Depends(get_db)], acto
         weekly_added=WeeklyAddedMetric(current=current_added, previous=previous_added, difference=current_added - previous_added),
         my_capabilities=MyCapabilitiesMetric(available=can_develop, total=my_total, published=my_published),
         audit=AuditMetric(available=can_audit, pending=pending, avg_review_hours=avg_hours),
-        recommended=_serialize(db, actor.id, recommended), latest=_serialize(db, actor.id, latest), popular=_serialize(db, actor.id, popular),
-        favorites=_serialize(db, actor.id, favorite_caps), frequent=_serialize(db, actor.id, frequent_caps, usage_map),
+        recommended=_serialize(db, actor.id, recommended, call_counts=call_counts),
+        latest=_serialize(db, actor.id, latest, call_counts=call_counts),
+        popular=_serialize(db, actor.id, popular, call_counts=call_counts),
+        favorites=_serialize(db, actor.id, favorite_caps, call_counts=call_counts),
+        frequent=_serialize(db, actor.id, frequent_caps, usage_map, call_counts),
     )
     return success_response(request, data)
 
